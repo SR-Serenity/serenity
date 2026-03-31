@@ -2,5 +2,48 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./apps/web-e2e"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./apps/auth-service-e2e"
+    },
+    {
+      "path": "./apps/auth-service"
+    },
+    {
+      "path": "./apps/api-service-e2e"
+    },
+    {
+      "path": "./apps/api-service"
+    },
+    {
+      "path": "./apps/analytics-service-e2e"
+    },
+    {
+      "path": "./apps/analytics-service"
+    },
+    {
+      "path": "./apps/gateway-e2e"
+    },
+    {
+      "path": "./apps/gateway"
+    },
+    {
+      "path": "./apps/realtime-service-e2e"
+    },
+    {
+      "path": "./apps/realtime-service"
+    },
+    {
+      "path": "./apps/notification-service-e2e"
+    },
+    {
+      "path": "./apps/notification-service"
+    }
+  ]
 }
