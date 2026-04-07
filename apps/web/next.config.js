@@ -10,6 +10,10 @@ const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+
+  // Optimize for Docker: Standalone mode reduces image size by 70%+
+  // Only includes traced dependencies, not full node_modules
+  output: 'standalone',
 };
 
 const plugins = [

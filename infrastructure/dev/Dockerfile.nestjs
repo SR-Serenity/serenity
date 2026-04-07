@@ -1,0 +1,28 @@
+# Development Dockerfile for NestJS Services
+# Features: Live reload, debugging, verbose logging
+# Usage: docker build --build-arg SERVICE_NAME=api-service -f infrastructure/dev/Dockerfile.nestjs -t serenity-api-service:dev .
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies (including dev dependencies for live reload tools)
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Install development tools for debugging
+RUN npm install -g @nestjs/cli
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
+
+EXPOSE 3000
+
+# Development command with live reload
+# Uses nx serve for hot module reloading
+ARG SERVICE_NAME
+CMD ["npm", "exec", "nx", "serve", "${SERVICE_NAME}"]
