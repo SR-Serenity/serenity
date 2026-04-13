@@ -5,20 +5,22 @@ version: '3.8'
 # Usage: docker-compose -f infrastructure/dev/docker-compose.yml up
 
 services:
-  # MongoDB
-  mongodb:
-    image: mongo:7.0-alpine
-    container_name: serenity-mongodb-dev
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: serenity-postgres-dev
     ports:
-      - "27017:27017"
+      - "5432:5432"
     environment:
-      MONGO_INITDB_DATABASE: serenity
+      POSTGRES_DB: serenity
+      POSTGRES_USER: serenity
+      POSTGRES_PASSWORD: serenity
     volumes:
-      - mongodb_data_dev:/data/db
+      - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - serenity-dev
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD-SHELL", "pg_isready -U serenity -d serenity"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,17 +38,18 @@ services:
       - "2991:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
       - NODE_ENV=development
       - DEBUG=serenity:*
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps  # Mount source code for live reload
+      - ../../apps:/app/apps  # Mount source code for live reload
 
   # Auth Service
   auth-service:
@@ -60,16 +63,17 @@ services:
       - "2992:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
       - NODE_ENV=development
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
 
   # API Service
   api-service:
@@ -83,16 +87,18 @@ services:
       - "2993:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
+      - AUTH_SERVICE_URL=http://auth-service:3000/api
       - NODE_ENV=development
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
 
   # Notification Service
   notification-service:
@@ -106,16 +112,16 @@ services:
       - "2994:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
       - NODE_ENV=development
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
 
   # Analytics Service
   analytics-service:
@@ -129,16 +135,16 @@ services:
       - "2995:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
       - NODE_ENV=development
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
 
   # Realtime Service
   realtime-service:
@@ -152,16 +158,16 @@ services:
       - "2996:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
       - NODE_ENV=development
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
 
   # Web Frontend
   web:
@@ -174,18 +180,22 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:2991
+      - NEXT_DIST_DIR=/app/dist/apps/web
     depends_on:
       - gateway
     networks:
       - serenity-dev
     restart: unless-stopped
     volumes:
-      - ../../../apps:/app/apps
+      - ../../apps:/app/apps
+      - web_node_modules:/app/apps/web/node_modules
 
 networks:
   serenity-dev:
     driver: bridge
 
 volumes:
-  mongodb_data_dev:
+  postgres_data_dev:
+    driver: local
+  web_node_modules:
     driver: local

@@ -7,22 +7,24 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies (including dev dependencies for live reload tools)
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY prisma ./prisma
+RUN corepack enable && pnpm install --frozen-lockfile && pnpm exec prisma generate
 
-# Copy source code
-COPY . .
+ENV PATH="/app/node_modules/.bin:${PATH}"
 
-# Install development tools for debugging
-RUN npm install -g @nestjs/cli
+# Copy source code with node user ownership
+COPY --chown=node:node . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-USER nodejs
+# Ensure node user can run things and write to cache
+RUN mkdir -p /app/.nx /app/node_modules/.cache && chown -R node:node /app/.nx /app/node_modules/.cache && chown node:node /app
+
+USER node
 
 EXPOSE 3000
 
 # Development command with live reload
 # Uses nx serve for hot module reloading
 ARG SERVICE_NAME
-CMD ["npm", "exec", "nx", "serve", "${SERVICE_NAME}"]
+ENV SERVICE_NAME=${SERVICE_NAME}
+CMD ["sh", "-c", "nx serve ${SERVICE_NAME}"]
