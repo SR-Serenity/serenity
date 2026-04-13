@@ -1,20 +1,18 @@
 import { Test } from '@nestjs/testing';
-import { AppService } from './app.service';
+import { AuthProxyService } from './modules/auth/auth-proxy.service';
 
-describe('AppService', () => {
-  let service: AppService;
+describe('AuthProxyService', () => {
+  let service: AuthProxyService;
 
   beforeAll(async () => {
     const app = await Test.createTestingModule({
-      providers: [AppService],
+      providers: [AuthProxyService],
     }).compile();
 
-    service = app.get<AppService>(AppService);
+    service = app.get<AuthProxyService>(AuthProxyService);
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
-      expect(service.getData()).toEqual({ message: 'Hello API' });
-    });
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 });

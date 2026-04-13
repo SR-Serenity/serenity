@@ -1,20 +1,34 @@
 import { Test } from '@nestjs/testing';
-import { AppService } from './app.service';
+import { AuthService } from './modules/auth/auth.service';
+import { PrismaService } from './modules/database/prisma.service';
 
-describe('AppService', () => {
-  let service: AppService;
+describe('AuthService', () => {
+  let service: AuthService;
 
   beforeAll(async () => {
     const app = await Test.createTestingModule({
-      providers: [AppService],
+      providers: [
+        AuthService,
+        {
+          provide: PrismaService,
+          useValue: {
+            user: { findUnique: jest.fn() },
+            organization: { findUnique: jest.fn() },
+            workspaceMember: {
+              findMany: jest.fn(),
+              findFirst: jest.fn(),
+              create: jest.fn(),
+            },
+            $transaction: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
-    service = app.get<AppService>(AppService);
+    service = app.get<AuthService>(AuthService);
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
-      expect(service.getData()).toEqual({ message: 'Hello API' });
-    });
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 });

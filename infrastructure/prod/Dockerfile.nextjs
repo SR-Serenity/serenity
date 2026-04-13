@@ -9,17 +9,17 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install all dependencies (including dev for build time)
-RUN npm ci --prefer-offline --no-audit
+RUN corepack enable && pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build Next.js application with optimizations
 # Next.js with output: 'standalone' creates .next/standalone with traced dependencies only
-RUN npm exec nx build web
+RUN pnpm nx build web
 
 # Runtime stage - minimal production image (~200MB vs 758MB)
 FROM node:20-alpine
