@@ -28,7 +28,7 @@ serenity/
 | Monorepo | Nx 22, pnpm |
 | Backend | NestJS 11, Node 20 |
 | Frontend | Next.js 16, React 19, TypeScript 5.9 |
-| Database | MongoDB 7.0 |
+| Database | PostgreSQL 16 + Prisma |
 | Bundler | Webpack + SWC |
 | Testing | Jest, Playwright |
 | Containers | Docker, Docker Compose |
@@ -60,7 +60,7 @@ docker compose up --build
 | Analytics Service | 2995 |
 | Realtime Service | 2996 |
 | Web Frontend | 2997 |
-| MongoDB | 27017 |
+| PostgreSQL | 5432 |
 
 Source files are volume-mounted — changes trigger live reload without rebuilding images.
 
@@ -121,7 +121,7 @@ pnpm nx graph
 
 - **Dockerfile.nestjs** — installs all dependencies (including dev), runs `nx serve` for HMR
 - **Dockerfile.nextjs** — installs all dependencies, runs `nx dev web` for HMR
-- **docker-compose.yml** — mounts `apps/` for live reload; MongoDB health-checked before services start
+- **docker-compose.yml** — mounts `apps/` for live reload; PostgreSQL health-checked before services start
 
 ### Production (`infrastructure/prod/`)
 
@@ -136,15 +136,33 @@ Key variables expected at runtime:
 ```env
 # All NestJS services
 PORT=3000
-MONGODB_URI=mongodb://mongodb:27017/serenity
+DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+JWT_SECRET=replace-with-strong-secret
 NODE_ENV=production
 
 # Web frontend
 NEXT_PUBLIC_API_URL=http://localhost:2991
 
 # Production only
+POSTGRES_USER=serenity
+POSTGRES_PASSWORD=replace-with-strong-password
 CLOUDFLARE_TUNNEL_TOKEN=your_tunnel_token_here
 ```
+
+## Multi-tenant Auth MVP APIs
+
+Gateway exposes these auth routes (proxied to `auth-service`):
+
+```sh
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/organizations
+POST /api/auth/organizations
+POST /api/auth/switch-org
+GET  /api/context
+```
+
+JWT payload includes `user_id` and `org_id` for tenant-aware downstream requests.
 
 ## CI / Nx Cloud
 

@@ -50,16 +50,16 @@ env-setup:
 
 build-dev:
 	@echo "Building development images..."
-	docker-compose -f infrastructure/dev/docker-compose.yml build
+	docker compose -f infrastructure/dev/docker-compose.yml build
 
 build-prod:
 	@echo "Building production images..."
-	docker-compose -f infrastructure/prod/docker-compose.yml build
+	docker compose -f infrastructure/prod/docker-compose.yml build
 
 up: up-dev
 up-dev:
 	@echo "Starting development services..."
-	docker-compose -f infrastructure/dev/docker-compose.yml up -d
+	docker compose -f infrastructure/dev/docker-compose.yml up -d
 	@echo "✓ Services started"
 	@echo "Gateway:    http://localhost:2991/api"
 	@echo "Web UI:     http://localhost:2997"
@@ -67,64 +67,64 @@ up-dev:
 
 up-prod:
 	@echo "Starting production services..."
-	docker-compose -f infrastructure/prod/docker-compose.yml up -d
+	docker compose -f infrastructure/prod/docker-compose.yml up -d
 	@echo "✓ Services started"
 	@echo "Verify Cloudflare tunnel: make logs-prod"
 
 down: down-dev
 down-dev:
 	@echo "Stopping development services..."
-	docker-compose -f infrastructure/dev/docker-compose.yml down
+	docker compose -f infrastructure/dev/docker-compose.yml down
 	@echo "✓ Services stopped"
 
 down-prod:
 	@echo "Stopping production services..."
-	docker-compose -f infrastructure/prod/docker-compose.yml down
+	docker compose -f infrastructure/prod/docker-compose.yml down
 	@echo "✓ Services stopped"
 
 logs: logs-dev
 logs-dev:
-	docker-compose -f infrastructure/dev/docker-compose.yml logs -f
+	docker compose -f infrastructure/dev/docker-compose.yml logs -f
 
 logs-prod:
-	docker-compose -f infrastructure/prod/docker-compose.yml logs -f
+	docker compose -f infrastructure/prod/docker-compose.yml logs -f
 
 logs-gateway:
-	docker-compose -f infrastructure/dev/docker-compose.yml logs -f gateway
+	docker compose -f infrastructure/dev/docker-compose.yml logs -f gateway
 
 logs-mongo:
-	docker-compose -f infrastructure/dev/docker-compose.yml logs -f mongodb
+	docker compose -f infrastructure/dev/docker-compose.yml logs -f mongodb
 
 ps:
 	@echo "=== Development Services ==="
-	@docker-compose -f infrastructure/dev/docker-compose.yml ps 2>/dev/null || echo "Dev services not running"
+	@docker compose -f infrastructure/dev/docker-compose.yml ps 2>/dev/null || echo "Dev services not running"
 	@echo ""
 	@echo "=== Production Services ==="
-	@docker-compose -f infrastructure/prod/docker-compose.yml ps 2>/dev/null || echo "Prod services not running"
+	@docker compose -f infrastructure/prod/docker-compose.yml ps 2>/dev/null || echo "Prod services not running"
 
 health:
 	@echo "Checking development service health..."
-	@docker-compose -f infrastructure/dev/docker-compose.yml ps
+	@docker compose -f infrastructure/dev/docker-compose.yml ps
 	@echo ""
 	@echo "Testing connections..."
-	@docker-compose -f infrastructure/dev/docker-compose.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" 2>/dev/null && echo "✓ MongoDB is healthy" || echo "✗ MongoDB is unhealthy"
+	@docker compose -f infrastructure/dev/docker-compose.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" 2>/dev/null && echo "✓ MongoDB is healthy" || echo "✗ MongoDB is unhealthy"
 	@curl -s http://localhost:2991/api >/dev/null 2>&1 && echo "✓ Gateway is healthy" || echo "✗ Gateway is unhealthy"
 	@curl -s http://localhost:2997 >/dev/null 2>&1 && echo "✓ Web is healthy" || echo "✗ Web is unhealthy"
 
 restart:
 	@echo "Restarting development services..."
-	docker-compose -f infrastructure/dev/docker-compose.yml restart
+	docker compose -f infrastructure/dev/docker-compose.yml restart
 	@echo "✓ Services restarted"
 
 clean: clean-dev
 clean-dev:
 	@echo "Removing development containers..."
-	docker-compose -f infrastructure/dev/docker-compose.yml down
+	docker compose -f infrastructure/dev/docker-compose.yml down
 	@echo "✓ Containers removed (data preserved)"
 
 clean-prod:
 	@echo "Removing production containers..."
-	docker-compose -f infrastructure/prod/docker-compose.yml down
+	docker compose -f infrastructure/prod/docker-compose.yml down
 	@echo "✓ Containers removed (data preserved)"
 
 clean-all:
@@ -132,8 +132,8 @@ clean-all:
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		docker-compose -f infrastructure/dev/docker-compose.yml down -v; \
-		docker-compose -f infrastructure/prod/docker-compose.yml down -v; \
+		docker compose -f infrastructure/dev/docker-compose.yml down -v; \
+		docker compose -f infrastructure/prod/docker-compose.yml down -v; \
 		echo "✓ All containers and volumes removed"; \
 	else \
 		echo "✗ Cancelled"; \
@@ -142,16 +142,16 @@ clean-all:
 rebuild: clean build-dev up-dev
 
 shell-gateway:
-	docker-compose -f infrastructure/dev/docker-compose.yml exec gateway sh
+	docker compose -f infrastructure/dev/docker-compose.yml exec gateway sh
 
 shell-auth:
-	docker-compose -f infrastructure/dev/docker-compose.yml exec auth-service sh
+	docker compose -f infrastructure/dev/docker-compose.yml exec auth-service sh
 
 shell-api:
-	docker-compose -f infrastructure/dev/docker-compose.yml exec api-service sh
+	docker compose -f infrastructure/dev/docker-compose.yml exec api-service sh
 
 mongo-shell:
-	docker-compose -f infrastructure/dev/docker-compose.yml exec mongodb mongosh
+	docker compose -f infrastructure/dev/docker-compose.yml exec mongodb mongosh
 
 test-api:
 	@echo "Testing Gateway API..."
@@ -160,6 +160,6 @@ test-api:
 backup-db:
 	@echo "Backing up MongoDB..."
 	@mkdir -p backups
-	@docker-compose -f infrastructure/dev/docker-compose.yml exec -T mongodb mongodump --out /backup
+	@docker compose -f infrastructure/dev/docker-compose.yml exec -T mongodb mongodump --out /backup
 	@docker cp serenity-mongodb-dev:/backup ./backups/$$(date +%Y%m%d_%H%M%S)
 	@echo "✓ Backup complete"

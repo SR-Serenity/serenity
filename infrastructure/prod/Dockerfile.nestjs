@@ -8,20 +8,20 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies (including dev for build tools)
-RUN npm ci --prefer-offline --no-audit
+RUN corepack enable && pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the service
 ARG SERVICE_NAME
-RUN npm exec nx build ${SERVICE_NAME}
+RUN pnpm nx build ${SERVICE_NAME}
 
 # Prune production dependencies (remove dev dependencies)
-RUN npm prune --production
+RUN pnpm prune --prod
 
 # Runtime stage - minimal production image
 FROM node:20-alpine
@@ -32,6 +32,7 @@ WORKDIR /app
 RUN apk add --no-cache dumb-init
 
 # Copy built application from builder
+ARG SERVICE_NAME
 COPY --from=builder /app/dist/apps/${SERVICE_NAME} ./dist
 
 # Copy pruned production dependencies

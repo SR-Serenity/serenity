@@ -5,24 +5,23 @@ version: '3.8'
 # Usage: docker-compose -f infrastructure/prod/docker-compose.yml up
 
 services:
-  # MongoDB with authentication
-  mongodb:
-    image: mongo:7.0-alpine
-    container_name: serenity-mongodb
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: serenity-postgres
     ports:
-      - "27017:27017"
+      - "5432:5432"
     environment:
-      MONGO_INITDB_DATABASE: serenity
-      # Uncomment and set for production MongoDB auth:
-      # MONGO_INITDB_ROOT_USERNAME: admin
-      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      POSTGRES_DB: serenity
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - mongodb_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - serenity-network
     restart: always
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d serenity"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -42,10 +41,11 @@ services:
       - "2991:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
+      - JWT_SECRET=${JWT_SECRET}
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -65,10 +65,11 @@ services:
       - "2992:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
+      - JWT_SECRET=${JWT_SECRET}
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -88,10 +89,12 @@ services:
       - "2993:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_SERVICE_URL=http://auth-service:3000/api
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -111,10 +114,10 @@ services:
       - "2994:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -134,10 +137,10 @@ services:
       - "2995:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -157,10 +160,10 @@ services:
       - "2996:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongodb:27017/serenity
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/serenity?schema=public
       - NODE_ENV=production
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     networks:
       - serenity-network
@@ -213,5 +216,5 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  postgres_data:
     driver: local

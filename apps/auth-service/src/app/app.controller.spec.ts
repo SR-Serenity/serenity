@@ -1,21 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { AuthController } from './modules/auth/auth.controller';
+import { AuthService } from './modules/auth/auth.service';
 
-describe('AppController', () => {
-  let app: TestingModule;
+describe('AuthController', () => {
+  let controller: AuthController;
 
   beforeAll(async () => {
-    app = await Test.createTestingModule({
-      controllers: [AppController],
-      providers: [AppService],
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AuthController],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: {
+            register: jest.fn(),
+            login: jest.fn(),
+            listOrganizations: jest.fn(),
+            createOrganization: jest.fn(),
+            switchOrganization: jest.fn(),
+            getUserIdFromAuthHeader: jest.fn(),
+          },
+        },
+      ],
     }).compile();
+
+    controller = app.get<AuthController>(AuthController);
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
-      const appController = app.get<AppController>(AppController);
-      expect(appController.getData()).toEqual({ message: 'Hello API' });
-    });
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
   });
 });

@@ -1,2 +1,81 @@
 .page {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  background: #f6f8fb;
+  color: #101828;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e4e7ec;
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.modeRow {
+  display: flex;
+  gap: 8px;
+}
+
+.modeRow button {
+  background: #eef2f6;
+  color: #344054;
+}
+
+.modeRow .active {
+  background: #175cd3;
+  color: #ffffff;
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+}
+
+.form input {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.form button,
+.modeRow button {
+  border-radius: 8px;
+  border: 0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.form button {
+  background: #1570ef;
+  color: white;
+}
+
+.form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.orgList {
+  display: grid;
+  gap: 8px;
+}
+
+.orgItem {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.message {
+  max-width: 720px;
+  margin: 0;
+  font-weight: 500;
 }
