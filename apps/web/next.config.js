@@ -18,6 +18,12 @@ const nextConfig = {
   // Optimize for Docker: Standalone mode reduces image size by 70%+
   // Only includes traced dependencies, not full node_modules
   output: 'standalone',
+
+  // i18n configuration with next-intl
+  i18n: {
+    locales: ['en', 'vi'],
+    defaultLocale: 'en',
+  },
 };
 
 const plugins = [
