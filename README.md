@@ -2,179 +2,229 @@
 
 A full-stack microservices monorepo built with Nx, NestJS, and Next.js.
 
+## Prerequisites
+
+- **Node.js**: 20+ 
+- **Docker & Docker Compose**
+- **pnpm**: 9+
+
+## Quick Setup
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Setup environment variables
+cp .env.example .env
+
+# 3. Start everything with Docker
+cd infrastructure/dev
+docker compose up --build
+```
+
+Access:
+- **Web**: http://localhost:2997
+- **API Gateway**: http://localhost:2991
+- **PostgreSQL**: localhost:5432
+
+## Services
+
+| Service | Port | Command |
+|---------|------|---------|
+| **Gateway** | 2991 | `pnpm nx serve gateway` |
+| **Auth Service** | 2992 | `pnpm nx serve auth-service` |
+| **API Service** | 2993 | `pnpm nx serve api-service` |
+| **Notification Service** | 2994 | `pnpm nx serve notification-service` |
+| **Analytics Service** | 2995 | `pnpm nx serve analytics-service` |
+| **Realtime Service** | 2996 | `pnpm nx serve realtime-service` |
+| **Web Frontend** | 2997 | `pnpm nx dev web` |
+
+## Running Services Locally
+
+**Prerequisites:** PostgreSQL running locally
+
+```bash
+# Terminal 1: Start PostgreSQL (macOS)
+brew services start postgresql@16
+
+# Terminal 2: Run migrations
+pnpm nx run prisma:migrate
+
+# Terminal 3: Start Auth Service
+pnpm nx serve auth-service
+
+# Terminal 4: Start API Service
+pnpm nx serve api-service
+
+# Terminal 5: Start Gateway
+pnpm nx serve gateway
+
+# Terminal 6: Start Web
+pnpm nx dev web
+```
+
+## Common Commands
+
+```bash
+# Run a service
+pnpm nx serve api-service
+
+# Build a service
+pnpm nx build api-service
+
+# Test a service
+pnpm nx test api-service
+
+# Lint a service
+pnpm nx lint api-service
+
+# Run all tests
+pnpm nx run-many --target=test --all
+
+# View project graph
+pnpm nx graph
+```
+
+## Docker Commands
+
+```bash
+# Start all services
+docker compose up --build
+
+# Stop all services
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f auth-service
+
+# Restart a service
+docker compose restart auth-service
+```
+
+## Database
+
+```bash
+# Run migrations
+pnpm nx run prisma:migrate
+
+# Seed database
+pnpm nx run prisma:seed
+
+# Open Prisma Studio
+pnpm nx run prisma:studio
+```
+
 ## Architecture
 
 ```
-serenity/
-├── apps/
-│   ├── gateway/               # API Gateway (port 2991)
-│   ├── auth-service/          # Authentication service (port 2992)
-│   ├── api-service/           # Core API service (port 2993)
-│   ├── notification-service/  # Notifications (port 2994)
-│   ├── analytics-service/     # Analytics (port 2995)
-│   ├── realtime-service/      # Real-time features (port 2996)
-│   ├── web/                   # Next.js frontend (port 2997)
-│   └── *-e2e/                 # Playwright e2e test suites
-├── packages/                  # Shared libraries (future)
-└── infrastructure/
-    ├── dev/                   # Development Docker setup
-    └── prod/                  # Production Docker setup
+apps/
+├── gateway/               # API Gateway (port 2991)
+├── auth-service/          # Authentication (port 2992)
+├── api-service/           # Core API (port 2993)
+├── notification-service/  # Notifications (port 2994)
+├── analytics-service/     # Analytics (port 2995)
+├── realtime-service/      # Real-time (port 2996)
+└── web/                   # Next.js Frontend (port 2997)
+```
+
+## Environment Variables
+
+```env
+# Database
+DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+
+# Services
+NODE_ENV=development
+JWT_SECRET=your-secret-key
+PORT=3000
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:2991
+```
+
+## Authentication Flow
+
+```bash
+# 1. Register
+curl -X POST http://localhost:2991/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "organizationName": "My Org"
+  }'
+
+# 2. Login
+curl -X POST http://localhost:2991/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+# Response: { "access_token": "eyJ..." }
+
+# 3. Use token in requests
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:2991/api/auth/context
+```
+
+## Troubleshooting
+
+**Port already in use:**
+```bash
+lsof -i :2991
+kill -9 <PID>
+```
+
+**PostgreSQL connection error:**
+```bash
+# Check if running
+psql -U postgres
+
+# Start PostgreSQL (macOS)
+brew services start postgresql@16
+
+# Start PostgreSQL (Linux)
+sudo systemctl start postgresql
+```
+
+**Clear cache:**
+```bash
+pnpm nx reset
+pnpm install
+```
+
+**Docker issues:**
+```bash
+# Rebuild images
+docker compose build --no-cache
+
+# Reset everything
+docker compose down -v
+docker compose up --build
 ```
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Monorepo | Nx 22, pnpm |
-| Backend | NestJS 11, Node 20 |
-| Frontend | Next.js 16, React 19, TypeScript 5.9 |
+| Monorepo | Nx 22 |
+| Backend | NestJS 11 |
+| Frontend | Next.js 16, React 19 |
 | Database | PostgreSQL 16 + Prisma |
-| Bundler | Webpack + SWC |
 | Testing | Jest, Playwright |
 | Containers | Docker, Docker Compose |
-| Reverse Proxy | Cloudflare Tunnel (production) |
 
-## Prerequisites
+## Resources
 
-- Node.js 20+
-- Docker & Docker Compose
-- pnpm
+- [Nx Documentation](https://nx.dev)
+- [NestJS Documentation](https://docs.nestjs.com)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
 
-## Development
+## Support
 
-Start all services with hot reload:
-
-```sh
-cd infrastructure/dev
-docker compose up --build
-```
-
-**Service ports:**
-
-| Service | Port |
-|---------|------|
-| Gateway | 2991 |
-| Auth Service | 2992 |
-| API Service | 2993 |
-| Notification Service | 2994 |
-| Analytics Service | 2995 |
-| Realtime Service | 2996 |
-| Web Frontend | 2997 |
-| PostgreSQL | 5432 |
-
-Source files are volume-mounted — changes trigger live reload without rebuilding images.
-
-## Production
-
-```sh
-cd infrastructure/prod
-cp .env.example .env   # fill in CLOUDFLARE_TUNNEL_TOKEN and any secrets
-docker compose up --build -d
-```
-
-Production images use multi-stage builds:
-- NestJS images copy only the compiled `dist/` and pruned `node_modules`
-- Next.js image uses standalone output mode (~200 MB final image)
-- All containers run as non-root user `nodejs:1001`
-- `dumb-init` handles signal forwarding and graceful shutdown
-- Cloudflare Tunnel exposes the application without opening inbound ports
-
-## Nx Workspace
-
-Install dependencies:
-
-```sh
-pnpm install
-```
-
-Common commands (always prefix with `pnpm nx`):
-
-```sh
-# Serve a specific app locally
-pnpm nx serve gateway
-pnpm nx dev web
-
-# Build
-pnpm nx build gateway
-pnpm nx build web
-
-# Run tests
-pnpm nx test auth-service
-
-# Lint
-pnpm nx lint api-service
-
-# Run e2e tests
-pnpm nx e2e web-e2e
-
-# Run tasks across all affected projects
-pnpm nx affected -t build
-pnpm nx affected -t test
-
-# Visualize project graph
-pnpm nx graph
-```
-
-## Infrastructure Details
-
-### Development (`infrastructure/dev/`)
-
-- **Dockerfile.nestjs** — installs all dependencies (including dev), runs `nx serve` for HMR
-- **Dockerfile.nextjs** — installs all dependencies, runs `nx dev web` for HMR
-- **docker-compose.yml** — mounts `apps/` for live reload; PostgreSQL health-checked before services start
-
-### Production (`infrastructure/prod/`)
-
-- **Dockerfile.nestjs** — multi-stage: builds with `nx build`, prunes dev deps, copies `dist/` only
-- **Dockerfile.nextjs** — multi-stage: builds with Next.js standalone mode, final image ~200 MB
-- **docker-compose.yml** — hardened config: `restart: always`, `no-new-privileges: true`, Cloudflare Tunnel
-
-### Environment Variables
-
-Key variables expected at runtime:
-
-```env
-# All NestJS services
-PORT=3000
-DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
-JWT_SECRET=replace-with-strong-secret
-NODE_ENV=production
-
-# Web frontend
-NEXT_PUBLIC_API_URL=http://localhost:2991
-
-# Production only
-POSTGRES_USER=serenity
-POSTGRES_PASSWORD=replace-with-strong-password
-CLOUDFLARE_TUNNEL_TOKEN=your_tunnel_token_here
-```
-
-## Multi-tenant Auth MVP APIs
-
-Gateway exposes these auth routes (proxied to `auth-service`):
-
-```sh
-POST /api/auth/register
-POST /api/auth/login
-GET  /api/auth/organizations
-POST /api/auth/organizations
-POST /api/auth/switch-org
-GET  /api/context
-```
-
-JWT payload includes `user_id` and `org_id` for tenant-aware downstream requests.
-
-## CI / Nx Cloud
-
-Connect to Nx Cloud for remote caching and distributed task execution:
-
-```sh
-pnpm nx connect
-```
-
-Keep TypeScript project references in sync:
-
-```sh
-pnpm nx sync          # update references
-pnpm nx sync:check    # verify (use in CI)
-```
+For issues, check [GitHub Issues](https://github.com/your-repo/issues) or contact the team.
