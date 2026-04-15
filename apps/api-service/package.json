@@ -8,7 +8,7 @@
       "build": {
         "executor": "nx:run-commands",
         "options": {
-          "command": "webpack-cli build",
+          "command": "node ../../node_modules/webpack-cli/bin/cli.js build",
           "args": [
             "--node-env=production"
           ],
@@ -89,6 +89,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.0.0"
+    "@nestjs/testing": "^11.0.0",
+    "webpack-cli": "^5.1.4"
   }
 }

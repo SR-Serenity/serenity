@@ -23,6 +23,12 @@
     },
     {
       "path": "./apps/notification-service"
+    },
+    {
+      "path": "./apps/web/libs/api"
+    },
+    {
+      "path": "./apps/web/libs/ui"
     }
   ]
 }
