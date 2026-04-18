@@ -1,0 +1,41 @@
+{
+  "name": "@org/web",
+  "projectType": "application",
+  "sourceRoot": "apps/web/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^default"],
+      "options": {
+        "cwd": "apps/web",
+        "command": "pnpm exec eslint ."
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/web",
+        "command": "pnpm exec next build ."
+      },
+      "outputs": ["{workspaceRoot}/apps/web/.next/**/*"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/web",
+        "command": "pnpm exec jest --passWithNoTests"
+      },
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "apps/web",
+        "command": "pnpm exec next dev -p 9999"
+      }
+    }
+  }
+}

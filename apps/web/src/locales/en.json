@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display name",
+    "workspaceName": "Workspace name",
+    "workspaceSlug": "Workspace slug",
+    "confirmPassword": "Confirm password",
+    "createWorkspace": "Create workspace",
+    "selectWorkspace": "Select a workspace",
+    "dontHaveAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "createOne": "Create one",
+    "signIn": "Sign in",
+    "back": "← Back",
+    "continue": "Continue →",
+    "welcome": "Welcome back to your workspace"
+  },
+  "common": {
+    "logout": "Sign out",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "success": "Success"
+  },
+  "workspace": {
+    "name": "Workspace",
+    "members": "Members",
+    "settings": "Settings"
+  }
+}
