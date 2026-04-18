@@ -29,6 +29,9 @@
     },
     {
       "path": "./apps/web/libs/ui"
+    },
+    {
+      "path": "./apps/landing"
     }
   ]
 }
