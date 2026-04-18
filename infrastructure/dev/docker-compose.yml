@@ -1,0 +1,201 @@
+version: '3.8'
+
+# Development Docker Compose Configuration
+# Features: Hot reload, debugging, all dev tools enabled
+# Usage: docker-compose -f infrastructure/dev/docker-compose.yml up
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: serenity-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: serenity
+      POSTGRES_USER: serenity
+      POSTGRES_PASSWORD: serenity
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - serenity-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U serenity -d serenity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # API Gateway
+  gateway:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: gateway
+    container_name: serenity-gateway-dev
+    ports:
+      - "2991:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
+      - NODE_ENV=development
+      - DEBUG=serenity:*
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps  # Mount source code for live reload
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: auth-service
+    container_name: serenity-auth-service-dev
+    ports:
+      - "2992:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+
+  # API Service
+  api-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: api-service
+    container_name: serenity-api-service-dev
+    ports:
+      - "2993:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - JWT_SECRET=dev-secret
+      - AUTH_SERVICE_URL=http://auth-service:3000/api
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: notification-service
+    container_name: serenity-notification-service-dev
+    ports:
+      - "2994:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: analytics-service
+    container_name: serenity-analytics-service-dev
+    ports:
+      - "2995:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+
+  # Realtime Service
+  realtime-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: realtime-service
+    container_name: serenity-realtime-service-dev
+    ports:
+      - "2996:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+
+  # Web Frontend
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dev/Dockerfile.nextjs
+    container_name: serenity-web-dev
+    ports:
+      - "2997:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:2991
+      - NEXT_DIST_DIR=/app/dist/apps/web
+    depends_on:
+      - gateway
+    networks:
+      - serenity-dev
+    restart: unless-stopped
+    volumes:
+      - ../../apps:/app/apps
+      - web_node_modules:/app/apps/web/node_modules
+
+networks:
+  serenity-dev:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  web_node_modules:
+    driver: local

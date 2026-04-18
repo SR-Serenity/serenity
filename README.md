@@ -1,107 +1,244 @@
-# New Nx Repository
+# Serenity
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A full-stack microservices monorepo built with Nx, NestJS, and Next.js.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Prerequisites
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+- **Node.js**: 20+ 
+- **Docker & Docker Compose**
+- **pnpm**: 9+
 
-## Try the full Nx platform
-🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/setup/connect-workspace/guide). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
+## Quick Setup
 
-## Generate a library
+```bash
+# 1. Install dependencies
+pnpm install
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+# 2. Setup environment variables
+cp .env.example .env
+
+# 3. Start everything with Docker
+cd infrastructure/dev
+docker compose up --build
 ```
 
-## Run tasks
+Access:
+- **Web**: http://localhost:2997
+- **API Gateway**: http://localhost:2991
+- **PostgreSQL**: localhost:5432
 
-To build the library use:
+## Services
 
-```sh
-npx nx build pkg1
+| Service | Port | Command |
+|---------|------|---------|
+| **Gateway** | 2991 | `pnpm nx serve gateway` |
+| **Auth Service** | 2992 | `pnpm nx serve auth-service` |
+| **API Service** | 2993 | `pnpm nx serve api-service` |
+| **Notification Service** | 2994 | `pnpm nx serve notification-service` |
+| **Analytics Service** | 2995 | `pnpm nx serve analytics-service` |
+| **Realtime Service** | 2996 | `pnpm nx serve realtime-service` |
+| **Web Frontend** | 2997 | `pnpm nx dev web` |
+
+## Running Services Locally
+
+**Prerequisites:** PostgreSQL running locally
+
+```bash
+# Terminal 1: Start PostgreSQL (macOS)
+brew services start postgresql@16
+
+# Terminal 2: Run migrations
+pnpm nx run prisma:migrate
+
+# Terminal 3: Start core backend services together (parallel)
+pnpm nx run-many -t serve --projects=auth-service,api-service,gateway --parallel=3
+
+# Terminal 4: Start optional supporting services together (parallel)
+pnpm nx run-many -t serve --projects=notification-service,analytics-service,realtime-service --parallel=3
+
+# Terminal 5: Start web frontend
+pnpm nx dev web
 ```
 
-To run any task with Nx use:
+### Run Multiple Services With Nx
 
-```sh
-npx nx <target> <project-name>
+Nx supports running multiple services at once via `run-many`.
+
+```bash
+# Run selected services in parallel
+pnpm nx run-many -t serve --projects=gateway,auth-service,api-service --parallel=3
+
+# Run all projects that have a serve target
+pnpm nx run-many -t serve --all --parallel=6
+
+# See which projects support serve
+pnpm nx show projects --withTarget serve
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+Tip: press `Ctrl+C` in the terminal to stop all services started by that `run-many` command.
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Common Commands
 
-## Versioning and releasing
+```bash
+# Run a service
+pnpm nx serve api-service
 
-To version and release the library use
+# Build a service
+pnpm nx build api-service
 
-```
-npx nx release
-```
+# Test a service
+pnpm nx test api-service
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+# Lint a service
+pnpm nx lint api-service
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Run all tests
+pnpm nx run-many --target=test --all
 
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+# View project graph
+pnpm nx graph
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+## Docker Commands
 
-```sh
-npx nx sync:check
+```bash
+# Start all services
+docker compose up --build
+
+# Stop all services
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f auth-service
+
+# Restart a service
+docker compose restart auth-service
 ```
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+## Database
 
-## Nx Cloud
+```bash
+# Run migrations
+pnpm nx run prisma:migrate
 
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+# Seed database
+pnpm nx run prisma:seed
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Set up CI (non-Github Actions CI)
-
-**Note:** This is only required if your CI provider is not GitHub Actions.
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
+# Open Prisma Studio
+pnpm nx run prisma:studio
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Architecture
 
-## Install Nx Console
+```
+apps/
+├── gateway/               # API Gateway (port 2991)
+├── auth-service/          # Authentication (port 2992)
+├── api-service/           # Core API (port 2993)
+├── notification-service/  # Notifications (port 2994)
+├── analytics-service/     # Analytics (port 2995)
+├── realtime-service/      # Real-time (port 2996)
+└── web/                   # Next.js Frontend (port 2997)
+```
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+## Environment Variables
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```env
+# Database
+DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
 
-## Useful links
+# Services
+NODE_ENV=development
+JWT_SECRET=your-secret-key
+PORT=3000
 
-Learn more:
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:2991
+```
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Authentication Flow
 
-And join the Nx community:
+```bash
+# 1. Register
+curl -X POST http://localhost:2991/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "organizationName": "My Org"
+  }'
 
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# 2. Login
+curl -X POST http://localhost:2991/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+# Response: { "access_token": "eyJ..." }
+
+# 3. Use token in requests
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:2991/api/auth/context
+```
+
+## Troubleshooting
+
+**Port already in use:**
+```bash
+lsof -i :2991
+kill -9 <PID>
+```
+
+**PostgreSQL connection error:**
+```bash
+# Check if running
+psql -U postgres
+
+# Start PostgreSQL (macOS)
+brew services start postgresql@16
+
+# Start PostgreSQL (Linux)
+sudo systemctl start postgresql
+```
+
+**Clear cache:**
+```bash
+pnpm nx reset
+pnpm install
+```
+
+**Docker issues:**
+```bash
+# Rebuild images
+docker compose build --no-cache
+
+# Reset everything
+docker compose down -v
+docker compose up --build
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Monorepo | Nx 22 |
+| Backend | NestJS 11 |
+| Frontend | Next.js 16, React 19 |
+| Database | PostgreSQL 16 + Prisma |
+| Testing | Jest, Playwright |
+| Containers | Docker, Docker Compose |
+
+## Resources
+
+- [Nx Documentation](https://nx.dev)
+- [NestJS Documentation](https://docs.nestjs.com)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+
+## Support
+
+For issues, check [GitHub Issues](https://github.com/your-repo/issues) or contact the team.
