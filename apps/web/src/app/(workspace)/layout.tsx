@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { Spinner } from '@serenity/ui'
+import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +10,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const auth = useAuth()
 
   useEffect(() => {
-    if (auth.initializing) return
+    if (auth.initializing) {
+      return
+    }
     if (!auth.isAuthenticated) {
       router.replace('/login')
     }
@@ -19,7 +21,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   if (auth.initializing || !auth.isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     )
   }

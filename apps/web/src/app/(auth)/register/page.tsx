@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { RegisterForm } from '@/components/auth/register-form'
-import { Spinner } from '@serenity/ui'
 import { useAuth } from '@/hooks/use-auth'
+import { Loader2 } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -19,18 +19,10 @@ export default function RegisterPage() {
   if (auth.initializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     )
   }
 
-  function handleRegisterSuccess(orgSlug: string) {
-    router.push(`/${orgSlug}`)
-  }
-
-  return (
-    <div className="w-full max-w-[420px]">
-      <RegisterForm onSuccess={handleRegisterSuccess} />
-    </div>
-  )
+  return <RegisterForm onSuccess={(slug) => router.push(`/${slug}`)} />
 }

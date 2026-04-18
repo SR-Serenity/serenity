@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import axios from 'axios';
 import { JwtPayload, verify } from 'jsonwebtoken';
+import { mapProxyError } from '../../common/errors/proxy-error.util';
 
 type AuthContext = {
   userId: string;
@@ -18,21 +19,29 @@ export class AuthProxyService {
     body: unknown,
     authHeader?: string
   ) {
-    const response = await axios.post(
-      `${this.authServiceUrl()}/auth/${endpoint}`,
-      body,
-      {
-        headers: this.forwardHeaders(authHeader),
-      }
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${this.authServiceUrl()}/auth/${endpoint}`,
+        body,
+        {
+          headers: this.forwardHeaders(authHeader),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'Auth service');
+    }
   }
 
   async forwardAuthGet(endpoint: string, authHeader?: string) {
-    const response = await axios.get(`${this.authServiceUrl()}/auth/${endpoint}`, {
-      headers: this.forwardHeaders(authHeader),
-    });
-    return response.data;
+    try {
+      const response = await axios.get(`${this.authServiceUrl()}/auth/${endpoint}`, {
+        headers: this.forwardHeaders(authHeader),
+      });
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'Auth service');
+    }
   }
 
   getRequestContext(authHeader?: string) {

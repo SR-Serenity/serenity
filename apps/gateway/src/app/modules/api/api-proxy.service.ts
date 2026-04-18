@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
+import { mapProxyError } from '../../common/errors/proxy-error.util';
 
 @Injectable()
 export class ApiProxyService {
@@ -8,14 +9,18 @@ export class ApiProxyService {
     authHeader?: string,
     params?: Record<string, unknown>
   ) {
-    const response = await axios.get(
-      `${this.apiServiceUrl()}/${endpoint}`,
-      {
-        headers: this.forwardHeaders(authHeader),
-        params,
-      }
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${this.apiServiceUrl()}/${endpoint}`,
+        {
+          headers: this.forwardHeaders(authHeader),
+          params,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'API service');
+    }
   }
 
   async forwardPostRequest(
@@ -23,14 +28,18 @@ export class ApiProxyService {
     body: unknown,
     authHeader?: string
   ) {
-    const response = await axios.post(
-      `${this.apiServiceUrl()}/${endpoint}`,
-      body,
-      {
-        headers: this.forwardHeaders(authHeader),
-      }
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${this.apiServiceUrl()}/${endpoint}`,
+        body,
+        {
+          headers: this.forwardHeaders(authHeader),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'API service');
+    }
   }
 
   async forwardPutRequest(
@@ -38,24 +47,32 @@ export class ApiProxyService {
     body: unknown,
     authHeader?: string
   ) {
-    const response = await axios.put(
-      `${this.apiServiceUrl()}/${endpoint}`,
-      body,
-      {
-        headers: this.forwardHeaders(authHeader),
-      }
-    );
-    return response.data;
+    try {
+      const response = await axios.put(
+        `${this.apiServiceUrl()}/${endpoint}`,
+        body,
+        {
+          headers: this.forwardHeaders(authHeader),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'API service');
+    }
   }
 
   async forwardDeleteRequest(endpoint: string, authHeader?: string) {
-    const response = await axios.delete(
-      `${this.apiServiceUrl()}/${endpoint}`,
-      {
-        headers: this.forwardHeaders(authHeader),
-      }
-    );
-    return response.data;
+    try {
+      const response = await axios.delete(
+        `${this.apiServiceUrl()}/${endpoint}`,
+        {
+          headers: this.forwardHeaders(authHeader),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'API service');
+    }
   }
 
   private forwardHeaders(authHeader?: string) {

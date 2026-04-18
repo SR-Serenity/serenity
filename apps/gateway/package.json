@@ -62,7 +62,8 @@
         "defaultConfiguration": "development",
         "options": {
           "buildTarget": "gateway:build",
-          "runBuildTargetDependencies": false
+          "runBuildTargetDependencies": false,
+          "inspect": false
         },
         "configurations": {
           "development": {

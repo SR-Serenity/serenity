@@ -1,6 +1,5 @@
-//@ts-check
+// @ts-check
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
 
 /**
@@ -23,6 +22,19 @@ const nextConfig = {
   i18n: {
     locales: ['en', 'vi'],
     defaultLocale: 'en',
+  },
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
   },
 };
 

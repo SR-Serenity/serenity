@@ -2,11 +2,21 @@
 
 import { useState } from 'react'
 import type { OrgSummary } from '@serenity/api'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 
 interface OrgPickerProps {
   organizations: OrgSummary[]
   onSelect: (slug: string) => Promise<void>
   onBack: () => void
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
 }
 
 export function OrgPicker({ organizations, onSelect, onBack }: OrgPickerProps) {
@@ -19,42 +29,53 @@ export function OrgPicker({ organizations, onSelect, onBack }: OrgPickerProps) {
     try {
       await onSelect(slug)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to select organization')
+      setError(err instanceof Error ? err.message : 'Failed to select workspace')
       setLoading('')
     }
   }
 
   return (
-    <div className="flex flex-col gap-5 w-full max-w-sm p-8 bg-white border border-gray-200 rounded-xl">
-      <button onClick={onBack} className="text-blue-600 text-sm font-medium hover:underline text-left">
-        ← Back
+    <div className="space-y-8">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-sm text-brand-muted hover:text-brand transition-colors"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Back
       </button>
 
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900">Select a workspace</h2>
-        <p className="mt-1 text-sm text-gray-600">You have access to multiple workspaces</p>
+      <div className="space-y-1.5">
+        <h2 className="text-2xl font-bold text-brand tracking-tight">Choose a workspace</h2>
+        <p className="text-sm text-brand-muted">
+          You have access to {organizations.length} workspace{organizations.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="space-y-2">
         {organizations.map((org) => (
           <button
             key={org.id}
             onClick={() => handleSelect(org.slug)}
             disabled={loading !== ''}
-            className="flex items-center justify-between p-4 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-left"
+            className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-brand-border bg-white hover:border-brand hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all text-left"
           >
-            <div className="flex flex-col gap-1">
-              <div className="font-medium text-gray-900">{org.name}</div>
-              <div className="text-sm text-gray-600">{org.slug}</div>
-              <div className="text-xs text-gray-500 capitalize">{org.role}</div>
+            <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center text-white text-sm font-semibold shrink-0">
+              {getInitials(org.name)}
             </div>
-            {loading === org.slug && <div className="text-sm text-blue-600">Loading…</div>}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-brand text-sm truncate">{org.name}</p>
+              <p className="text-xs text-brand-muted truncate">{org.slug}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="secondary" className="text-xs capitalize">{org.role}</Badge>
+              {loading === org.slug && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
+            </div>
           </button>
         ))}
       </div>
 
       {error && (
-        <p className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-md px-3 py-2">
           {error}
         </p>
       )}

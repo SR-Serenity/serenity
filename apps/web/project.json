@@ -3,6 +3,14 @@
   "projectType": "application",
   "sourceRoot": "apps/web/src",
   "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^default"],
+      "options": {
+        "cwd": "apps/web",
+        "command": "pnpm exec eslint ."
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "inputs": ["default", "^production"],

@@ -2,9 +2,11 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
+import { GatewayExceptionFilter } from './app/common/errors/gateway-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new GatewayExceptionFilter());
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? '*',
   });

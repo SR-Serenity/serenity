@@ -28,13 +28,28 @@ type AuthContextValue = AuthState & {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+type JwtUserPayload = {
+  user_id?: string
+  sub?: string
+  email?: string
+  displayName?: string
+}
+
 function decodeJwt(token: string): User | null {
   try {
-    const payload = jwtDecode<any>(token)
+    const payload = jwtDecode<JwtUserPayload>(token)
+    const id = payload.user_id ?? payload.sub
+    const email = payload.email
+    const displayName = payload.displayName
+
+    if (!id || !email || !displayName) {
+      return null
+    }
+
     return {
-      id: payload.user_id || payload.sub,
-      email: payload.email,
-      displayName: payload.displayName,
+      id,
+      email,
+      displayName,
     }
   } catch {
     return null
@@ -105,7 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const user = decodeJwt(response.accessToken)
-    if (!user) throw new Error('Invalid token')
+    if (!user) {
+      throw new Error('Invalid token')
+    }
 
     if (response.organization) {
       persistAuth(response.accessToken, response.organization)
@@ -143,7 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const user = decodeJwt(response.accessToken)
-    if (!user) throw new Error('Invalid token')
+    if (!user) {
+      throw new Error('Invalid token')
+    }
 
     persistAuth(response.accessToken, response.organization)
     setState({
@@ -157,7 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const selectOrg = async (orgSlug: string): Promise<void> => {
-    if (!state.token) throw new Error('Not authenticated')
+    if (!state.token) {
+      throw new Error('Not authenticated')
+    }
 
     const response = await authApi.switchOrg(state.token, orgSlug)
 
@@ -166,7 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const user = decodeJwt(response.accessToken)
-    if (!user) throw new Error('Invalid token')
+    if (!user) {
+      throw new Error('Invalid token')
+    }
 
     persistAuth(response.accessToken, response.organization)
     setState({
@@ -201,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
   return ctx
 }

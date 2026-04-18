@@ -50,18 +50,32 @@ brew services start postgresql@16
 # Terminal 2: Run migrations
 pnpm nx run prisma:migrate
 
-# Terminal 3: Start Auth Service
-pnpm nx serve auth-service
+# Terminal 3: Start core backend services together (parallel)
+pnpm nx run-many -t serve --projects=auth-service,api-service,gateway --parallel=3
 
-# Terminal 4: Start API Service
-pnpm nx serve api-service
+# Terminal 4: Start optional supporting services together (parallel)
+pnpm nx run-many -t serve --projects=notification-service,analytics-service,realtime-service --parallel=3
 
-# Terminal 5: Start Gateway
-pnpm nx serve gateway
-
-# Terminal 6: Start Web
+# Terminal 5: Start web frontend
 pnpm nx dev web
 ```
+
+### Run Multiple Services With Nx
+
+Nx supports running multiple services at once via `run-many`.
+
+```bash
+# Run selected services in parallel
+pnpm nx run-many -t serve --projects=gateway,auth-service,api-service --parallel=3
+
+# Run all projects that have a serve target
+pnpm nx run-many -t serve --all --parallel=6
+
+# See which projects support serve
+pnpm nx show projects --withTarget serve
+```
+
+Tip: press `Ctrl+C` in the terminal to stop all services started by that `run-many` command.
 
 ## Common Commands
 

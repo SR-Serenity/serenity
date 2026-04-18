@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoginForm } from '@/components/auth/login-form'
 import { OrgPicker } from '@/components/auth/org-picker'
-import { Spinner } from '@serenity/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { LoginResult, OrgSummary } from '@serenity/api'
+import { Loader2 } from 'lucide-react'
 
 type Phase = 'credentials' | 'org_select'
 
@@ -25,7 +25,7 @@ export default function LoginPage() {
   if (auth.initializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     )
   }
@@ -44,17 +44,13 @@ export default function LoginPage() {
     router.push(`/${slug}`)
   }
 
-  return (
-    <div className="w-full max-w-[420px]">
-      {phase === 'credentials' ? (
-        <LoginForm onSuccess={handleLoginSuccess} />
-      ) : (
-        <OrgPicker
-          organizations={pendingOrgs}
-          onSelect={handleSelectOrg}
-          onBack={() => setPhase('credentials')}
-        />
-      )}
-    </div>
+  return phase === 'credentials' ? (
+    <LoginForm onSuccess={handleLoginSuccess} />
+  ) : (
+    <OrgPicker
+      organizations={pendingOrgs}
+      onSelect={handleSelectOrg}
+      onBack={() => setPhase('credentials')}
+    />
   )
 }

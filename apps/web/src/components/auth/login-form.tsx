@@ -1,9 +1,11 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
-import { Button, Input } from '@serenity/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { LoginResult } from '@serenity/api'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface LoginFormProps {
   onSuccess: (result: LoginResult) => void
@@ -20,7 +22,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
       const result = await auth.login(email, password)
       onSuccess(result)
@@ -32,46 +33,61 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-sm p-8 bg-white border border-gray-200 rounded-xl">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Sign in</h1>
-        <p className="mt-1 text-sm text-gray-600">Welcome back to your workspace</p>
+    <div className="space-y-8">
+      <div className="space-y-1.5">
+        <h1 className="text-2xl font-bold text-brand tracking-tight">Welcome back</h1>
+        <p className="text-sm text-brand-muted">Sign in to your workspace to continue</p>
       </div>
 
-      <Input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        disabled={loading}
-        required
-      />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            required
+            autoFocus
+          />
+        </div>
 
-      <Input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        disabled={loading}
-        required
-      />
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
+        </div>
 
-      {error && (
-        <p className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
-        </p>
-      )}
+        {error && (
+          <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-md px-3 py-2">
+            {error}
+          </p>
+        )}
 
-      <Button type="submit" loading={loading}>
-        Sign in
-      </Button>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+        >
+          {loading ? 'Signing in…' : 'Sign in'}
+        </Button>
+      </form>
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm text-brand-muted">
         Don&apos;t have an account?{' '}
-        <a href="/register" className="text-blue-600 hover:underline font-medium">
+        <a href="/register" className="text-brand font-medium hover:underline underline-offset-4">
           Create one
         </a>
       </p>
-    </form>
+    </div>
   )
 }
