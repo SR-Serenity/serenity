@@ -16,3 +16,12 @@ export function slugify(name: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
 }
+
+export function formatDateLong(date: Date = new Date(), locale = 'en-US'): string {
+  return date.toLocaleDateString(locale, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}

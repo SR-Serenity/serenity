@@ -1,34 +1,75 @@
+'use client'
+
 import type { ReactNode } from 'react'
+import { Resizable } from 'react-resizable'
+import type { ResizeCallbackData } from 'react-resizable'
 
 interface SidebarLayoutProps {
   sidebar: ReactNode
-  header?: ReactNode
   children: ReactNode
+  sidebarWidth: number
+  sidebarCollapsed: boolean
+  onSidebarWidthChange: (width: number) => void
 }
 
-/**
- * Reusable sidebar layout for workspace pages
- * Sidebar: navigation, workspace info, user
- * Header: page title/breadcrumbs
- * Main: content area
- */
+const MIN_SIDEBAR_WIDTH = 240
+const MAX_SIDEBAR_WIDTH = 420
+const COLLAPSED_WIDTH = 88
+
 export function SidebarLayout({
   sidebar,
-  header,
   children,
+  sidebarWidth,
+  sidebarCollapsed,
+  onSidebarWidthChange,
 }: SidebarLayoutProps) {
-  return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 flex flex-col bg-brand text-white">
-        {sidebar}
-      </aside>
+  const clampedWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, sidebarWidth))
 
-      {/* Main content area */}
-      <main className="flex-1 flex flex-col bg-brand-surface">
-        {header && <header className="border-b border-brand-border bg-white">{header}</header>}
-        <div className="flex-1">{children}</div>
-      </main>
+  function handleResize(_event: React.SyntheticEvent, data: ResizeCallbackData) {
+    onSidebarWidthChange(data.size.width)
+  }
+
+  return (
+    <div className="h-screen overflow-hidden bg-brand-surface p-3 md:p-4">
+      <div className="mx-auto flex h-full w-full max-w-[1600px] overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
+        {/* Sidebar */}
+        {sidebarCollapsed ? (
+          <aside
+            style={{ width: COLLAPSED_WIDTH }}
+            className="shrink-0 flex flex-col h-full bg-brand-surface/70 border-r border-brand-border overflow-hidden transition-[width] duration-200"
+          >
+            {sidebar}
+          </aside>
+        ) : (
+          <Resizable
+            width={clampedWidth}
+            height={0}
+            axis="x"
+            minConstraints={[MIN_SIDEBAR_WIDTH, 0]}
+            maxConstraints={[MAX_SIDEBAR_WIDTH, 0]}
+            onResize={handleResize}
+            handle={
+              <span
+                className="absolute top-0 -right-1 h-full w-2 cursor-col-resize hover:bg-brand/30 active:bg-brand/50 transition-colors duration-150"
+                role="separator"
+                aria-label="Resize sidebar"
+              />
+            }
+          >
+            <aside
+              style={{ width: clampedWidth }}
+              className="relative shrink-0 flex flex-col h-full bg-brand-surface/70 border-r border-brand-border overflow-hidden"
+            >
+              {sidebar}
+            </aside>
+          </Resizable>
+        )}
+
+        {/* Main — each page renders its own header + content */}
+        <main className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto bg-white">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
