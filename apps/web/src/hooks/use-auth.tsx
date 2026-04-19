@@ -35,14 +35,30 @@ type JwtUserPayload = {
   displayName?: string
 }
 
-function decodeJwt(token: string): User | null {
+function deriveDisplayName(payload: JwtUserPayload, fallback?: string): string {
+  if (payload.displayName && payload.displayName.trim().length > 0) {
+    return payload.displayName
+  }
+
+  if (fallback && fallback.trim().length > 0) {
+    return fallback
+  }
+
+  if (payload.email && payload.email.includes('@')) {
+    return payload.email.split('@')[0]
+  }
+
+  return 'Member'
+}
+
+function decodeJwt(token: string, fallbackDisplayName?: string): User | null {
   try {
     const payload = jwtDecode<JwtUserPayload>(token)
     const id = payload.user_id ?? payload.sub
     const email = payload.email
-    const displayName = payload.displayName
+    const displayName = deriveDisplayName(payload, fallbackDisplayName)
 
-    if (!id || !email || !displayName) {
+    if (!id || !email) {
       return null
     }
 
@@ -119,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('No access token in response')
     }
 
-    const user = decodeJwt(response.accessToken)
+    const user = decodeJwt(response.accessToken, response.user?.displayName)
     if (!user) {
       throw new Error('Invalid token')
     }
@@ -159,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('No organization in response')
     }
 
-    const user = decodeJwt(response.accessToken)
+    const user = decodeJwt(response.accessToken, response.user?.displayName)
     if (!user) {
       throw new Error('Invalid token')
     }
@@ -186,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Invalid switch-org response')
     }
 
-    const user = decodeJwt(response.accessToken)
+    const user = decodeJwt(response.accessToken, state.user?.displayName)
     if (!user) {
       throw new Error('Invalid token')
     }
