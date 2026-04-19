@@ -48,8 +48,6 @@ const navGroups = [
   },
 ]
 
-const allNavItems = navGroups.flatMap((g) => g.items)
-
 export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const pathname = usePathname()
@@ -100,6 +98,8 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   const sidebar = (
     <WorkspaceSidebar
+      orgId={auth.currentOrg.id}
+      memberId={auth.currentOrg.memberId}
       orgName={auth.currentOrg.name}
       orgSlug={auth.currentOrg.slug}
       userDisplayName={displayName}

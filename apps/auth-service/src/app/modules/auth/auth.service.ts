@@ -77,7 +77,7 @@ export class AuthService {
         },
       });
 
-      await tx.workspaceMember.create({
+      const member = await tx.workspaceMember.create({
         data: {
           userId: user.id,
           orgId: organization.id,
@@ -85,7 +85,7 @@ export class AuthService {
         },
       });
 
-      return { user, organization };
+      return { user, organization, member };
     });
 
     return this.authResponse(
@@ -101,6 +101,7 @@ export class AuthService {
         },
         organization: {
           id: created.organization.id,
+          memberId: created.member.id,
           name: created.organization.name,
           slug: created.organization.slug,
         },
@@ -157,11 +158,13 @@ export class AuthService {
         },
         organization: {
           id: membership.organization.id,
+          memberId: membership.id,
           name: membership.organization.name,
           slug: membership.organization.slug,
         },
         organizations: user.memberships.map((entry) => ({
           id: entry.organization.id,
+          memberId: entry.id,
           name: entry.organization.name,
           slug: entry.organization.slug,
           role: entry.role,
@@ -224,6 +227,7 @@ export class AuthService {
       {
         organization: {
           id: organization.id,
+          memberId: member.id,
           name: organization.name,
           slug: organization.slug,
         },
@@ -259,6 +263,7 @@ export class AuthService {
       {
         organization: {
           id: membership.organization.id,
+          memberId: membership.id,
           name: membership.organization.name,
           slug: membership.organization.slug,
         },

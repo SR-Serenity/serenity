@@ -27,6 +27,7 @@ export class UsersService {
         createdAt: true,
         memberships: {
           select: {
+            id: true,
             role: true,
             organization: {
               select: {
@@ -51,6 +52,7 @@ export class UsersService {
       createdAt: user.createdAt,
       organizations: user.memberships.map((m) => ({
         id: m.organization.id,
+        memberId: m.id,
         name: m.organization.name,
         slug: m.organization.slug,
         role: m.role,

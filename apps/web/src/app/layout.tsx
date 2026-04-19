@@ -1,5 +1,7 @@
 import './global.css'
 import { AuthProvider } from '@/hooks/use-auth'
+import { StoreProvider } from '@/components/providers/store-provider'
+import { ChatProvider } from '@/components/providers/chat-provider'
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +16,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <StoreProvider>
+          <AuthProvider>
+            <ChatProvider>
+              {children}
+            </ChatProvider>
+          </AuthProvider>
+        </StoreProvider>
       </body>
     </html>
   )

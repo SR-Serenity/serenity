@@ -5,6 +5,8 @@ export async function request<T>(
   init?: RequestInit & { token?: string }
 ): Promise<T> {
   const { token, ...rest } = init ?? {}
+  const baseUrl = API_BASE.replace(/\/$/, '')
+  const normalizedPath = path.replace(/^\//, '')
 
   const headers: Record<string, string> = {
     'content-type': 'application/json',
@@ -15,7 +17,7 @@ export async function request<T>(
     headers['authorization'] = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE}/api/${path}`, {
+  const response = await fetch(`${baseUrl}/api/${normalizedPath}`, {
     ...rest,
     headers,
   })

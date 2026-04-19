@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Building2,
@@ -8,12 +8,17 @@ import {
   ChevronUp,
   ChevronsLeft,
   ChevronsRight,
+  Hash,
   LogOut,
+  MessageCircle,
   Settings,
   UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { chatApi } from '@/lib/api/chat'
+import { useAppDispatch, useAppSelector } from '@/lib/store'
+import { setChannels, setConversations } from '@/lib/store/chat-slice'
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>
@@ -28,6 +33,8 @@ interface NavGroup {
 }
 
 interface WorkspaceSidebarProps {
+  orgId?: string
+  memberId?: string
   orgName: string
   orgSlug: string
   userDisplayName: string
@@ -52,6 +59,8 @@ function getInitials(name: string) {
 }
 
 export function WorkspaceSidebar({
+  orgId,
+  memberId,
   orgName,
   orgSlug,
   userDisplayName,
@@ -67,6 +76,21 @@ export function WorkspaceSidebar({
   onToggleCollapse,
 }: WorkspaceSidebarProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const dispatch = useAppDispatch()
+  const { channels, conversations } = useAppSelector((state) => state.chat)
+
+  useEffect(() => {
+    if (orgId) {
+      chatApi.getChannels(orgId).then((data: any) => {
+        dispatch(setChannels(data as any[]))
+      })
+    }
+    if (memberId) {
+      chatApi.getConversations(memberId).then((data: any) => {
+        dispatch(setConversations(data as any[]))
+      })
+    }
+  }, [orgId, memberId, dispatch])
 
   function toggleGroup(label: string) {
     setCollapsedGroups((prev) => {
@@ -79,6 +103,30 @@ export function WorkspaceSidebar({
   function resolveHref(href: string) {
     return `${basePath}/${href}`
   }
+
+  const chatGroups: NavGroup[] = [
+    {
+      label: 'Channels',
+      items: channels.map((c) => ({
+        icon: Hash,
+        label: c.name,
+        href: `chat/channel/${c.id}`,
+      })),
+    },
+    {
+      label: 'Direct Messages',
+      items: conversations.map((c) => {
+        const otherMember = c.members.find(m => m.member.user.displayName !== userDisplayName);
+        return {
+          icon: MessageCircle,
+          label: otherMember?.member.user.displayName || 'Me',
+          href: `chat/conversation/${c.id}`,
+        };
+      }),
+    },
+  ]
+
+  const allGroups = [...navGroups, ...chatGroups]
 
   return (
     <div className="flex h-full flex-col">
@@ -191,7 +239,7 @@ export function WorkspaceSidebar({
         {sidebarCollapsed ? (
           /* Collapsed: flat icon list */
           <div className="space-y-0.5">
-            {navGroups.flatMap((g) => g.items).map((item) => {
+            {allGroups.flatMap((g) => g.items).map((item) => {
               const target = resolveHref(item.href)
               const isActive =
                 currentPath === target ||
@@ -217,7 +265,7 @@ export function WorkspaceSidebar({
         ) : (
           /* Expanded: collapsible groups */
           <div className="space-y-4">
-            {navGroups.map((group) => {
+            {allGroups.map((group) => {
               const isGroupCollapsed = collapsedGroups.has(group.label)
               return (
                 <div key={group.label}>
@@ -264,7 +312,7 @@ export function WorkspaceSidebar({
                               )}
                             >
                               <item.icon className="w-4 h-4 shrink-0" />
-                              <span className="flex-1 font-medium">{item.label}</span>
+                              <span className="flex-1 font-medium text-xs">{item.label}</span>
                               {item.badge && item.badge > 0 && (
                                 <span
                                   className={cn(

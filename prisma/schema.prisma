@@ -20,6 +20,8 @@ model Organization {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   memberships WorkspaceMember[]
+  channels      Channel[]
+  conversations Conversation[]
 }
 
 model User {
@@ -43,7 +45,108 @@ model WorkspaceMember {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
+  // Chat relations
+  messages        Message[]
+  reactions       Reaction[]
+  channelMembers  ChannelMember[]
+  conversationMembers ConversationMember[]
+
   @@unique([userId, orgId])
   @@index([orgId])
   @@index([userId])
+}
+
+model Channel {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  isPrivate      Boolean  @default(false)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ChannelMember[]
+  messages     Message[]
+
+  @@index([organizationId])
+}
+
+model ChannelMember {
+  id        String   @id @default(cuid())
+  channelId String
+  memberId  String
+  createdAt DateTime @default(now())
+
+  channel Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  member  WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, memberId])
+  @@index([memberId])
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  isGroup        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ConversationMember[]
+  messages     Message[]
+
+  @@index([organizationId])
+}
+
+model ConversationMember {
+  id             String   @id @default(cuid())
+  conversationId String
+  memberId       String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  member       WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, memberId])
+  @@index([memberId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  content        String   @db.Text
+  senderId       String
+  channelId      String?
+  conversationId String?
+  parentMessageId String?
+  isEdited       Boolean  @default(false)
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sender        WorkspaceMember @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  channel       Channel?         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  conversation  Conversation?    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  parentMessage Message?         @relation("Thread", fields: [parentMessageId], references: [id], onDelete: SetNull)
+  replies       Message[]       @relation("Thread")
+  reactions     Reaction[]
+
+  @@index([channelId])
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([parentMessageId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  messageId String
+  memberId  String
+  createdAt DateTime @default(now())
+
+  message Message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  member  WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, memberId, emoji])
+  @@index([memberId])
 }
