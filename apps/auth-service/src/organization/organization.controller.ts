@@ -1,15 +1,19 @@
 import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthService } from '../auth/auth.service';
-
-type CreateOrgBody = {
-  name: string;
-  slug: string;
-};
-
-type SwitchOrgBody = {
-  orgSlug: string;
-};
+import { AuthResponseDto } from '../auth/dto/auth.dto';
+import {
+  CreateOrganizationBodyDto,
+  SwitchOrganizationBodyDto,
+  UserOrganizationsResponseDto,
+} from './dto/organization.dto';
 
 @ApiTags('organizations')
 @ApiBearerAuth()
@@ -19,21 +23,9 @@ export class OrganizationController {
 
   @Get('organizations')
   @ApiOperation({ summary: 'List user organizations' })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'List of organizations',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          slug: { type: 'string' },
-          createdAt: { type: 'string' },
-        },
-      },
-    },
+    type: UserOrganizationsResponseDto,
   })
   organizations(@Headers('authorization') authorization?: string) {
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
@@ -42,32 +34,14 @@ export class OrganizationController {
 
   @Post('organizations')
   @ApiOperation({ summary: 'Create a new organization' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', example: 'My New Org' },
-        slug: { type: 'string', example: 'my-new-org' },
-      },
-      required: ['name', 'slug'],
-    },
-  })
-  @ApiResponse({
-    status: 201,
+  @ApiBody({ type: CreateOrganizationBodyDto })
+  @ApiCreatedResponse({
     description: 'Organization created successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        slug: { type: 'string' },
-        createdAt: { type: 'string' },
-      },
-    },
+    type: AuthResponseDto,
   })
   createOrganization(
     @Headers('authorization') authorization: string | undefined,
-    @Body() body: CreateOrgBody
+    @Body() body: CreateOrganizationBodyDto
   ) {
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
     return this.authService.createOrganization(userId, body);
@@ -75,30 +49,14 @@ export class OrganizationController {
 
   @Post('switch-org')
   @ApiOperation({ summary: 'Switch to a different organization' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        orgSlug: { type: 'string', example: 'my-org' },
-      },
-      required: ['orgSlug'],
-    },
-  })
-  @ApiResponse({
-    status: 200,
+  @ApiBody({ type: SwitchOrganizationBodyDto })
+  @ApiOkResponse({
     description: 'Organization switched successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        slug: { type: 'string' },
-      },
-    },
+    type: AuthResponseDto,
   })
   switchOrganization(
     @Headers('authorization') authorization: string | undefined,
-    @Body() body: SwitchOrgBody
+    @Body() body: SwitchOrganizationBodyDto
   ) {
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
     return this.authService.switchOrganization(userId, body.orgSlug);

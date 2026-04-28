@@ -1,6 +1,7 @@
 import { Controller, Get, Headers, Param } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiProxyService } from './api-proxy.service';
+import { UserProfileResponseDto, UserResponseDto } from './dto/api-response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -10,39 +11,14 @@ export class UsersController {
 
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'User profile retrieved',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        email: { type: 'string' },
-        displayName: { type: 'string' },
-        createdAt: { type: 'string' },
-        organizations: { type: 'array' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'User profile retrieved', type: UserProfileResponseDto })
   async getProfile(@Headers('authorization') authorization: string) {
     return this.apiProxy.forwardGetRequest('users/profile', authorization);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User found',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        email: { type: 'string' },
-        displayName: { type: 'string' },
-        createdAt: { type: 'string' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'User found', type: UserResponseDto })
   async getUser(
     @Param('id') id: string,
     @Headers('authorization') authorization: string

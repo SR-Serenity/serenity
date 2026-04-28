@@ -1,6 +1,13 @@
-import { Controller, Get, Headers, NotFoundException } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Headers, NotFoundException, Param } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { UserProfileResponseDto, UserResponseDto } from './dto/user-response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -10,30 +17,9 @@ export class UsersController {
 
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'User profile retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        email: { type: 'string' },
-        displayName: { type: 'string' },
-        createdAt: { type: 'string' },
-        organizations: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              slug: { type: 'string' },
-              role: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
+    type: UserProfileResponseDto,
   })
   async getProfile(@Headers('authorization') authorization: string) {
     return this.usersService.getUserProfile(authorization);
@@ -41,21 +27,9 @@ export class UsersController {
 
   @Get('/:id')
   @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User found',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        email: { type: 'string' },
-        displayName: { type: 'string' },
-        createdAt: { type: 'string' },
-      },
-    },
-  })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async getUser(id: string) {
+  @ApiOkResponse({ description: 'User found', type: UserResponseDto })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  async getUser(@Param('id') id: string) {
     const user = await this.usersService.getUserById(id);
     if (!user) {
       throw new NotFoundException('User not found');
