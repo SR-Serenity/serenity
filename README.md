@@ -144,6 +144,25 @@ apps/
 └── web/                   # Next.js Frontend (port 2997)
 ```
 
+### NestJS service module layout
+
+Each NestJS service now uses:
+
+```
+src/
+├── main.ts
+├── app.module.ts
+└── <module>/
+    ├── <module>.module.ts
+    ├── ...controller.ts
+    ├── ...service.ts
+    ├── config/
+    │   ├── enums/
+    │   └── types/
+    ├── dto/
+    └── strategies/
+```
+
 ## Environment Variables
 
 ```env
