@@ -1,6 +1,10 @@
 import { Controller, Get, Headers, Param } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiProxyService } from './api-proxy.service';
+import {
+  OrganizationMembersResponseDto,
+  OrganizationResponseDto,
+} from './dto/api-response.dto';
 
 @ApiTags('organizations')
 @ApiBearerAuth()
@@ -10,20 +14,7 @@ export class OrganizationsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get organization by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Organization found',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        slug: { type: 'string' },
-        createdAt: { type: 'string' },
-        memberCount: { type: 'number' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Organization found', type: OrganizationResponseDto })
   async getOrganization(
     @Param('id') id: string,
     @Headers('authorization') authorization: string
@@ -33,20 +24,7 @@ export class OrganizationsController {
 
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get organization by slug' })
-  @ApiResponse({
-    status: 200,
-    description: 'Organization found',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        slug: { type: 'string' },
-        createdAt: { type: 'string' },
-        memberCount: { type: 'number' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Organization found', type: OrganizationResponseDto })
   async getOrganizationBySlug(
     @Param('slug') slug: string,
     @Headers('authorization') authorization: string
@@ -59,15 +37,9 @@ export class OrganizationsController {
 
   @Get(':id/members')
   @ApiOperation({ summary: 'Get organization members' })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'Members list retrieved',
-    schema: {
-      type: 'object',
-      properties: {
-        members: { type: 'array' },
-      },
-    },
+    type: OrganizationMembersResponseDto,
   })
   async getMembers(
     @Param('id') id: string,
