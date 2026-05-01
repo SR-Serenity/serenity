@@ -16,6 +16,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@org/source"]
+    "customConditions": ["@org/source"],
+    "paths": {
+      "@org/auth": ["./libs/shared/auth/src/index.ts"],
+      "@org/auth/*": ["./libs/shared/auth/src/*"]
+    }
   }
 }
