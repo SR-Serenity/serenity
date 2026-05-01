@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -15,6 +15,12 @@ import {
   UserOrganizationsResponseDto,
 } from './dto/organization.dto';
 
+type RequestWithAuth = {
+  headers: {
+    authorization?: string;
+  };
+};
+
 @ApiTags('organizations')
 @ApiBearerAuth()
 @Controller('auth')
@@ -27,7 +33,8 @@ export class OrganizationController {
     description: 'List of organizations',
     type: UserOrganizationsResponseDto,
   })
-  organizations(@Headers('authorization') authorization?: string) {
+  organizations(@Req() req: RequestWithAuth) {
+    const authorization = req.headers.authorization as string | undefined;
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
     return this.authService.listOrganizations(userId);
   }
@@ -40,9 +47,10 @@ export class OrganizationController {
     type: AuthResponseDto,
   })
   createOrganization(
-    @Headers('authorization') authorization: string | undefined,
+    @Req() req: RequestWithAuth,
     @Body() body: CreateOrganizationBodyDto
   ) {
+    const authorization = req.headers.authorization as string | undefined;
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
     return this.authService.createOrganization(userId, body);
   }
@@ -55,9 +63,10 @@ export class OrganizationController {
     type: AuthResponseDto,
   })
   switchOrganization(
-    @Headers('authorization') authorization: string | undefined,
+    @Req() req: RequestWithAuth,
     @Body() body: SwitchOrganizationBodyDto
   ) {
+    const authorization = req.headers.authorization as string | undefined;
     const userId = this.authService.getUserIdFromAuthHeader(authorization);
     return this.authService.switchOrganization(userId, body.orgSlug);
   }
