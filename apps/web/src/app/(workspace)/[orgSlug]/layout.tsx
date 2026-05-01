@@ -48,8 +48,6 @@ const navGroups = [
   },
 ]
 
-const allNavItems = navGroups.flatMap((g) => g.items)
-
 export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const pathname = usePathname()
