@@ -17,16 +17,24 @@ export class AuthProxyService {
   async forwardAuthRequest(
     endpoint: string,
     body: unknown,
-    authHeader?: string
+    authHeader?: string,
+    method: 'POST' | 'PATCH' | 'DELETE' = 'POST'
   ) {
     try {
-      const response = await axios.post(
-        `${this.authServiceUrl()}/auth/${endpoint}`,
-        body,
-        {
-          headers: this.forwardHeaders(authHeader),
-        }
-      );
+      const url = `${this.authServiceUrl()}/auth/${endpoint}`;
+      const headers = this.forwardHeaders(authHeader);
+
+      let response;
+      switch (method) {
+        case 'PATCH':
+          response = await axios.patch(url, body, { headers });
+          break;
+        case 'DELETE':
+          response = await axios.delete(url, { headers });
+          break;
+        default:
+          response = await axios.post(url, body, { headers });
+      }
       return response.data;
     } catch (error) {
       throw mapProxyError(error, 'Auth service');

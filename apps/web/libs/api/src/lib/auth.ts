@@ -1,5 +1,5 @@
 import { request } from './client'
-import type { AuthResponse } from '../types'
+import type { AuthResponse, AcceptInvitationResponse } from '../types'
 
 export const authApi = {
   login: async (email: string, password: string, orgSlug?: string): Promise<AuthResponse> => {
@@ -26,11 +26,30 @@ export const authApi = {
     })
   },
 
+  registerWithInvite: async (input: {
+    email: string
+    password: string
+    displayName: string
+    inviteToken: string
+  }): Promise<AcceptInvitationResponse> => {
+    return request('auth/register-with-invite', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  },
+
   switchOrg: async (token: string, orgSlug: string): Promise<AuthResponse> => {
     return request('auth/switch-org', {
       token,
       method: 'POST',
       body: JSON.stringify({ orgSlug }),
+    })
+  },
+
+  acceptInvitation: async (token: string): Promise<AcceptInvitationResponse> => {
+    return request('auth/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     })
   },
 }

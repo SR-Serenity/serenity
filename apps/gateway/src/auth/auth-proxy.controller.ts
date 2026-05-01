@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthProxyService } from './auth-proxy.service';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthProxyController {
   constructor(private readonly authProxyService: AuthProxyService) {}
@@ -10,37 +12,18 @@ export class AuthProxyController {
     return this.authProxyService.forwardAuthRequest('register', body);
   }
 
+  @Post('register-with-invite')
+  registerWithInvite(@Body() body: unknown) {
+    return this.authProxyService.forwardAuthRequest('register-with-invite', body);
+  }
+
   @Post('login')
   login(@Body() body: unknown) {
     return this.authProxyService.forwardAuthRequest('login', body);
   }
 
-  @Get('organizations')
-  organizations(@Headers('authorization') authorization: string | undefined) {
-    return this.authProxyService.forwardAuthGet('organizations', authorization);
-  }
-
-  @Post('organizations')
-  createOrganization(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: unknown
-  ) {
-    return this.authProxyService.forwardAuthRequest(
-      'organizations',
-      body,
-      authorization
-    );
-  }
-
-  @Post('switch-org')
-  switchOrg(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: unknown
-  ) {
-    return this.authProxyService.forwardAuthRequest(
-      'switch-org',
-      body,
-      authorization
-    );
+  @Post('invitations/accept')
+  acceptInvitation(@Body() body: unknown) {
+    return this.authProxyService.forwardAuthRequest('invitations/accept', body);
   }
 }

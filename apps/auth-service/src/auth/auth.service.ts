@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -108,6 +109,35 @@ export class AuthService {
     );
   }
 
+  async registerWithoutOrg(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }) {
+    this.assertEmail(input.email);
+    this.assertPassword(input.password);
+    this.assertRequired(input.displayName, 'Display name');
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: input.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email is already in use');
+    }
+
+    const passwordHash = await hash(input.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        email: input.email.toLowerCase(),
+        displayName: input.displayName.trim(),
+        passwordHash,
+      },
+    });
+
+    return user;
+  }
+
   async login(input: LoginInput) {
     this.assertEmail(input.email);
     this.assertRequired(input.password, 'Password');
@@ -159,6 +189,7 @@ export class AuthService {
           id: membership.organization.id,
           name: membership.organization.name,
           slug: membership.organization.slug,
+          role: membership.role,
         },
         organizations: user.memberships.map((entry) => ({
           id: entry.organization.id,
@@ -226,6 +257,7 @@ export class AuthService {
           id: organization.id,
           name: organization.name,
           slug: organization.slug,
+          role: member.role,
         },
       }
     );
@@ -261,6 +293,7 @@ export class AuthService {
           id: membership.organization.id,
           name: membership.organization.name,
           slug: membership.organization.slug,
+          role: membership.role,
         },
       }
     );
@@ -275,16 +308,46 @@ export class AuthService {
       throw new UnauthorizedException('Invalid authorization header');
     }
 
-    const payload = verify(token, this.jwtSecret());
-    if (!payload || typeof payload === 'string') {
-      throw new UnauthorizedException('Invalid token payload');
-    }
-
+    const payload = this.verifyToken(token);
     const userId = payload.user_id ?? payload.sub;
     if (typeof userId !== 'string' || userId.length === 0) {
       throw new UnauthorizedException('Token missing user_id');
     }
     return userId;
+  }
+
+  getOrgContextFromHeader(authHeader: string) {
+    const payload = this.verifyToken(authHeader.split(' ')[1]);
+    const orgId = payload.org_id;
+    const role = payload.role as WorkspaceRole;
+    if (!orgId) {
+      throw new UnauthorizedException('Token missing org_id');
+    }
+    return { orgId, role };
+  }
+
+  assertOwnerOnly(role: WorkspaceRole, action: string) {
+    if (role !== WorkspaceRole.OWNER) {
+      throw new ForbiddenException(
+        `Only owners can ${action}`
+      );
+    }
+  }
+
+  assertOwnerOrAdmin(role: WorkspaceRole, action: string) {
+    if (role !== WorkspaceRole.OWNER && role !== WorkspaceRole.ADMIN) {
+      throw new ForbiddenException(
+        `Only owners or admins can ${action}`
+      );
+    }
+  }
+
+  private verifyToken(token: string) {
+    const payload = verify(token, this.jwtSecret());
+    if (!payload || typeof payload === 'string') {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+    return payload;
   }
 
   private authResponse(

@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register']
+const PUBLIC_PATHS = ['/login', '/register', '/invite/']
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    if (!payload.exp) {
+      return false
+    }
+    return Date.now() >= payload.exp * 1000
+  } catch {
+    return true
+  }
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get('auth_token')?.value
-  const isAuthenticated = Boolean(token)
+  const isAuthenticated = token && !isTokenExpired(token)
 
   // Unauthenticated user hitting protected route → redirect to /login
   if (!isAuthenticated && !PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {

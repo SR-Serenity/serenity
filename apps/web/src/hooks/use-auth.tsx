@@ -33,6 +33,19 @@ type JwtUserPayload = {
   sub?: string
   email?: string
   displayName?: string
+  exp?: number
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = jwtDecode<JwtUserPayload>(token)
+    if (!payload.exp) {
+      return false
+    }
+    return Date.now() >= payload.exp * 1000
+  } catch {
+    return true
+  }
 }
 
 function deriveDisplayName(payload: JwtUserPayload, fallback?: string): string {
@@ -97,8 +110,34 @@ function readPersistedState(): Omit<AuthState, 'initializing'> {
     return { token: null, user: null, currentOrg: null }
   }
 
+  const inviteToken = localStorage.getItem('invite_access_token')
+  if (inviteToken) {
+    localStorage.removeItem('invite_access_token')
+    const inviteOrg = localStorage.getItem('invite_org')
+    localStorage.removeItem('invite_org')
+    if (inviteOrg) {
+      try {
+        const org = JSON.parse(inviteOrg)
+        persistAuth(inviteToken, org)
+        return {
+          token: inviteToken,
+          user: decodeJwt(inviteToken) || null,
+          currentOrg: org,
+        }
+      } catch {
+        return { token: null, user: null, currentOrg: null }
+      }
+    }
+  }
+
   try {
     const token = localStorage.getItem('auth_token')
+
+    if (token && isTokenExpired(token)) {
+      clearAuth()
+      return { token: null, user: null, currentOrg: null }
+    }
+
     const orgJson = localStorage.getItem('auth_org')
     const currentOrg = orgJson ? JSON.parse(orgJson) : null
 

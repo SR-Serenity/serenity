@@ -1,7 +1,13 @@
-import { Controller, Get, Headers, Param } from '@nestjs/common';
+import { Controller, Get, Param, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiProxyService } from './api-proxy.service';
 import { UserProfileResponseDto, UserResponseDto } from './dto/api-response.dto';
+
+type RequestWithAuth = {
+  headers: {
+    authorization?: string;
+  };
+};
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -12,7 +18,8 @@ export class UsersController {
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiOkResponse({ description: 'User profile retrieved', type: UserProfileResponseDto })
-  async getProfile(@Headers('authorization') authorization: string) {
+  async getProfile(@Req() req: RequestWithAuth) {
+    const authorization = req.headers.authorization as string;
     return this.apiProxy.forwardGetRequest('users/profile', authorization);
   }
 
@@ -21,8 +28,9 @@ export class UsersController {
   @ApiOkResponse({ description: 'User found', type: UserResponseDto })
   async getUser(
     @Param('id') id: string,
-    @Headers('authorization') authorization: string
+    @Req() req: RequestWithAuth
   ) {
+    const authorization = req.headers.authorization as string;
     return this.apiProxy.forwardGetRequest(`users/${id}`, authorization);
   }
 }

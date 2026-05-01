@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -8,6 +8,9 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UserProfileResponseDto, UserResponseDto } from './dto/user-response.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/auth.types';
+import type { AuthUser } from '../auth/auth.types';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -16,13 +19,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('profile')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiOkResponse({
     description: 'User profile retrieved successfully',
     type: UserProfileResponseDto,
   })
-  async getProfile(@Headers('authorization') authorization: string) {
-    return this.usersService.getUserProfile(authorization);
+  async getProfile(@CurrentUser() user: AuthUser) {
+    return this.usersService.getUserProfile(user.userId);
   }
 
   @Get('/:id')

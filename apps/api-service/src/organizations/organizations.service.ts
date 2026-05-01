@@ -1,24 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { verify } from 'jsonwebtoken';
+import { Injectable, UnauthorizedException, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-
-interface JwtPayload {
-  user_id: string;
-  sub: string;
-  email: string;
-  org_id: string;
-  role: string;
-  [key: string]: unknown;
-}
+import { WorkspaceRole } from '@prisma/client';
 
 @Injectable()
 export class OrganizationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOrganization(orgId: string, authHeader: string) {
-    const userId = this.extractUserIdFromAuth(authHeader);
-
-    // Verify user has access to this organization
+  async getOrganization(orgId: string, userId: string) {
     const membership = await this.prisma.workspaceMember.findFirst({
       where: {
         userId,
@@ -56,9 +44,7 @@ export class OrganizationsService {
     };
   }
 
-  async getOrganizationBySlug(slug: string, authHeader: string) {
-    const userId = this.extractUserIdFromAuth(authHeader);
-
+  async getOrganizationBySlug(slug: string, userId: string) {
     const org = await this.prisma.organization.findUnique({
       where: { slug },
       select: {
@@ -76,7 +62,6 @@ export class OrganizationsService {
       return null;
     }
 
-    // Verify user has access to this organization
     const userHasAccess = org.memberships.some((m) => m.userId === userId);
     if (!userHasAccess) {
       throw new UnauthorizedException('Organization access denied');
@@ -91,10 +76,7 @@ export class OrganizationsService {
     };
   }
 
-  async getOrganizationMembers(orgId: string, authHeader: string) {
-    const userId = this.extractUserIdFromAuth(authHeader);
-
-    // Verify user has access to this organization
+  async getOrganizationMembers(orgId: string, userId: string) {
     const membership = await this.prisma.workspaceMember.findFirst({
       where: {
         userId,
@@ -111,12 +93,19 @@ export class OrganizationsService {
       select: {
         id: true,
         role: true,
+        departmentId: true,
         createdAt: true,
         user: {
           select: {
             id: true,
             email: true,
             displayName: true,
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -129,37 +118,83 @@ export class OrganizationsService {
         email: m.user.email,
         displayName: m.user.displayName,
         role: m.role,
+        departmentId: m.departmentId,
+        departmentName: m.department?.name || null,
         joinedAt: m.createdAt,
       })),
     };
   }
 
-  private extractUserIdFromAuth(authHeader: string): string {
-    if (!authHeader) {
-      throw new UnauthorizedException('Missing authorization header');
+  async updateMemberRole(
+    orgId: string,
+    memberUserId: string,
+    newRole: WorkspaceRole,
+    userId: string,
+    userRole: WorkspaceRole
+  ) {
+    if (userRole !== WorkspaceRole.OWNER) {
+      throw new ForbiddenException('Only owners can update member roles');
     }
 
-    const [scheme, token] = authHeader.split(' ');
-    if (scheme !== 'Bearer' || !token) {
-      throw new UnauthorizedException('Invalid authorization header');
+    const targetMembership = await this.prisma.workspaceMember.findFirst({
+      where: {
+        userId: memberUserId,
+        orgId,
+      },
+    });
+
+    if (!targetMembership) {
+      throw new NotFoundException('Member not found');
     }
 
-    try {
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        throw new UnauthorizedException('JWT_SECRET is not configured');
+    if (targetMembership.role === WorkspaceRole.OWNER) {
+      throw new BadRequestException('Cannot change owner role');
+    }
+
+    await this.prisma.workspaceMember.update({
+      where: { id: targetMembership.id },
+      data: { role: newRole },
+    });
+
+    return { success: true };
+  }
+
+  async updateMemberDepartment(
+    orgId: string,
+    memberUserId: string,
+    departmentId: string | null,
+    userId: string,
+    userRole: WorkspaceRole
+  ) {
+    if (userRole !== WorkspaceRole.OWNER) {
+      throw new ForbiddenException('Only owners can update member departments');
+    }
+
+    const targetMembership = await this.prisma.workspaceMember.findFirst({
+      where: {
+        userId: memberUserId,
+        orgId,
+      },
+    });
+
+    if (!targetMembership) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (departmentId) {
+      const department = await this.prisma.department.findFirst({
+        where: { id: departmentId, orgId },
+      });
+      if (!department) {
+        throw new NotFoundException('Department not found');
       }
-
-      const payload = verify(token, secret) as JwtPayload;
-      const userId = payload.user_id ?? payload.sub;
-
-      if (typeof userId !== 'string' || !userId) {
-        throw new UnauthorizedException('Invalid token payload');
-      }
-
-      return userId;
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
     }
+
+    await this.prisma.workspaceMember.update({
+      where: { id: targetMembership.id },
+      data: { departmentId },
+    });
+
+    return { success: true };
   }
 }
