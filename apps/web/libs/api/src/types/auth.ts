@@ -11,3 +11,7 @@ export type AuthResponse = {
 export type LoginResult =
   | { type: 'single_org'; slug: string }
   | { type: 'multi_org'; organizations: OrgSummary[] }
+
+export type AcceptInvitationResponse =
+  | { needsRegistration: true; email: string; token: string; orgName: string; role: string; departmentId?: string }
+  | AuthResponse
