@@ -87,7 +87,7 @@ export function SidebarLayout({
         </header>
 
         {/* White Content Canvas */}
-        <main className="flex-1 bg-white rounded-l-2xl overflow-hidden">
+        <main className="flex-1 bg-white rounded-tl-2xl overflow-hidden">
           <div className="h-full w-full overflow-y-auto no-scrollbar">
             {children}
           </div>
