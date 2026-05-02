@@ -29,14 +29,6 @@ const navItems = [
   { icon: Mail, label: 'Email', href: 'mail' },
 ]
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
 export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const pathname = usePathname()
@@ -44,9 +36,8 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const auth = useAuth()
 
   useEffect(() => {
-    if (!auth.isAuthenticated) {
-      return
-    }
+    if (!auth.isAuthenticated) return
+
     if (auth.currentOrg?.slug !== orgSlug) {
       auth.selectOrg(orgSlug).catch(() => router.replace('/login'))
     }
@@ -62,7 +53,6 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   const basePath = `/${orgSlug}`
   const displayName = auth.user?.displayName ?? 'Member'
-  const initials = getInitials(displayName)
 
   const sidebar = (
     <WorkspaceSidebar
@@ -77,7 +67,7 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
     <SidebarLayout
       sidebar={sidebar}
       userDisplayName={displayName}
-      userInitials={initials}
+      userInitials={auth.user?.displayName?.[0]?.toUpperCase() ?? 'M'}
     >
       {children}
     </SidebarLayout>
