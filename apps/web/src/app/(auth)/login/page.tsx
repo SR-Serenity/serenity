@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LoginForm } from '@/components/auth/login-form'
-import { OrgPicker } from '@/components/auth/org-picker'
+import { LoginForm } from '@/app/(auth)/components/login-form'
+import { OrgPicker } from '@/app/(auth)/components/org-picker'
 import { useAuth } from '@/hooks/use-auth'
 import type { LoginResult, OrgSummary } from '@serenity/api'
 import { Loader2 } from 'lucide-react'

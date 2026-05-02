@@ -83,7 +83,7 @@ export function WorkspaceSidebar({
             </Link>
           )
         })}
-      </nav>
+     </nav>
     </div>
   )
 }

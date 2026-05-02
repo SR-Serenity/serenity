@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { SplitPanelLayout } from '@/components/layouts/split-panel-layout'
-import { AuthHeroPanel } from '@/components/auth/auth-hero-panel'
-import { AuthFormWrapper } from '@/components/auth/auth-form-wrapper'
+import { SplitPanelLayout } from '@/app/(auth)/components/split-panel-layout'
+import { AuthHeroPanel } from '@/app/(auth)/components/auth-hero-panel'
+import { AuthFormWrapper } from '@/app/(auth)/components/auth-form-wrapper'
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

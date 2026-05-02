@@ -1,13 +1,14 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { Bell, ChevronDown, LogOut, Settings, Sparkles, User } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
+} from '@/app/shared/components/ui/popover'
 
 interface SidebarLayoutProps {
   sidebar: ReactNode
@@ -23,6 +24,8 @@ export function SidebarLayout({
   userInitials,
 }: SidebarLayoutProps) {
   const { user, logout } = useAuth()
+  const router = useRouter()
+  const { orgSlug } = useParams<{ orgSlug: string }>()
 
   return (
     <div className="h-screen w-full bg-sidebar flex overflow-hidden shadow-2xl">
@@ -35,19 +38,19 @@ export function SidebarLayout({
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-10 shrink-0 flex items-center justify-end px-6 gap-4">
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all border border-primary/20 group">
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all border border-primary/20 group cursor-pointer">
             <Sparkles className="w-4 h-4" />
             <span className="text-xs font-semibold tracking-wide">AI Assistant</span>
           </button>
           
           <div className="flex items-center gap-4 border-l border-white/10 pl-4">
-            <button className="relative p-2 text-white/40 hover:text-white transition-colors">
+            <button className="relative p-2 text-white/40 hover:text-white transition-colors cursor-pointer">
               <Bell className="w-5 h-5" />
             </button>
 
             <Popover>
-              <PopoverTrigger>
-                <div className="flex items-center gap-2.5 cursor-pointer group">
+              <PopoverTrigger className="cursor-pointer">
+                <div className="flex items-center gap-2.5 group">
                   <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-semibold overflow-hidden group-hover:bg-white/15 transition-all">
                     {userInitials}
                   </div>
@@ -65,18 +68,24 @@ export function SidebarLayout({
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <button className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700">
+                  <button 
+                    onClick={() => router.push(`/${orgSlug}/profile`)}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700 cursor-pointer"
+                  >
                     <User className="w-4 h-4 text-gray-400" />
                     Profile
                   </button>
-                  <button className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700">
+                  <button 
+                    onClick={() => router.push(`/${orgSlug}/settings`)}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700 cursor-pointer"
+                  >
                     <Settings className="w-4 h-4 text-gray-400" />
                     Settings
                   </button>
                 </div>
                 <button 
                   onClick={() => logout()}
-                  className="flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition-colors text-left w-full font-medium"
+                  className="flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition-colors text-left w-full font-medium cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign out

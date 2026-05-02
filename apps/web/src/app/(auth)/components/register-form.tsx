@@ -1,91 +1,57 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { jwtDecode } from 'jwt-decode'
-import { authApi } from '@serenity/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
+import { useAuth } from '@/hooks/use-auth'
+import { slugify } from '@/lib/utils'
+import { Button } from '@/app/shared/components/ui/button'
+import { Input } from '@/app/shared/components/ui/input'
+import { Label } from '@/app/shared/components/ui/label'
+import { Progress } from '@/app/shared/components/ui/progress'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
-import type { User } from '@serenity/api'
 
-interface JoinOrgFormProps {
+interface RegisterFormProps {
   onSuccess: (orgSlug: string) => void
-  prefillEmail: string
-  inviteToken: string
-  orgName: string
 }
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2 | 3 | 4
 
-const TOTAL_STEPS = 2
+const TOTAL_STEPS = 3
 
-const stepMeta: Record<Exclude<Step, 3>, { title: string; subtitle: string }> = {
-  1: { title: 'Create your account', subtitle: 'Tell us a bit about yourself.' },
-  2: { title: 'Joining organization', subtitle: "You're about to join" },
+const stepMeta: Record<Exclude<Step, 4>, { title: string; subtitle: string }> = {
+  1: { title: "What's your work email?",  subtitle: "We'll use this to set up your account." },
+  2: { title: 'Create your account',      subtitle: 'Tell us a bit about yourself.' },
+  3: { title: 'Name your workspace',      subtitle: 'This is where your team will collaborate.' },
 }
 
-function decodeJwt(token: string, fallbackDisplayName?: string): User | null {
-  try {
-    type JwtPayload = {
-      user_id?: string
-      sub?: string
-      email?: string
-      displayName?: string
-    }
-
-    const payload = jwtDecode<JwtPayload>(token)
-    const id = payload.user_id ?? payload.sub
-    const email = payload.email
-
-    if (!id || !email) {
-      return null
-    }
-
-    let displayName = fallbackDisplayName || ''
-    if (payload.displayName && payload.displayName.trim().length > 0) {
-      displayName = payload.displayName
-    }
-
-    return {
-      id,
-      email,
-      displayName: displayName || email.split('@')[0],
-    }
-  } catch {
-    return null
-  }
-}
-
-export function JoinOrgForm({
-  onSuccess,
-  prefillEmail,
-  inviteToken,
-  orgName,
-}: JoinOrgFormProps) {
+export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [step, setStep] = useState<Step>(1)
+  const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [orgName, setOrgName] = useState('')
+  const [orgSlug, setOrgSlug] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [orgSlug, setOrgSlug] = useState('')
+  const auth = useAuth()
   const onSuccessRef = useRef(onSuccess)
+
+  function handleOrgNameChange(name: string) {
+    setOrgName(name)
+    setOrgSlug(slugify(name))
+  }
+
+  function handleOrgSlugChange(slug: string) {
+    setOrgSlug(
+      slug.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-|-$/g, '')
+    )
+  }
 
   async function handleStep1(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
-    if (!displayName.trim()) {
-      setError('Display name is required')
-      return
-    }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
       return
     }
     setStep(2)
@@ -94,41 +60,37 @@ export function JoinOrgForm({
   async function handleStep2(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
+    if (!displayName.trim()) {
+      setError('Display name is required'); return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters'); return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match'); return
+    }
+    setStep(3)
+  }
+
+  async function handleStep3(e: React.SubmitEvent) {
+    e.preventDefault()
+    setError('')
     setLoading(true)
     try {
-      const registerResponse = await authApi.registerWithInvite({
-        email: prefillEmail.toLowerCase().trim(),
-        password,
-        displayName: displayName.trim(),
-        inviteToken,
-      })
-
-      if ('accessToken' in registerResponse && registerResponse.organization) {
-        const user = decodeJwt(registerResponse.accessToken, displayName)
-        if (user) {
-          localStorage.setItem('auth_token', registerResponse.accessToken)
-          localStorage.setItem('auth_org', JSON.stringify(registerResponse.organization))
-          document.cookie = `auth_token=${registerResponse.accessToken}; path=/; SameSite=Lax; max-age=86400`
-          document.cookie = `auth_org_slug=${registerResponse.organization.slug}; path=/; SameSite=Lax; max-age=86400`
-
-          sessionStorage.removeItem('invite_token')
-          sessionStorage.removeItem('invite_email')
-          sessionStorage.removeItem('invite_orgName')
-          sessionStorage.removeItem('invite_role')
-          sessionStorage.removeItem('invite_departmentId')
-
-          sessionStorage.setItem(
-            'invite_notification',
-            `You've been added to ${registerResponse.organization.name}`
-          )
-
-          setOrgSlug(registerResponse.organization.slug)
-          setStep(3)
-          return
-        }
+      if (!orgName.trim()) {
+        throw new Error('Workspace name is required')
       }
-
-      throw new Error('Failed to join organization')
+      if (!orgSlug.trim()) {
+        throw new Error('Workspace URL is required')
+      }
+      await auth.register({
+        displayName: displayName.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+        orgName: orgName.trim(),
+        orgSlug: orgSlug.toLowerCase(),
+      })
+      setStep(4)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -136,12 +98,16 @@ export function JoinOrgForm({
     }
   }
 
+  const handlers = { 1: handleStep1, 2: handleStep2, 3: handleStep3 }
+
+  // Keep onSuccess ref in sync
   useEffect(() => {
     onSuccessRef.current = onSuccess
   }, [onSuccess])
 
+  // Auto-redirect on success after 1.5 seconds
   useEffect(() => {
-    if (step !== 3) {
+    if (step !== 4) {
       return
     }
     const timer = setTimeout(() => {
@@ -150,7 +116,7 @@ export function JoinOrgForm({
     return () => clearTimeout(timer)
   }, [step, orgSlug])
 
-  if (step === 3) {
+  if (step === 4) {
     return (
       <div className="space-y-8 text-center">
         <div className="flex justify-center">
@@ -159,7 +125,7 @@ export function JoinOrgForm({
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-brand tracking-tight">You&apos;re all set!</h1>
           <p className="text-sm text-brand-muted">
-            You've been added to <span className="font-medium text-brand">{orgName}</span>
+            Your workspace <span className="font-medium text-brand">{orgName}</span> is ready.
           </p>
         </div>
         <Button
@@ -176,6 +142,7 @@ export function JoinOrgForm({
 
   return (
     <div className="space-y-8">
+      {/* Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-xs text-brand-muted">
           <span>Step {step} of {TOTAL_STEPS}</span>
@@ -186,25 +153,28 @@ export function JoinOrgForm({
 
       <div className="space-y-1.5">
         <h1 className="text-2xl font-bold text-brand tracking-tight">{meta.title}</h1>
-        <p className="text-sm text-brand-muted">
-          {meta.subtitle}
-          {step === 2 && <span className="font-medium"> {orgName}</span>}
-        </p>
+        <p className="text-sm text-brand-muted">{meta.subtitle}</p>
       </div>
 
-      <form onSubmit={step === 1 ? handleStep1 : handleStep2} className="space-y-4">
+      <form onSubmit={handlers[step]} className="space-y-4">
         {step === 1 && (
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Work email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+              autoFocus
+            />
+          </div>
+        )}
+
+        {step === 2 && (
           <>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Work email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={prefillEmail}
-                disabled
-                className="bg-muted text-brand-muted"
-              />
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="displayName">Full name</Label>
               <Input
@@ -245,13 +215,40 @@ export function JoinOrgForm({
           </>
         )}
 
-        {step === 2 && (
-          <div className="rounded-lg bg-brand-light p-4">
-            <p className="text-sm text-brand">
-              Click &quot;Join organization&quot; to confirm and join{' '}
-              <span className="font-semibold">{orgName}</span>.
-            </p>
-          </div>
+        {step === 3 && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="orgName">Workspace name</Label>
+              <Input
+                id="orgName"
+                type="text"
+                placeholder="Acme Corp"
+                value={orgName}
+                onChange={(e) => handleOrgNameChange(e.target.value)}
+                disabled={loading}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="orgSlug">Workspace URL</Label>
+              <div className="flex items-center gap-0">
+                <span className="h-9 px-3 flex items-center text-sm text-brand-muted bg-muted border border-r-0 border-brand-border rounded-l-md shrink-0">
+                  serenity.app/
+                </span>
+                <Input
+                  id="orgSlug"
+                  type="text"
+                  placeholder="acme-corp"
+                  value={orgSlug}
+                  onChange={(e) => handleOrgSlugChange(e.target.value)}
+                  disabled={loading}
+                  required
+                  className="rounded-l-none"
+                />
+              </div>
+            </div>
+          </>
         )}
 
         {error && (
@@ -266,8 +263,7 @@ export function JoinOrgForm({
               type="button"
               variant="outline"
               onClick={() => {
-                setError('')
-                setStep((s) => (s - 1) as Step)
+                setError(''); setStep((s) => (s - 1) as Step)
               }}
               disabled={loading}
               className="flex items-center gap-1.5 cursor-pointer"
@@ -281,10 +277,19 @@ export function JoinOrgForm({
             disabled={loading}
             className="flex-1 h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
           >
-            {loading ? 'Joining…' : step === 2 ? 'Join organization' : 'Continue →'}
+            {loading ? 'Creating…' : step === 3 ? 'Create workspace' : 'Continue →'}
           </Button>
         </div>
       </form>
+
+      {step === 1 && (
+        <p className="text-center text-sm text-brand-muted">
+          Already have an account?{' '}
+          <a href="/login" className="text-brand font-medium hover:underline underline-offset-4">
+            Sign in
+          </a>
+        </p>
+      )}
     </div>
   )
 }

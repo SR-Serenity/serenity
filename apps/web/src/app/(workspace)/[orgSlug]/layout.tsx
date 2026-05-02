@@ -13,8 +13,8 @@ import {
   SquareKanban,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { SidebarLayout } from '@/components/layouts/sidebar-layout'
-import { WorkspaceSidebar } from '@/components/workspace/workspace-sidebar'
+import { SidebarLayout } from '@/app/(workspace)/components/sidebar-layout'
+import { WorkspaceSidebar } from '@/app/(workspace)/components/workspace-sidebar'
 
 type WorkspaceLayoutProps = {
   children: ReactNode
