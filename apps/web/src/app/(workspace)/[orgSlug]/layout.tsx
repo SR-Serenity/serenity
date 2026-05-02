@@ -54,7 +54,7 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const router = useRouter()
   // pathname is passed to sidebar for active-item highlighting
   const auth = useAuth()
-  const [sidebarWidth, setSidebarWidth] = useState(288)
+  const [sidebarWidth, setSidebarWidth] = useState(200)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
     auth.logout()
     router.push('/login')
   }
-
+  // TODO: Implement basic org switching logic
   async function handleSwitchOrganization() {
     const nextSlug = window.prompt('Enter organization slug')?.trim().toLowerCase()
     if (!nextSlug || nextSlug === orgSlug) {

@@ -30,46 +30,45 @@ export function SidebarLayout({
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-brand-surface p-3 md:p-4">
-      <div className="mx-auto flex h-full w-full max-w-[1600px] overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
-        {/* Sidebar */}
-        {sidebarCollapsed ? (
+    <div className="h-screen flex overflow-hidden bg-brand-surface text-foreground">
+      {/* Sidebar */}
+      {sidebarCollapsed ? (
+        <aside
+          style={{ width: COLLAPSED_WIDTH }}
+          className="shrink-0 flex flex-col h-full bg-brand-surface border-r border-brand-border overflow-hidden transition-[width] duration-200"
+        >
+          {sidebar}
+        </aside>
+      ) : (
+        <Resizable
+          width={clampedWidth}
+          height={0}
+          axis="x"
+          minConstraints={[MIN_SIDEBAR_WIDTH, 0]}
+          maxConstraints={[MAX_SIDEBAR_WIDTH, 0]}
+          onResize={handleResize}
+          handle={
+            <span
+              className="absolute top-0 -right-0.5 h-full w-1 cursor-col-resize hover:bg-brand-light active:bg-brand-light transition-colors duration-150 z-50"
+              role="separator"
+              aria-label="Resize sidebar"
+            />
+          }
+        >
           <aside
-            style={{ width: COLLAPSED_WIDTH }}
-            className="shrink-0 flex flex-col h-full bg-brand-surface/70 border-r border-brand-border overflow-hidden transition-[width] duration-200"
+            style={{ width: clampedWidth }}
+            className="relative shrink-0 flex flex-col h-full bg-brand-surface border-r border-brand-border overflow-hidden"
           >
             {sidebar}
           </aside>
-        ) : (
-          <Resizable
-            width={clampedWidth}
-            height={0}
-            axis="x"
-            minConstraints={[MIN_SIDEBAR_WIDTH, 0]}
-            maxConstraints={[MAX_SIDEBAR_WIDTH, 0]}
-            onResize={handleResize}
-            handle={
-              <span
-                className="absolute top-0 -right-1 h-full w-2 cursor-col-resize hover:bg-brand/30 active:bg-brand/50 transition-colors duration-150"
-                role="separator"
-                aria-label="Resize sidebar"
-              />
-            }
-          >
-            <aside
-              style={{ width: clampedWidth }}
-              className="relative shrink-0 flex flex-col h-full bg-brand-surface/70 border-r border-brand-border overflow-hidden"
-            >
-              {sidebar}
-            </aside>
-          </Resizable>
-        )}
+        </Resizable>
+      )}
 
-        {/* Main — each page renders its own header + content */}
-        <main className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto bg-white">
-          {children}
-        </main>
-      </div>
+      {/* Main — each page renders its own header + content */}
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-brand-surface">
+        {children}
+      </main>
     </div>
   )
-}
+  }
+
