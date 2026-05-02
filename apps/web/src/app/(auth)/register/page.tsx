@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { RegisterForm } from '@/components/auth/register-form'
-import { JoinOrgForm } from '@/components/auth/join-org-form'
+import { RegisterForm } from '@/app/(auth)/components/register-form'
+import { JoinOrgForm } from '@/app/(auth)/components/join-org-form'
 import { useAuth } from '@/hooks/use-auth'
 import { Loader2 } from 'lucide-react'
 

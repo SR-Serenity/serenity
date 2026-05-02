@@ -12,7 +12,7 @@ import {
   Video,
 } from 'lucide-react'
 import { formatDateLong, cn } from '@/lib/utils'
-import { AvatarPill } from '@/components/workspace/avatar-pill'
+import { AvatarPill } from '@/app/(workspace)/components/avatar-pill'
 
 const stats = [
   {

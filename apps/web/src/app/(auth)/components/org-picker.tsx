@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { OrgSummary } from '@serenity/api'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/app/shared/components/ui/badge'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
 interface OrgPickerProps {
