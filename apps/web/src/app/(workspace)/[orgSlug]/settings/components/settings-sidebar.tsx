@@ -68,15 +68,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
             key={item.id}
             onClick={() => onTabChange(item.id)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer",
               activeTab === item.id 
-                ? "bg-blue-100 text-blue-600" 
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-white text-primary shadow-sm ring-1 ring-black/5" 
+                : "text-gray-500"
             )}
           >
             <item.icon className={cn(
               "w-4 h-4",
-              activeTab === item.id ? "text-blue-600" : "text-gray-400"
+              activeTab === item.id ? "text-primary" : "text-gray-400"
             )} />
             {item.label}
           </button>

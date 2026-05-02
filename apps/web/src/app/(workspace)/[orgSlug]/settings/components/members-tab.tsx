@@ -129,20 +129,20 @@ export function MembersTab({ isOwner }: MembersTabProps) {
       {/* Pending Invitations */}
       {invitations.length > 0 && showInvite && (
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-brand mb-3">Pending Invitations</h2>
+          <h2 className="text-sm font-semibold text-primary mb-3">Pending Invitations</h2>
           <div className="space-y-2">
             {invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="flex items-center justify-between p-3 bg-brand-surface/20 rounded-lg"
+                className="flex items-center justify-between p-3 bg-primary/5 rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center">
-                    <Mail className="w-4 h-4 text-brand" />
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-brand">{inv.email}</p>
-                    <p className="text-xs text-brand-muted">
+                    <p className="text-sm font-medium text-primary">{inv.email}</p>
+                    <p className="text-xs text-gray-500">
                       {inv.role} {inv.departmentName && `• ${inv.departmentName}`}
                     </p>
                   </div>
@@ -150,7 +150,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
                 {showInvite && (
                   <button
                     onClick={() => handleRevokeInvitation(inv.id)}
-                    className="p-2 text-brand-muted hover:text-danger rounded-lg hover:bg-danger/10"
+                    className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -163,11 +163,11 @@ export function MembersTab({ isOwner }: MembersTabProps) {
 
       {/* Members Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-brand">Team Members</h2>
+        <h2 className="text-sm font-semibold text-primary">Team Members</h2>
         {showInvite && (
           <button
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             Invite Member
@@ -176,28 +176,28 @@ export function MembersTab({ isOwner }: MembersTabProps) {
       </div>
 
       {/* Members List */}
-      <div className="border border-brand-border rounded-lg overflow-hidden">
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full">
-          <thead className="bg-brand-surface/20">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="text-left px-4 py-3 text-xs font-medium text-brand-muted">Member</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-brand-muted">Role</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-brand-muted">Department</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-brand-muted">Joined</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Member</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Role</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Department</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Joined</th>
               {isOwner && <th className="w-10"></th>}
             </tr>
           </thead>
           <tbody>
             {members.map((member) => (
-              <tr key={member.id} className="border-t border-brand-border">
+              <tr key={member.id} className="border-t border-gray-100">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-medium text-sm">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
                       {member.displayName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-brand">{member.displayName}</p>
-                      <p className="text-xs text-brand-muted">{member.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{member.displayName}</p>
+                      <p className="text-xs text-gray-500">{member.email}</p>
                     </div>
                   </div>
                 </td>
@@ -206,7 +206,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
                     <select
                       value={member.role}
                       onChange={(e) => handleUpdateRole(member.id, e.target.value as WorkspaceRole)}
-                      className="text-sm border border-brand-border rounded-lg px-2 py-1 bg-white"
+                      className="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       <option value="MEMBER">Member</option>
                       <option value="ADMIN">Admin</option>
@@ -215,9 +215,9 @@ export function MembersTab({ isOwner }: MembersTabProps) {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
-                        member.role === 'OWNER' && 'bg-brand-light text-brand',
-                        member.role === 'ADMIN' && 'bg-info-light text-info',
-                        member.role === 'MEMBER' && 'bg-muted text-brand-muted'
+                        member.role === 'OWNER' && 'bg-primary/10 text-primary',
+                        member.role === 'ADMIN' && 'bg-blue-50 text-blue-600',
+                        member.role === 'MEMBER' && 'bg-gray-100 text-gray-600'
                       )}
                     >
                       <UserCog className="w-3 h-3" />
@@ -230,7 +230,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
                     <select
                       value={member.departmentId || ''}
                       onChange={(e) => handleUpdateDepartment(member.id, e.target.value || null)}
-                      className="text-sm border border-brand-border rounded-lg px-2 py-1 bg-white"
+                      className="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       <option value="">No department</option>
                       {departments.map((dept) => (
@@ -240,17 +240,17 @@ export function MembersTab({ isOwner }: MembersTabProps) {
                       ))}
                     </select>
                   ) : (
-                    <span className="text-sm text-brand-muted">
+                    <span className="text-sm text-gray-500">
                       {member.departmentName || '—'}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-brand-muted">
+                <td className="px-4 py-3 text-sm text-gray-500">
                   {new Date(member.joinedAt).toLocaleDateString()}
                 </td>
                 {isOwner && (
                   <td className="px-4 py-3">
-                    <button className="p-1 text-brand-muted hover:text-brand rounded">
+                    <button className="p-1 text-gray-400 hover:text-gray-600 rounded">
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                   </td>
