@@ -5,10 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    /* ── Brand tokens ─────────────────────────────────────────
-       Change --brand-* variables below to retheme the entire app.
-       These become Tailwind utilities: bg-brand, text-brand-muted, etc.
-    ─────────────────────────────────────────────────────────── */
+
     --color-brand:         var(--brand);
     --color-brand-hover:   var(--brand-hover);
     --color-brand-light:   var(--brand-light);
@@ -66,57 +63,52 @@
 }
 
 :root {
-    /* ── Brand palette ───────────────────────────────────────
-       #070738 = oklch(0.155 0.105 264)
-       Edit only here to retheme the whole app.
-    ─────────────────────────────────────────────────────────── */
-    --brand:         oklch(0.155 0.105 264); /* #070738 — primary brand */
-    --brand-hover:   oklch(0.19 0.105 264);  /* slightly lighter for hover */
-    --brand-light:   oklch(0.94 0.02 264);   /* tinted light bg (buttons, badges) */
-    --brand-surface: oklch(0.975 0.008 264); /* page/panel background */
-    --brand-muted:   oklch(0.556 0.02 264);  /* secondary text */
-    --brand-border:  oklch(0.90 0.012 264);  /* subtle borders */
+    --brand:         #0f172a; /* navy-900 */
+    --brand-hover:   #1e293b; /* navy-800 */
+    --brand-light:   #f1f5f9;
+    --brand-surface: #f8fafc;
+    --brand-muted:   #64748b;
+    --brand-border:  #1e293b;
 
-    --success:        oklch(0.527 0.154 150);
-    --success-light:  oklch(0.94 0.05 150);
-    --warning:        oklch(0.70 0.165 60);
-    --warning-light:  oklch(0.96 0.05 60);
-    --info:           oklch(0.56 0.20 250);
-    --info-light:     oklch(0.94 0.04 250);
+    --success:        #059669;
+    --success-light:  #ecfdf5;
+    --warning:        #f59e0b;
+    --warning-light:  #fffbeb;
+    --info:           #2563eb;
+    --info-light:     #eff6ff;
 
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0.09 264);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0.09 264);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0.09 264);
-    /* #070738 ≈ oklch(0.155 0.105 264) */
-    --primary: oklch(0.155 0.105 264);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.96 0.01 264);
-    --secondary-foreground: oklch(0.155 0.105 264);
-    --muted: oklch(0.97 0.005 264);
-    --muted-foreground: oklch(0.556 0.02 264);
-    --accent: oklch(0.94 0.02 264);
-    --accent-foreground: oklch(0.155 0.105 264);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.92 0.01 264);
-    --input: oklch(0.92 0.01 264);
-    --ring: oklch(0.155 0.105 264);
-    --chart-1: oklch(0.56 0.20 250);
-    --chart-2: oklch(0.527 0.154 150);
-    --chart-3: oklch(0.70 0.165 60);
-    --chart-4: oklch(0.60 0.20 320);
-    --chart-5: oklch(0.155 0.105 264);
+    --background: #ffffff;
+    --foreground: #020617;
+    --card: #ffffff;
+    --card-foreground: #020617;
+    --popover: #ffffff;
+    --popover-foreground: #020617;
+    --primary: #1570ef;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #020617;
+    --muted: #f1f5f9;
+    --muted-foreground: #475569;
+    --accent: #f1f5f9;
+    --accent-foreground: #020617;
+    --destructive: #dc2626;
+    --border: #cbd5e1;
+    --input: #cbd5e1;
+    --ring: #1570ef;
+    --chart-1: #1570ef;
+    --chart-2: #059669;
+    --chart-3: #f59e0b;
+    --chart-4: #7c3aed;
+    --chart-5: #0f172a;
     --radius: 0.5rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.155 0.105 264);
-    --sidebar-primary: oklch(0.155 0.105 264);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.94 0.02 264);
-    --sidebar-accent-foreground: oklch(0.155 0.105 264);
-    --sidebar-border: oklch(0.90 0.012 264);
-    --sidebar-ring: oklch(0.155 0.105 264);
+    --sidebar: #0f172a;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #1570ef;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e293b;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #1570ef;
 }
 
 .dark {
