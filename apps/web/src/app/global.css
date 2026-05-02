@@ -5,10 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    /* ── Brand tokens ─────────────────────────────────────────
-       Change --brand-* variables below to retheme the entire app.
-       These become Tailwind utilities: bg-brand, text-brand-muted, etc.
-    ─────────────────────────────────────────────────────────── */
+
     --color-brand:         var(--brand);
     --color-brand-hover:   var(--brand-hover);
     --color-brand-light:   var(--brand-light);
@@ -66,55 +63,52 @@
 }
 
 :root {
-    /* ── Brand palette (Tailwind Slate) ───────────────────────
-       Edit only here to retheme the whole app.
-    ─────────────────────────────────────────────────────────── */
-    --brand:         #020617; /* slate-950 */
-    --brand-hover:   #1e293b; /* slate-800 */
-    --brand-light:   #f1f5f9; /* slate-100 */
-    --brand-surface: #f8fafc; /* slate-50 */
-    --brand-muted:   #64748b; /* slate-500 */
-    --brand-border:  #cbd5e1; /* slate-300 - sharper border */
+    --brand:         #0f172a; /* navy-900 */
+    --brand-hover:   #1e293b; /* navy-800 */
+    --brand-light:   #f1f5f9;
+    --brand-surface: #f8fafc;
+    --brand-muted:   #64748b;
+    --brand-border:  #1e293b;
 
-    --success:        #059669; /* emerald-600 */
-    --success-light:  #ecfdf5; /* emerald-50 */
-    --warning:        #f59e0b; /* amber-500 */
-    --warning-light:  #fffbeb; /* amber-50 */
-    --info:           #2563eb; /* blue-600 */
-    --info-light:     #eff6ff; /* blue-50 */
+    --success:        #059669;
+    --success-light:  #ecfdf5;
+    --warning:        #f59e0b;
+    --warning-light:  #fffbeb;
+    --info:           #2563eb;
+    --info-light:     #eff6ff;
 
     --background: #ffffff;
-    --foreground: #020617; /* slate-950 */
+    --foreground: #020617;
     --card: #ffffff;
     --card-foreground: #020617;
     --popover: #ffffff;
     --popover-foreground: #020617;
-    --primary: #020617;
-    --primary-foreground: #f8fafc;
+    --primary: #1570ef;
+    --primary-foreground: #ffffff;
     --secondary: #f1f5f9;
     --secondary-foreground: #020617;
     --muted: #f1f5f9;
-    --muted-foreground: #475569; /* slate-600 */
+    --muted-foreground: #475569;
     --accent: #f1f5f9;
     --accent-foreground: #020617;
-    --destructive: #dc2626; /* red-600 */
-    --border: #cbd5e1; /* slate-300 */
+    --destructive: #dc2626;
+    --border: #cbd5e1;
     --input: #cbd5e1;
-    --ring: #020617;
-    --chart-1: #2563eb;
+    --ring: #1570ef;
+    --chart-1: #1570ef;
     --chart-2: #059669;
     --chart-3: #f59e0b;
     --chart-4: #7c3aed;
-    --chart-5: #020617;
+    --chart-5: #0f172a;
     --radius: 0.5rem;
-    --sidebar: #f8fafc;
-    --sidebar-foreground: #020617;
-    --sidebar-primary: #020617;
-    --sidebar-primary-foreground: #f8fafc;
-    --sidebar-accent: #f1f5f9;
-    --sidebar-accent-foreground: #020617;
-    --sidebar-border: #cbd5e1;
-    --sidebar-ring: #020617;
+    --sidebar: #0f172a;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #1570ef;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e293b;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #1570ef;
 }
 
 .dark {
