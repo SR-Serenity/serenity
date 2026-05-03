@@ -10,19 +10,13 @@
       "path": "./apps/auth-service"
     },
     {
-      "path": "./apps/api-service"
-    },
-    {
-      "path": "./apps/analytics-service"
+      "path": "./apps/core-service"
     },
     {
       "path": "./apps/gateway"
     },
     {
       "path": "./apps/realtime-service"
-    },
-    {
-      "path": "./apps/notification-service"
     },
     {
       "path": "./apps/web/libs/api"
