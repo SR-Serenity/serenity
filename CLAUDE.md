@@ -63,6 +63,14 @@ All `node_modules` live at the root. There must be no `node_modules` inside indi
 - **shadcn/ui** — style: `base-nova`, components in `src/components/ui/`, requires `@base-ui/react`
 - **next-intl** — i18n with `en` / `vi` locales
 
+## apps/web styling conventions
+
+- Prefer **Tailwind utilities** for spacing, sizing, radii, flex/grid, and one-off layout values (`px-4`, `h-8`, `rounded-md`, `gap-2`)
+- Use **CSS variables in `src/app/global.css` only for semantic design tokens** that should theme the product consistently: colors, surfaces, borders, shadows, typography, and shared layout constants
+- Do **not** create custom `--space-*`, `--size-*`, or `--radius-*` scales when Tailwind already provides the same values
+- In components, avoid hardcoded hex colors; use semantic tokens through Tailwind arbitrary values or mapped theme tokens
+- If a value must change across themes or be reused as a product token, define it once in `global.css`; otherwise keep it in Tailwind classes close to the component
+
 ## apps/web color system
 
 Brand color is `#070738` (deep navy). **Do not hardcode hex values in components.**

@@ -1,106 +1,88 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { Bell, ChevronDown, LogOut, Settings, Sparkles, User } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/shared/components/ui/popover'
+import { cn } from '@/lib/utils'
+import { AppDock, type AppItem } from './app-dock'
+import type { NavSection } from './nav-panel'
+import { WorkspaceHeader } from './workspace-header'
 
-interface SidebarLayoutProps {
-  sidebar: ReactNode
+interface WorkbenchLayoutProps {
+  apps: AppItem[]
+  sections: NavSection[]
   children: ReactNode
-  userDisplayName: string
-  userInitials: string
+  /** Current page path for active state highlighting */
+  currentPath: string
 }
 
-export function SidebarLayout({
-  sidebar,
+/** Shared workspace shell: header + app dock + content canvas. */
+export function WorkbenchLayout({
+  apps,
+  sections,
   children,
-  userDisplayName,
-  userInitials,
-}: SidebarLayoutProps) {
-  const { user, logout } = useAuth()
-  const router = useRouter()
-  const { orgSlug } = useParams<{ orgSlug: string }>()
+  currentPath,
+}: WorkbenchLayoutProps) {
+  const { user } = useAuth()
+  const orgSlug = currentPath.split('/').filter(Boolean)[0] ?? ''
+
+  const userInitials = (user?.displayName ?? user?.email ?? 'U')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w: string) => w[0]?.toUpperCase() ?? '')
+    .join('')
+
+  // Find active app for navigator title
+  const activeApp = apps.find(
+    a => currentPath === a.href || currentPath.startsWith(a.href + '/'),
+  )
 
   return (
-    <div className="h-screen w-full bg-sidebar flex overflow-hidden shadow-2xl">
-      {/* Permanent Narrow Sidebar Area */}
-      <aside className="w-24 shrink-0 flex flex-col h-full overflow-hidden text-white">
-        {sidebar}
-      </aside>
+    <div className="relative flex w-full h-screen overflow-hidden flex-col bg-back">
+      <WorkspaceHeader
+        currentPath={currentPath}
+        orgSlug={orgSlug}
+        activeApp={activeApp ? { label: activeApp.label, icon: activeApp.icon } : undefined}
+      />
 
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="h-10 shrink-0 flex items-center justify-end px-6 gap-4">
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all border border-primary/20 group cursor-pointer">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs font-semibold tracking-wide">AI Assistant</span>
-          </button>
-          
-          <div className="flex items-center gap-4 border-l border-white/10 pl-4">
-            <button className="relative p-2 text-white/40 hover:text-white transition-colors cursor-pointer">
-              <Bell className="w-5 h-5" />
-            </button>
+      <div
+        className={cn(
+          'flex w-full flex-1 min-w-0 min-h-0',
+          'rounded-lg',
+          'overflow-hidden',
+          /* subtle outer border — mirrors ::after inset border */
+          'ring-1 ring-inset ring-divider',
+        )}
+        
+      >
+        {/* ── 1. AppDock ── */}
+        <AppDock
+          orgSlug={orgSlug}
+          orgName={activeApp?.label ?? 'Workspace'}
+          apps={apps}
+          currentPath={currentPath}
+          navigatorVisible
+          onOpenAccountPopup={() => {
+            /* handled by Popover below – we pass through a ref trick via portal */
+          }}
+          userInitials={userInitials}
+        />
 
-            <Popover>
-              <PopoverTrigger className="cursor-pointer">
-                <div className="flex items-center gap-2.5 group">
-                  <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-semibold overflow-hidden group-hover:bg-white/15 transition-all">
-                    {userInitials}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-white/90 group-hover:text-white transition-colors">
-                      {userDisplayName}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 text-white/50 group-hover:text-white transition-colors" />
-                  </div>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-56 p-2 bg-white border border-gray-200 text-gray-900 shadow-2xl gap-1 ring-1 ring-black/5">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-semibold text-gray-900">{userDisplayName}</p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <button 
-                    onClick={() => router.push(`/${orgSlug}/profile`)}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700 cursor-pointer"
-                  >
-                    <User className="w-4 h-4 text-gray-400" />
-                    Profile
-                  </button>
-                  <button 
-                    onClick={() => router.push(`/${orgSlug}/settings`)}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-50 transition-colors text-left text-gray-700 cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4 text-gray-400" />
-                    Settings
-                  </button>
-                </div>
-                <button 
-                  onClick={() => logout()}
-                  className="flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition-colors text-left w-full font-medium cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign out
-                </button>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </header>
+        {/* ── 2. Navigator Panel (collapsible) ── */}
+        {/* NavPanel removed as requested */}
 
-        {/* White Content Canvas */}
-        <main className="flex-1 bg-white rounded-tl-2xl overflow-hidden">
-          <div className="h-full w-full overflow-y-auto no-scrollbar">
-            {children}
-          </div>
-        </main>
+        {/* ── 3. Content area ── */}
+        <div
+          className={cn(
+            'flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden bg-surface',
+          )}
+        >
+          {/* Main content canvas */}
+          <main className="flex-1 min-h-0 overflow-hidden">
+            <div className="h-full w-full overflow-y-auto no-scrollbar">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   )

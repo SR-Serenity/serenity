@@ -4,30 +4,114 @@ import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import {
+  Briefcase,
+  Building2,
   Calendar,
-  LayoutDashboard,
+  CheckSquare,
+  FileText,
+  GitMerge,
+  HardDrive,
+  Inbox,
+  Layers,
   Loader2,
-  Mail,
   MessageSquare,
-  ListTodo,
-  SquareKanban,
+  TestTube,
+  UserSquare,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { SidebarLayout } from '@/app/(workspace)/components/sidebar-layout'
-import { WorkspaceSidebar } from '@/app/(workspace)/components/workspace-sidebar'
+import { WorkbenchLayout } from '@/app/(workspace)/components/sidebar-layout'
+import type { AppItem } from '@/app/(workspace)/components/app-dock'
+import type { NavSection } from '@/app/(workspace)/components/nav-panel'
 
-type WorkspaceLayoutProps = {
-  children: ReactNode
+type WorkspaceLayoutProps = { children: ReactNode }
+
+/** Canonical workspace apps shown in the left dock. */
+function buildApps(basePath: string): AppItem[] {
+  return [
+    /* position: 'top' */
+    {
+      id: 'inbox',
+      icon: Inbox,
+      label: 'Inbox',
+      href: `${basePath}/inbox`,
+      position: 'top',
+    },
+    /* mid apps (core) */
+    {
+      id: 'planner',
+      icon: Calendar,
+      label: 'Planner',
+      href: `${basePath}/planner`,
+    },
+    {
+      id: 'office',
+      icon: Building2,
+      label: 'Office',
+      href: `${basePath}/office`,
+    },
+    {
+      id: 'cards',
+      icon: Layers,
+      label: 'Cards',
+      href: `${basePath}/cards`,
+    },
+    {
+      id: 'contact',
+      icon: UserSquare,
+      label: 'Contact',
+      href: `${basePath}/contact`,
+    },
+    {
+      id: 'chat',
+      icon: MessageSquare,
+      label: 'Chat',
+      href: `${basePath}/chat`,
+    },
+    {
+      id: 'hr',
+      icon: Briefcase,
+      label: 'HR',
+      href: `${basePath}/hr`,
+    },
+    {
+      id: 'trackers',
+      icon: CheckSquare,
+      label: 'Trackers',
+      href: `${basePath}/trackers`,
+    },
+    {
+      id: 'documents',
+      icon: FileText,
+      label: 'Documents',
+      href: `${basePath}/documents`,
+    },
+    {
+      id: 'team',
+      icon: Users,
+      label: 'Team',
+      href: `${basePath}/team`,
+    },
+    {
+      id: 'processes',
+      icon: GitMerge,
+      label: 'Processes',
+      href: `${basePath}/processes`,
+    },
+    {
+      id: 'drive',
+      icon: HardDrive,
+      label: 'Drive',
+      href: `${basePath}/drive`,
+    },
+    {
+      id: 'test-management',
+      icon: TestTube,
+      label: 'Test Management',
+      href: `${basePath}/test-management`,
+    },
+  ]
 }
-
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: 'dashboard' },
-  { icon: MessageSquare, label: 'Chat', href: 'chat' },
-  { icon: ListTodo, label: 'Tasks', href: 'tasks' },
-  { icon: Calendar, label: 'Calendar', href: 'calendar' },
-  { icon: SquareKanban, label: 'Workspace', href: 'workspace' },
-  { icon: Mail, label: 'Email', href: 'mail' },
-]
 
 export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug: string }>()
@@ -37,7 +121,6 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   useEffect(() => {
     if (!auth.isAuthenticated) return
-
     if (auth.currentOrg?.slug !== orgSlug) {
       auth.selectOrg(orgSlug).catch(() => router.replace('/login'))
     }
@@ -45,31 +128,29 @@ export default function OrgWorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   if (!auth.isAuthenticated || !auth.currentOrg) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-sidebar">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div
+        className="flex items-center justify-center min-h-screen"
+        style={{ backgroundColor: 'var(--theme-back-color)' }}
+      >
+        <Loader2
+          className="w-6 h-6 animate-spin"
+          style={{ color: 'var(--global-accent-BackgroundColor)' }}
+        />
       </div>
     )
   }
 
   const basePath = `/${orgSlug}`
-  const displayName = auth.user?.displayName ?? 'Member'
-
-  const sidebar = (
-    <WorkspaceSidebar
-      basePath={basePath}
-      currentPath={pathname}
-      navItems={navItems}
-      orgName={auth.currentOrg.name}
-    />
-  )
+  const apps = buildApps(basePath)
+  const sections: NavSection[] = [] // Removed submenu completely as requested
 
   return (
-    <SidebarLayout
-      sidebar={sidebar}
-      userDisplayName={displayName}
-      userInitials={auth.user?.displayName?.[0]?.toUpperCase() ?? 'M'}
+    <WorkbenchLayout
+      apps={apps}
+      sections={sections}
+      currentPath={pathname}
     >
       {children}
-    </SidebarLayout>
+    </WorkbenchLayout>
   )
 }
