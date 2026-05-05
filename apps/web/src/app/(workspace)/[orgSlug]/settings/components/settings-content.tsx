@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { MembersTab } from './members-tab'
 import { DepartmentsTab } from './departments-tab'
 import { SettingsTab } from './settings-sidebar'
-import { ChevronRight, ExternalLink, ShieldCheck, Palette, BellRing, Monitor, AppWindow } from 'lucide-react'
+import { ExternalLink, ShieldCheck, Palette, Monitor, AppWindow } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SettingsContentProps {
@@ -134,7 +134,7 @@ function GeneralSettings() {
         
         <div className="grid grid-cols-2 gap-8 max-w-2xl">
           <div className="space-y-4 group cursor-pointer">
-            <div className="aspect-[16/10] bg-gray-50 border-2 border-blue-600 rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all group-hover:shadow-md">
+            <div className="aspect-16/10 bg-gray-50 border-2 border-blue-600 rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all group-hover:shadow-md">
               <div className="h-4 w-3/4 bg-gray-200 rounded-full" />
               <div className="h-4 w-1/2 bg-blue-100 rounded-full" />
               <div className="mt-auto h-12 w-full bg-white border border-gray-200 rounded-xl shadow-sm" />
@@ -146,7 +146,7 @@ function GeneralSettings() {
           </div>
           
           <div className="space-y-4 group cursor-pointer">
-            <div className="aspect-[16/10] bg-gray-900 border-2 border-transparent rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all group-hover:shadow-md">
+            <div className="aspect-16/10 bg-gray-900 border-2 border-transparent rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all group-hover:shadow-md">
               <div className="h-4 w-3/4 bg-gray-800 rounded-full" />
               <div className="h-4 w-1/2 bg-blue-900/40 rounded-full" />
               <div className="mt-auto h-12 w-full bg-gray-800 border border-gray-700 rounded-xl shadow-sm" />

@@ -200,6 +200,10 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
   http://localhost:2991/api/auth/context
 ```
 
+## Frontend Style Guide
+
+- CSS/Tailwind conventions: [`docs/frontend-style-conventions.md`](docs/frontend-style-conventions.md)
+
 ## Troubleshooting
 
 **Port already in use:**
