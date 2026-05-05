@@ -51,6 +51,8 @@ export function ThemeProvider({ children, defaultTheme = 'theme-light' }: ThemeP
       mq.addEventListener('change', handler)
       return () => mq.removeEventListener('change', handler)
     }
+
+    return undefined
   }, [defaultTheme])
 
   function setTheme(t: Theme) {

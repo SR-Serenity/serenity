@@ -26,10 +26,11 @@ export function ShellIconActionButton({
 }: ShellIconActionButtonProps) {
   const classes = cn(
     'relative flex items-center justify-center shrink-0 cursor-pointer group',
-    'w-9 h-9 rounded border border-transparent outline-none',
-    'transition-colors duration-150',
+    'w-9 h-9 rounded-xl border border-transparent outline-none',
+    'transition-all duration-150 ease-out',
+    'focus-visible:border-focus focus-visible:bg-primary/10',
     active
-      ? 'bg-btn-pressed text-caption'
+      ? 'bg-primary/10 text-accent-txt'
       : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
     className,
   )
@@ -65,10 +66,10 @@ export function ShellSectionHeader({ title, actions }: ShellSectionHeaderProps) 
     <div
       className={cn(
         'flex items-center justify-between shrink-0',
-        'px-5 py-3',
-        'font-bold leading-6 text-xl',
+        'px-5 py-4',
+        'font-semibold leading-6 text-lg',
         'text-primary-text',
-        actions ? '' : 'min-h-17',
+        actions ? '' : 'min-h-16',
       )}
       style={{ textRendering: 'optimizeLegibility' }}
     >

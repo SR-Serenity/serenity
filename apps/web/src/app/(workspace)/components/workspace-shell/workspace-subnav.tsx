@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { ChevronRight, type LucideIcon } from 'lucide-react'
-import { ShellDivider, ShellSectionHeader } from './shell-primitives'
+import { ShellDivider, ShellSectionHeader } from './workspace-shell-primitives'
 
 export interface NavItem {
   id: string
@@ -22,7 +22,7 @@ export interface NavSection {
   items: NavItem[]
 }
 
-interface NavPanelProps {
+interface WorkspaceSubnavProps {
   /** Section title shown at the top of the panel */
   title: string
   sections: NavSection[]
@@ -50,10 +50,11 @@ function NavGroup({
         className={cn(
           'flex items-center justify-between shrink-0 w-full',
           'border-none outline-none bg-transparent cursor-pointer',
-          'px-4 py-2',
+          'mx-3 px-2 py-2 rounded-xl',
           'min-h-10',
           'transition-colors duration-150',
           'hover:bg-nav-hover',
+          'focus-visible:bg-primary/10 focus-visible:text-accent-txt',
           'group',
         )}
       >
@@ -61,7 +62,7 @@ function NavGroup({
           <span
             className={cn(
               'flex items-center justify-center shrink-0',
-              'w-5 h-5 rounded-sm',
+              'w-5 h-5 rounded-lg',
               'border border-transparent transition-all duration-100',
               'text-disabled-text',
               'group-hover:bg-ui',
@@ -83,7 +84,7 @@ function NavGroup({
               'px-1 py-0.5',
               'text-xs font-medium uppercase tracking-[0.08em]',
               'text-tertiary-text',
-              'rounded-sm',
+              'rounded-lg',
               'transition-colors duration-150',
               'group-hover:bg-ui-hover',
               'group-hover:text-primary-text',
@@ -132,11 +133,11 @@ function NavItemRow({
         className={cn(
           'flex items-center shrink-0 min-w-0',
           'mx-3 px-3',
-          'h-8 min-h-8 rounded-md',
+          'h-9 min-h-9 rounded-xl',
           'cursor-pointer select-none',
           'transition-colors duration-150',
           isActive
-            ? 'bg-nav-selected'
+            ? 'bg-primary/10'
             : 'hover:bg-nav-hover',
           depth > 0 && 'pl-10',
         )}
@@ -147,7 +148,7 @@ function NavItemRow({
             onClick={() => setOpen(v => !v)}
             className={cn(
               'flex items-center justify-center shrink-0 mr-1.5',
-              'w-4 h-4 rounded-sm',
+              'w-4 h-4 rounded-lg',
               'text-trans hover:text-caption',
               'hover:bg-btn-hover',
               'transition-colors duration-150 outline-none',
@@ -167,8 +168,8 @@ function NavItemRow({
             className={cn(
               'shrink-0 mr-2 w-4 h-4',
               'transition-colors duration-150',
-              isActive
-                ? 'text-caption'
+            isActive
+                ? 'text-accent-txt'
                 : 'text-muted',
             )}
           >
@@ -183,7 +184,7 @@ function NavItemRow({
             'text-sm whitespace-nowrap overflow-hidden text-ellipsis',
             'transition-colors duration-150',
             isActive
-              ? 'text-caption font-medium'
+              ? 'text-primary-text font-medium'
               : 'text-content',
           )}
         >
@@ -220,19 +221,18 @@ function NavItemRow({
 }
 
 /** Collapsible section panel shown beside the app dock. */
-export function NavPanel({
+export function WorkspaceSubnav({
   title,
   sections,
   currentPath,
   headerActions,
   footer,
-}: NavPanelProps) {
+}: WorkspaceSubnavProps) {
   return (
     <div
       className={cn(
         'relative flex flex-col h-full',
         'bg-nav',
-        'border-l border-nav-border',
         'w-70',
         'min-w-50 max-w-90',
       )}

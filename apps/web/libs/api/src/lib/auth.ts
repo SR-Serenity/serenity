@@ -1,5 +1,5 @@
 import { request } from './client'
-import type { AuthResponse, AcceptInvitationResponse } from '../types'
+import type { AuthResponse, AcceptInvitationResponse, OrgSummary } from '../types'
 
 export const authApi = {
   login: async (email: string, password: string, orgSlug?: string): Promise<AuthResponse> => {
@@ -43,6 +43,13 @@ export const authApi = {
       token,
       method: 'POST',
       body: JSON.stringify({ orgSlug }),
+    })
+  },
+
+  organizations: async (token: string): Promise<{ organizations: OrgSummary[] }> => {
+    return request('auth/organizations', {
+      token,
+      method: 'GET',
     })
   },
 
