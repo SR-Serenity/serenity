@@ -1,6 +1,6 @@
 # Production Dockerfile for NestJS Services
 # Features: Multi-stage build, optimized image size, security hardening
-# Usage: docker build --build-arg SERVICE_NAME=api-service -f infrastructure/prod/Dockerfile.nestjs -t serenity-api-service:latest .
+# Usage: docker build --build-arg SERVICE_NAME=core-service -f infrastructure/prod/Dockerfile.nestjs -t serenity-core-service:latest .
 
 # Build stage
 FROM node:20-alpine AS builder

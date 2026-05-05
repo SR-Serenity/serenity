@@ -148,7 +148,7 @@ shell-auth:
 	docker compose -f infrastructure/dev/docker-compose.yml exec auth-service sh
 
 shell-api:
-	docker compose -f infrastructure/dev/docker-compose.yml exec api-service sh
+	docker compose -f infrastructure/dev/docker-compose.yml exec core-service sh
 
 mongo-shell:
 	docker compose -f infrastructure/dev/docker-compose.yml exec mongodb mongosh

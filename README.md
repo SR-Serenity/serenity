@@ -33,9 +33,7 @@ Access:
 |---------|------|---------|
 | **Gateway** | 2991 | `pnpm nx serve gateway` |
 | **Auth Service** | 2992 | `pnpm nx serve auth-service` |
-| **API Service** | 2993 | `pnpm nx serve api-service` |
-| **Notification Service** | 2994 | `pnpm nx serve notification-service` |
-| **Analytics Service** | 2995 | `pnpm nx serve analytics-service` |
+| **Core Service** | 2993 | `pnpm nx serve core-service` |
 | **Realtime Service** | 2996 | `pnpm nx serve realtime-service` |
 | **Web Frontend** | 2997 | `pnpm nx dev web` |
 
@@ -51,10 +49,10 @@ brew services start postgresql@16
 pnpm nx run prisma:migrate
 
 # Terminal 3: Start core backend services together (parallel)
-pnpm nx run-many -t serve --projects=auth-service,api-service,gateway --parallel=3
+pnpm nx run-many -t serve --projects=auth-service,core-service,gateway --parallel=3
 
 # Terminal 4: Start optional supporting services together (parallel)
-pnpm nx run-many -t serve --projects=notification-service,analytics-service,realtime-service --parallel=3
+pnpm nx run-many -t serve --projects=realtime-service --parallel=1
 
 # Terminal 5: Start web frontend
 pnpm nx dev web
@@ -66,7 +64,7 @@ Nx supports running multiple services at once via `run-many`.
 
 ```bash
 # Run selected services in parallel
-pnpm nx run-many -t serve --projects=gateway,auth-service,api-service --parallel=3
+pnpm nx run-many -t serve --projects=gateway,auth-service,core-service --parallel=3
 
 # Run all projects that have a serve target
 pnpm nx run-many -t serve --all --parallel=6
@@ -81,16 +79,16 @@ Tip: press `Ctrl+C` in the terminal to stop all services started by that `run-ma
 
 ```bash
 # Run a service
-pnpm nx serve api-service
+pnpm nx serve core-service
 
 # Build a service
-pnpm nx build api-service
+pnpm nx build core-service
 
 # Test a service
-pnpm nx test api-service
+pnpm nx test core-service
 
 # Lint a service
-pnpm nx lint api-service
+pnpm nx lint core-service
 
 # Run all tests
 pnpm nx run-many --target=test --all
@@ -137,9 +135,7 @@ pnpm nx run prisma:studio
 apps/
 ├── gateway/               # API Gateway (port 2991)
 ├── auth-service/          # Authentication (port 2992)
-├── api-service/           # Core API (port 2993)
-├── notification-service/  # Notifications (port 2994)
-├── analytics-service/     # Analytics (port 2995)
+├── core-service/          # Core API (port 2993)
 ├── realtime-service/      # Real-time (port 2996)
 └── web/                   # Next.js Frontend (port 2997)
 ```
@@ -261,3 +257,8 @@ docker compose up --build
 ## Support
 
 For issues, check [GitHub Issues](https://github.com/your-repo/issues) or contact the team.
+## Support
+
+For issues, check [GitHub Issues](https://github.com/your-repo/issues) or contact the team.
+your-repo/issues) or contact the team.
+your-repo/issues) or contact the team.

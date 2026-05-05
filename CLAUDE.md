@@ -35,10 +35,8 @@ Multi-tenant workspace platform (Slack-like). Nx monorepo with pnpm workspaces.
 | `apps/web` (`@org/web`) | 9999 | Next.js 16 frontend |
 | `apps/gateway` | — | API gateway |
 | `apps/auth-service` | — | Auth (login, register, JWT) |
-| `apps/api-service` | 2991 | Main REST API |
+| `apps/core-service` | 2993 | Main REST API |
 | `apps/realtime-service` | — | WebSocket |
-| `apps/notification-service` | — | Notifications |
-| `apps/analytics-service` | — | Analytics |
 
 Run web dev server: `pnpm nx dev @org/web` (port 9999)
 

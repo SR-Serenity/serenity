@@ -1,6 +1,6 @@
 # Development Dockerfile for NestJS Services
 # Features: Live reload, debugging, verbose logging
-# Usage: docker build --build-arg SERVICE_NAME=api-service -f infrastructure/dev/Dockerfile.nestjs -t serenity-api-service:dev .
+# Usage: docker build --build-arg SERVICE_NAME=core-service -f infrastructure/dev/Dockerfile.nestjs -t serenity-core-service:dev .
 
 FROM node:20-alpine
 

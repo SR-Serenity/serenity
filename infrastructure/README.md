@@ -200,7 +200,7 @@ nano .env
 
 # 3. Build images (tag with version)
 docker-compose -f docker-compose.yml build \
-  --build-arg SERVICE_NAME=api-service
+  --build-arg SERVICE_NAME=core-service
 
 # 4. Start services
 docker-compose -f docker-compose.yml up -d

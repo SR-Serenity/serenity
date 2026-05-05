@@ -59,11 +59,9 @@
       },
       "exclude": [
         "apps/auth-service-e2e/**/*",
-        "apps/api-service-e2e/**/*",
-        "apps/analytics-service-e2e/**/*",
+        "apps/core-service-e2e/**/*",
         "apps/gateway-e2e/**/*",
-        "apps/realtime-service-e2e/**/*",
-        "apps/notification-service-e2e/**/*"
+        "apps/realtime-service-e2e/**/*"
       ]
     },
     {
