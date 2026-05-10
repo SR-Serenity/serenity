@@ -61,6 +61,25 @@ export class ApiProxyService {
     }
   }
 
+  async forwardPatchRequest(
+    endpoint: string,
+    body: unknown,
+    authHeader?: string
+  ) {
+    try {
+      const response = await axios.patch(
+        `${this.apiServiceUrl()}/${endpoint}`,
+        body,
+        {
+          headers: this.forwardHeaders(authHeader),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'API service');
+    }
+  }
+
   async forwardDeleteRequest(endpoint: string, authHeader?: string) {
     try {
       const response = await axios.delete(
