@@ -80,44 +80,19 @@ export class ApiProxyService {
     }
   }
 
-  async forwardDeleteRequest(endpoint: string, authHeader?: string) {
+  async forwardDeleteRequest(
+    endpoint: string,
+    authHeader?: string,
+    body?: unknown,
+  ) {
     try {
       const response = await axios.delete(
         `${this.apiServiceUrl()}/${endpoint}`,
         {
           headers: this.forwardHeaders(authHeader),
+          data: body,
         }
       );
-      return response.data;
-    } catch (error) {
-      throw mapProxyError(error, 'API service');
-    }
-  }
-
-  async forwardRequest(
-    endpoint: string,
-    body: unknown,
-    authHeader?: string,
-    method: 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'POST'
-  ) {
-    try {
-      const url = `${this.apiServiceUrl()}/${endpoint}`;
-      const headers = this.forwardHeaders(authHeader);
-
-      let response;
-      switch (method) {
-        case 'PATCH':
-          response = await axios.patch(url, body, { headers });
-          break;
-        case 'PUT':
-          response = await axios.put(url, body, { headers });
-          break;
-        case 'DELETE':
-          response = await axios.delete(url, { headers });
-          break;
-        default:
-          response = await axios.post(url, body, { headers });
-      }
       return response.data;
     } catch (error) {
       throw mapProxyError(error, 'API service');

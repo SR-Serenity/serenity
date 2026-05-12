@@ -100,11 +100,10 @@ export class OrganizationsController {
     @Body() body: UpdateMemberRoleBodyDto
   ) {
     const authorization = req.headers.authorization as string;
-    return this.apiProxy.forwardRequest(
+    return this.apiProxy.forwardPatchRequest(
       `organizations/${id}/members/${userId}/role`,
       body,
       authorization,
-      'PATCH'
     );
   }
 
@@ -119,11 +118,10 @@ export class OrganizationsController {
     @Body() body: UpdateMemberDepartmentBodyDto
   ) {
     const authorization = req.headers.authorization as string;
-    return this.apiProxy.forwardRequest(
+    return this.apiProxy.forwardPatchRequest(
       `organizations/${id}/members/${userId}/department`,
       body,
       authorization,
-      'PATCH'
     );
   }
 }

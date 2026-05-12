@@ -148,7 +148,7 @@ export class EditMessageDto {
     content!: string;
 }
 
-export class CursorQueryDto {
+export class CursorPageDto {
   @ApiPropertyOptional({ description: 'Pagination cursor token' })
   @IsOptional()
   @IsBase64()
@@ -156,9 +156,15 @@ export class CursorQueryDto {
 
   @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 100 })
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
     limit?: number;
+}
+
+export class ListMessagesDto extends CursorPageDto {
+  @ApiPropertyOptional({ description: 'Thread parent message id' })
+  @IsOptional()
+  @IsString()
+    parentId?: string;
 }

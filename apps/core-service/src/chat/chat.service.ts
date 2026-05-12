@@ -23,8 +23,9 @@ import type {
   CreateChannelDto,
   CreateDmDto,
   CreateMessageDto,
-  CursorQueryDto,
+  CursorPageDto,
   EditMessageDto,
+  ListMessagesDto,
 } from './dto/chat.dto';
 
 type AuthContext = {
@@ -58,10 +59,10 @@ export class ChatService {
     private readonly uploads: UploadsService
   ) {}
 
-  async listConversations(auth: AuthContext, query?: CursorQueryDto) {
+  async listConversations(auth: AuthContext, page?: CursorPageDto) {
     await this.ensureWorkspaceMember(auth.orgId, auth.userId);
-    const limit = query?.limit ?? 50;
-    const cursor = this.decodeCursor<ConversationCursor>(query?.cursor);
+    const limit = page?.limit ?? 50;
+    const cursor = this.decodeCursor<ConversationCursor>(page?.cursor);
     const baseWhere: Prisma.ChatConversationWhereInput = {
       orgId: auth.orgId,
       OR: [
@@ -105,17 +106,17 @@ export class ChatService {
       take: limit + 1,
     });
 
-    const page = this.toCursorPage(conversations, limit, (conversation) => ({
+    const cursorPage = this.toCursorPage(conversations, limit, (conversation) => ({
       updatedAt: conversation.updatedAt.toISOString(),
       id: conversation.id,
     }));
 
     return {
-      conversations: page.items.map(({ messages, ...conversation }) => ({
+      conversations: cursorPage.items.map(({ messages, ...conversation }) => ({
         ...conversation,
         lastMessage: messages[0] ? this.presentMessage(messages[0]) : null,
       })),
-      nextCursor: page.nextCursor,
+      nextCursor: cursorPage.nextCursor,
     };
   }
 
@@ -200,11 +201,11 @@ export class ChatService {
     auth: AuthContext,
     conversationId: string,
     parentId?: string,
-    query?: CursorQueryDto
+    page?: ListMessagesDto
   ) {
     await this.ensureConversationAccess(auth, conversationId);
-    const limit = query?.limit ?? 50;
-    const cursor = this.decodeCursor<MessageCursor>(query?.cursor);
+    const limit = page?.limit ?? 50;
+    const cursor = this.decodeCursor<MessageCursor>(page?.cursor);
     const baseWhere: Prisma.ChatMessageWhereInput = {
       conversationId,
       parentId: parentId ?? null,
@@ -232,16 +233,16 @@ export class ChatService {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
     });
-    const page = this.toCursorPage(messages, limit, (message) => ({
+    const cursorPage = this.toCursorPage(messages, limit, (message) => ({
       createdAt: message.createdAt.toISOString(),
       id: message.id,
     }));
 
     return {
-      messages: page.items
+      messages: cursorPage.items
         .reverse()
         .map((message) => this.presentMessage(message)),
-      nextCursor: page.nextCursor,
+      nextCursor: cursorPage.nextCursor,
     };
   }
 

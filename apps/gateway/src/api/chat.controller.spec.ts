@@ -14,6 +14,25 @@ describe('Gateway ChatController', () => {
     controller = new ChatController(apiProxy);
   });
 
+  it('proxies conversation and message list metadata as JSON bodies', () => {
+    controller.listConversations(req, { limit: 50 });
+    controller.listMessages(req, 'conversation_1', {
+      parentId: 'message_1',
+      limit: 50,
+    });
+
+    expect(apiProxy.forwardPostRequest).toHaveBeenCalledWith(
+      'chat/conversations/list',
+      { limit: 50 },
+      'Bearer token',
+    );
+    expect(apiProxy.forwardPostRequest).toHaveBeenCalledWith(
+      'chat/conversations/conversation_1/messages/list',
+      { parentId: 'message_1', limit: 50 },
+      'Bearer token',
+    );
+  });
+
   it('proxies chat attachment upload intent and completion as JSON with auth header', () => {
     controller.createUploadIntent(req, {
       filename: 'file.png',
@@ -68,6 +87,16 @@ describe('Gateway ChatController', () => {
     expect(apiProxy.forwardDeleteRequest).toHaveBeenCalledWith(
       'chat/messages/message_1',
       'Bearer token',
+    );
+  });
+
+  it('proxies reaction removal as a JSON body', () => {
+    controller.removeReaction(req, 'message_1', { emoji: 'ok' });
+
+    expect(apiProxy.forwardDeleteRequest).toHaveBeenCalledWith(
+      'chat/messages/message_1/reactions',
+      'Bearer token',
+      { emoji: 'ok' },
     );
   });
 });

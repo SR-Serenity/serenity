@@ -2,11 +2,9 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   Patch,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -21,8 +19,9 @@ import {
   CreateChannelDto,
   CreateDmDto,
   CreateMessageDto,
-  CursorQueryDto,
+  CursorPageDto,
   EditMessageDto,
+  ListMessagesDto,
 } from './dto/chat.dto';
 
 @ApiTags('chat')
@@ -32,10 +31,10 @@ import {
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Get('conversations')
+  @Post('conversations/list')
   @ApiOperation({ summary: 'List accessible chat conversations' })
-  listConversations(@CurrentUser() user: AuthUser, @Query() query: CursorQueryDto) {
-    return this.chatService.listConversations(user, query);
+  listConversations(@CurrentUser() user: AuthUser, @Body() body: CursorPageDto) {
+    return this.chatService.listConversations(user, body);
   }
 
   @Post('channels')
@@ -69,15 +68,14 @@ export class ChatController {
     return this.chatService.completeAttachmentUpload(user, attachmentId, body);
   }
 
-  @Get('conversations/:conversationId/messages')
+  @Post('conversations/:conversationId/messages/list')
   @ApiOperation({ summary: 'List root messages or thread replies' })
   listMessages(
     @CurrentUser() user: AuthUser,
     @Param('conversationId') conversationId: string,
-    @Query('parentId') parentId?: string,
-    @Query() query?: CursorQueryDto,
+    @Body() body: ListMessagesDto,
   ) {
-    return this.chatService.listMessages(user, conversationId, parentId, query);
+    return this.chatService.listMessages(user, conversationId, body.parentId, body);
   }
 
   @Post('conversations/:conversationId/messages')
@@ -128,13 +126,13 @@ export class ChatController {
     return this.chatService.addReaction(user, messageId, body);
   }
 
-  @Delete('messages/:messageId/reactions/:emoji')
+  @Delete('messages/:messageId/reactions')
   @ApiOperation({ summary: 'Remove a reaction from a message' })
   removeReaction(
     @CurrentUser() user: AuthUser,
     @Param('messageId') messageId: string,
-    @Param('emoji') emoji: string
+    @Body() body: AddReactionDto,
   ) {
-    return this.chatService.removeReaction(user, messageId, decodeURIComponent(emoji));
+    return this.chatService.removeReaction(user, messageId, body.emoji);
   }
 }

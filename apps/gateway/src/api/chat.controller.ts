@@ -2,11 +2,9 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   Patch,
   Post,
-  Query,
   Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -24,21 +22,16 @@ type RequestWithAuth = {
 export class ChatController {
   constructor(private readonly apiProxy: ApiProxyService) {}
 
-  @Get('conversations')
+  @Post('conversations/list')
   @ApiOperation({ summary: 'List accessible chat conversations' })
   listConversations(
     @Req() req: RequestWithAuth,
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: string,
+    @Body() body: unknown,
   ) {
-    const params = {
-      ...(cursor ? { cursor } : {}),
-      ...(limit ? { limit } : {}),
-    };
-    return this.apiProxy.forwardGetRequest(
-      'chat/conversations',
+    return this.apiProxy.forwardPostRequest(
+      'chat/conversations/list',
+      body,
       req.headers.authorization,
-      Object.keys(params).length > 0 ? params : undefined,
     );
   }
 
@@ -89,24 +82,17 @@ export class ChatController {
     );
   }
 
-  @Get('conversations/:conversationId/messages')
+  @Post('conversations/:conversationId/messages/list')
   @ApiOperation({ summary: 'List root messages or thread replies' })
   listMessages(
     @Req() req: RequestWithAuth,
     @Param('conversationId') conversationId: string,
-    @Query('parentId') parentId?: string,
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: string,
+    @Body() body: unknown,
   ) {
-    const params = {
-      ...(parentId ? { parentId } : {}),
-      ...(cursor ? { cursor } : {}),
-      ...(limit ? { limit } : {}),
-    };
-    return this.apiProxy.forwardGetRequest(
-      `chat/conversations/${conversationId}/messages`,
+    return this.apiProxy.forwardPostRequest(
+      `chat/conversations/${conversationId}/messages/list`,
+      body,
       req.headers.authorization,
-      Object.keys(params).length > 0 ? params : undefined
     );
   }
 
@@ -177,16 +163,17 @@ export class ChatController {
     );
   }
 
-  @Delete('messages/:messageId/reactions/:emoji')
+  @Delete('messages/:messageId/reactions')
   @ApiOperation({ summary: 'Remove a reaction from a message' })
   removeReaction(
     @Req() req: RequestWithAuth,
     @Param('messageId') messageId: string,
-    @Param('emoji') emoji: string
+    @Body() body: unknown,
   ) {
     return this.apiProxy.forwardDeleteRequest(
-      `chat/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
-      req.headers.authorization
+      `chat/messages/${messageId}/reactions`,
+      req.headers.authorization,
+      body,
     );
   }
 }
