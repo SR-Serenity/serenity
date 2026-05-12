@@ -1,38 +1,138 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreVertical, Reply, Smile } from 'lucide-react'
-import type { ChatMessage, ChatReaction } from '@serenity/api'
-import { cn } from '@/lib/utils'
+import {
+  Check,
+  Download,
+  Edit3,
+  FileText,
+  MoreHorizontal,
+  Reply,
+  RotateCcw,
+  SmilePlus,
+  Trash2,
+  X,
+} from 'lucide-react'
+import type { ChatAttachment, ChatMessage, ChatReaction } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type MessageItemProps = {
   message: ChatMessage
   currentUserId: string
+  compact?: boolean
   onReply?: (message: ChatMessage) => void
   onAddReaction?: (messageId: string, emoji: string) => void
   onRemoveReaction?: (messageId: string, emoji: string) => void
   onOpenThread?: (message: ChatMessage) => void
+  onEditMessage?: (messageId: string, content: string) => Promise<void> | void
+  onUnsendMessage?: (messageId: string) => Promise<void> | void
+  onDeleteMessage?: (messageId: string) => Promise<void> | void
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👀']
 
+function initials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || 'U'
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatBytes(size?: number | null) {
+  if (!size) return null
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function isImageAttachment(attachment: ChatAttachment) {
+  return attachment.kind === 'GIF' || attachment.mimeType?.startsWith('image/')
+}
+
+function AttachmentPreview({ attachment }: { attachment: ChatAttachment }) {
+  const size = formatBytes(attachment.size)
+  const url = attachment.url ?? undefined
+
+  if (url && isImageAttachment(attachment)) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-2 block w-fit overflow-hidden rounded-lg border border-gray-200 bg-white"
+      >
+        <img
+          src={url}
+          alt={attachment.name}
+          className="max-h-64 max-w-96 object-contain"
+        />
+      </a>
+    )
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className={cn(
+        'mt-2 flex max-w-md items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm transition-colors shadow-sm',
+        url ? 'hover:bg-gray-50' : 'pointer-events-none opacity-70'
+      )}
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+        <FileText className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium text-gray-900">{attachment.name}</div>
+        <div className="text-xs text-gray-500">{size ?? attachment.mimeType ?? 'File'}</div>
+      </div>
+      {url && <Download className="h-4 w-4 shrink-0 text-gray-400" />}
+    </a>
+  )
+}
+
 export function MessageItem({
   message,
   currentUserId,
+  compact = false,
   onReply,
   onAddReaction,
   onRemoveReaction,
   onOpenThread,
+  onEditMessage,
+  onUnsendMessage,
+  onDeleteMessage,
 }: MessageItemProps) {
-  const [showActions, setShowActions] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState(message.content)
+  const [isSaving, setIsSaving] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const isOwnMessage = message.authorId === currentUserId
+  const isUnsent = Boolean(message.unsentAt)
+  const replyCount = message.replies?.length ?? 0
+  const groupedReactions = message.reactions.reduce(
+    (acc: Record<string, ChatReaction[]>, reaction: ChatReaction) => {
+      acc[reaction.emoji] = [...(acc[reaction.emoji] ?? []), reaction]
+      return acc
+    },
+    {}
+  )
 
   const handleReactionClick = (emoji: string) => {
+    if (isUnsent) return
     const existingReaction = message.reactions.find(
-      (r: ChatReaction) => r.emoji === emoji && r.userId === currentUserId
+      reaction => reaction.emoji === emoji && reaction.userId === currentUserId
     )
     if (existingReaction) {
       onRemoveReaction?.(message.id, emoji)
@@ -42,95 +142,134 @@ export function MessageItem({
     setShowEmojiPicker(false)
   }
 
-  const groupedReactions = message.reactions.reduce((acc: Record<string, ChatReaction[]>, reaction: ChatReaction) => {
-    if (!acc[reaction.emoji]) {
-      acc[reaction.emoji] = []
+  const saveEdit = async () => {
+    const nextContent = draft.trim()
+    if (!nextContent || nextContent === message.content) {
+      setIsEditing(false)
+      setDraft(message.content)
+      return
     }
-    acc[reaction.emoji].push(reaction)
-    return acc
-  }, {})
 
-  const replyCount = message.replies?.length ?? 0
+    setIsSaving(true)
+    setActionError(null)
+    try {
+      await onEditMessage?.(message.id, nextContent)
+      setIsEditing(false)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to edit message')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const runAction = async (action: () => Promise<void> | void, fallback: string) => {
+    setActionError(null)
+    setShowMenu(false)
+    try {
+      await action()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : fallback)
+    }
+  }
 
   return (
-    <div
-      className={cn(
-        'group relative px-4 py-2 hover:bg-hover',
-        isOwnMessage && 'bg-accent/5'
-      )}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => {
-        setShowActions(false)
-        setShowEmojiPicker(false)
-      }}
-    >
-      <div className="flex gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
-          {message.author.displayName.slice(0, 2).toUpperCase()}
-        </div>
+    <div className="group relative px-4 py-2 transition-colors hover:bg-gray-50/80">
+      <div className="mx-auto flex max-w-5xl gap-3">
+        {!compact && (
+          <div
+            className={cn(
+              'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm',
+              isOwnMessage ? 'bg-blue-600' : 'bg-teal-500'
+            )}
+          >
+            {initials(message.author.displayName)}
+          </div>
+        )}
+
+        {compact && <div className="w-9 shrink-0 text-right text-[11px] text-transparent group-hover:text-gray-400">{formatTime(message.createdAt)}</div>}
 
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-baseline gap-2">
-            <span className="font-semibold text-caption">
-              {message.author.displayName}
-            </span>
-            <span className="text-xs text-muted">
-              {new Date(message.createdAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </div>
-
-          <div className="text-sm text-caption whitespace-pre-wrap break-words">
-            {message.content}
-          </div>
-
-          {message.attachments.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {message.attachments.map(attachment => (
-                <div
-                  key={attachment.id}
-                  className="flex items-center gap-2 rounded border border-divider bg-panel p-2 text-sm"
-                >
-                  {attachment.kind === 'GIF' ? (
-                    <img
-                      src={attachment.url}
-                      alt={attachment.name}
-                      className="max-h-48 rounded"
-                    />
-                  ) : (
-                    <>
-                      <span className="flex-1 truncate text-caption">
-                        {attachment.name}
-                      </span>
-                      {attachment.size && (
-                        <span className="text-xs text-muted">
-                          {(attachment.size / 1024).toFixed(1)} KB
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
+          {!compact && (
+            <div className="mb-0.5 flex min-w-0 items-baseline gap-2">
+              <span className="truncate font-semibold text-gray-900">{message.author.displayName}</span>
+              <span className="shrink-0 text-xs text-gray-400">{formatTime(message.createdAt)}</span>
+              {message.editedAt && !isUnsent && <span className="text-xs text-gray-400">edited</span>}
             </div>
           )}
 
-          {Object.keys(groupedReactions).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
+          {isEditing ? (
+            <div className="space-y-2">
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                rows={3}
+                className="min-h-20 w-full resize-none rounded-lg border border-blue-500 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-2 ring-blue-100"
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void saveEdit()}
+                  disabled={isSaving}
+                  className="gap-1 bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false)
+                    setDraft(message.content)
+                  }}
+                  disabled={isSaving}
+                  className="gap-1"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div
+                className={cn(
+                  'whitespace-pre-wrap wrap-break-word text-sm leading-5',
+                  isUnsent ? 'italic text-gray-500' : 'text-gray-800'
+                )}
+              >
+                {isUnsent ? 'Message unsent' : message.content}
+              </div>
+
+              {!isUnsent && message.attachments.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {message.attachments.map(attachment => (
+                    <AttachmentPreview key={attachment.id} attachment={attachment} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {!isUnsent && Object.keys(groupedReactions).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {Object.entries(groupedReactions).map(([emoji, reactions]) => {
-                const hasReacted = reactions.some((r: ChatReaction) => r.userId === currentUserId)
+                const hasReacted = reactions.some(reaction => reaction.userId === currentUserId)
                 return (
                   <button
                     key={emoji}
+                    type="button"
                     onClick={() => handleReactionClick(emoji)}
                     className={cn(
-                      'flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                      'flex h-7 items-center gap-1 rounded-full border px-2 text-xs transition-colors',
                       hasReacted
-                        ? 'border-accent bg-accent/10 text-accent-foreground'
-                        : 'border-divider bg-panel text-muted hover:bg-hover'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                     )}
-                    title={reactions.map((r: ChatReaction) => r.user?.displayName).join(', ')}
+                    title={reactions.map(reaction => reaction.user?.displayName).filter(Boolean).join(', ')}
                   >
                     <span>{emoji}</span>
                     <span>{reactions.length}</span>
@@ -140,54 +279,116 @@ export function MessageItem({
             </div>
           )}
 
-          {replyCount > 0 && (
+          {!isUnsent && replyCount > 0 && (
             <button
+              type="button"
               onClick={() => onOpenThread?.(message)}
-              className="mt-2 flex items-center gap-1 text-xs text-accent hover:underline"
+              className="mt-2 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
             >
               <Reply className="h-3 w-3" />
               {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
             </button>
           )}
+
+          {actionError && (
+            <div className="mt-2 text-xs text-red-600">{actionError}</div>
+          )}
         </div>
       </div>
 
-      {showActions && (
-        <div className="absolute right-4 top-2 flex items-center gap-1 rounded border border-divider bg-surface p-1 shadow-sm">
+      {!isEditing && (
+        <div className="absolute right-5 top-1 hidden items-center rounded-lg border border-gray-200 bg-white p-1 shadow-lg group-hover:flex">
+          {!isUnsent && (
+            <div className="relative">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setShowEmojiPicker(prev => !prev)}
+                title="Add reaction"
+              >
+                <SmilePlus className="h-4 w-4" />
+              </Button>
+              {showEmojiPicker && (
+                <div className="absolute right-0 top-9 z-20 flex gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+                  {QUICK_REACTIONS.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleReactionClick(emoji)}
+                      className="rounded-md p-1 text-lg transition-colors hover:bg-gray-100"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {!isUnsent && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onReply?.(message)}
+              title="Reply in thread"
+            >
+              <Reply className="h-4 w-4" />
+            </Button>
+          )}
           <div className="relative">
             <Button
+              type="button"
               variant="ghost"
-              size="sm"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="h-7 w-7 p-0"
+              size="icon-sm"
+              onClick={() => setShowMenu(prev => !prev)}
+              title="More actions"
             >
-              <Smile className="h-4 w-4" />
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
-            {showEmojiPicker && (
-              <div className="absolute right-0 top-full z-10 mt-1 flex gap-1 rounded border border-divider bg-surface p-2 shadow-lg">
-                {QUICK_REACTIONS.map(emoji => (
+            {showMenu && (
+              <div className="absolute right-0 top-9 z-20 w-48 rounded-lg border border-gray-200 bg-white p-1 text-sm shadow-xl">
+                {isOwnMessage && !isUnsent && (
                   <button
-                    key={emoji}
-                    onClick={() => handleReactionClick(emoji)}
-                    className="rounded p-1 text-lg hover:bg-hover"
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false)
+                      setDraft(message.content)
+                      setIsEditing(true)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-gray-700 hover:bg-gray-100"
                   >
-                    {emoji}
+                    <Edit3 className="h-4 w-4" />
+                    Edit message
                   </button>
-                ))}
+                )}
+                {isOwnMessage && !isUnsent && (
+                  <button
+                    type="button"
+                    onClick={() => void runAction(
+                      () => onUnsendMessage?.(message.id),
+                      'Failed to unsend message'
+                    )}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-gray-700 hover:bg-gray-100"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Unsend
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void runAction(
+                    () => onDeleteMessage?.(message.id),
+                    'Failed to delete message'
+                  )}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete for me
+                </button>
               </div>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onReply?.(message)}
-            className="h-7 w-7 p-0"
-          >
-            <Reply className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
         </div>
       )}
     </div>

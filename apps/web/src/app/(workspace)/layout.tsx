@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { authApi, chatApi, type ChatConversation, type OrgSummary } from '@serenity/api'
 import {
   Briefcase,
@@ -122,7 +122,7 @@ function buildSections(
           items: channels.map(conversation => ({
             id: conversation.id,
             label: getChatConversationName(conversation, currentUserId),
-            href: `${basePath}/chat?conversation=${encodeURIComponent(conversation.id)}`,
+            href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
             icon: conversation.type === 'PRIVATE_CHANNEL' ? Lock : Hash,
           })),
         },
@@ -132,7 +132,7 @@ function buildSections(
           items: directMessages.map(conversation => ({
             id: conversation.id,
             label: getChatConversationName(conversation, currentUserId),
-            href: `${basePath}/chat?conversation=${encodeURIComponent(conversation.id)}`,
+            href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
             icon: MessageSquare,
           })),
         },
@@ -331,46 +331,51 @@ function ChatSubnav({
 
   const channels = filteredConversations.filter(conversation => conversation.type !== 'DM')
   const directMessages = filteredConversations.filter(conversation => conversation.type === 'DM')
+  const openDialog = (type: 'channel' | 'dm') => {
+    window.dispatchEvent(new CustomEvent('serenity:open-chat-dialog', { detail: type }))
+  }
 
   return (
-    <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col bg-nav text-content">
+    <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col border-r border-gray-200 bg-gray-50/50 text-gray-700">
       <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
-        <div className="shrink-0 border-b border-nav-divider px-4 py-3">
+        <div className="shrink-0 border-b border-gray-200 px-4 py-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <button
               type="button"
-              className="flex min-w-0 items-center gap-2 px-1 py-1 text-left text-sm font-semibold text-primary-text"
+              className="flex min-w-0 items-center gap-2 px-1 py-1 text-left text-sm font-semibold text-gray-900"
             >
               <span className="truncate">Serenity</span>
-              <ChevronRight className="h-3.5 w-3.5 rotate-90 text-muted" />
+              <ChevronRight className="h-3.5 w-3.5 rotate-90 text-gray-400" />
             </button>
 
             <div className="flex shrink-0 items-center gap-1">
-              <Link
-                href={`${basePath}/chat?new=dm`}
+              <button
+                type="button"
+                onClick={() => openDialog('dm')}
                 title="New direct message"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-accent-txt"
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-blue-600 transition-colors hover:bg-blue-200"
               >
                 <MessageSquare className="h-4 w-4" />
-              </Link>
-              <Link
-                href={`${basePath}/chat?new=channel`}
+              </button>
+              <button
+                type="button"
+                onClick={() => openDialog('channel')}
                 title="Create channel"
-                className="flex h-7 w-7 items-center justify-center text-muted"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <Plus className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={event => onSearchChange(event.target.value)}
               placeholder="Search"
-              className="h-9 w-full rounded-md border border-nav-divider bg-surface px-3 pl-9 text-sm text-content outline-none placeholder:text-muted"
+              className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 pl-9 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </div>
@@ -383,15 +388,15 @@ function ChatSubnav({
             icon={MessageSquare}
           />
 
-          <div className="my-3 h-px bg-nav-divider" />
+          <div className="my-3 h-px bg-gray-100" />
 
           <ChatSubnavSection
             title="Channels"
-            actionHref={`${basePath}/chat?new=channel`}
+            onAction={() => openDialog('channel')}
             items={channels.map(conversation => ({
               id: conversation.id,
               label: getChatConversationName(conversation, currentUserId),
-              href: `${basePath}/chat?conversation=${encodeURIComponent(conversation.id)}`,
+              href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
               icon: conversation.type === 'PRIVATE_CHANNEL' ? Lock : Hash,
             }))}
             currentPath={currentPath}
@@ -399,11 +404,11 @@ function ChatSubnav({
 
           <ChatSubnavSection
             title="Direct Messages"
-            actionHref={`${basePath}/chat?new=dm`}
+            onAction={() => openDialog('dm')}
             items={directMessages.map(conversation => ({
               id: conversation.id,
               label: getChatConversationName(conversation, currentUserId),
-              href: `${basePath}/chat?conversation=${encodeURIComponent(conversation.id)}`,
+              href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
               icon: MessageSquare,
             }))}
             currentPath={currentPath}
@@ -416,12 +421,12 @@ function ChatSubnav({
 
 function ChatSubnavSection({
   title,
-  actionHref,
+  onAction,
   items,
   currentPath,
 }: {
   title: string
-  actionHref: string
+  onAction: () => void
   items: NavItem[]
   currentPath: string
 }) {
@@ -433,20 +438,25 @@ function ChatSubnavSection({
         <button
           type="button"
           onClick={() => setOpen(value => !value)}
-        className="flex min-w-0 items-center gap-2 text-sm text-tertiary-text"
+          className="flex min-w-0 items-center gap-2 text-sm font-medium text-gray-500"
         >
           <ChevronRight className={cn('h-3.5 w-3.5', open && 'rotate-90')} />
           <span className="truncate">{title}</span>
         </button>
-        <Link href={actionHref} title={`Add ${title}`} className="text-muted">
+        <button
+          type="button"
+          onClick={onAction}
+          title={`Add ${title}`}
+          className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+        >
           <Plus className="h-4 w-4" />
-        </Link>
+        </button>
       </div>
 
       {open && (
         <div>
           {items.length === 0 ? (
-            <div className="px-7 py-1 text-sm text-disabled-text">No items</div>
+            <div className="px-7 py-1 text-sm text-gray-400">No items</div>
           ) : (
             items.map(item => (
               <ChatSubnavLink
@@ -481,11 +491,11 @@ function ChatSubnavLink({
     <Link
       href={href}
       className={cn(
-        'flex h-8 items-center gap-2 rounded px-3 text-sm text-content',
-        active && 'bg-primary/10 text-primary-text',
+        'flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-700',
+        active && 'bg-white text-primary shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-primary',
       )}
     >
-      {Icon && <Icon className="h-4 w-4 shrink-0" />}
+      {Icon && <Icon className={cn('h-4 w-4 shrink-0 text-gray-400', active && 'text-primary')} />}
       <span className="truncate">{label}</span>
     </Link>
   )
@@ -645,7 +655,6 @@ function NavItemRow({
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug?: string }>()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const auth = useAuth()
   const [navigatorVisible, setNavigatorVisible] = useState(true)
@@ -733,7 +742,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     app => pathname === app.href || pathname.startsWith(app.href + '/'),
   )
   const sections = buildSections(activeApp?.id, basePath, chatConversations, auth.user?.id)
-  const currentPath = searchParams.size > 0 ? `${pathname}?${searchParams.toString()}` : pathname
+  const currentPath = pathname
   const userInitials = (auth.user?.displayName ?? auth.user?.email ?? 'U')
     .split(/\s+/)
     .slice(0, 2)
@@ -842,7 +851,12 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
           )}
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-divider bg-surface">
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border',
+            activeApp?.id === 'chat' ? 'border-gray-200 bg-white' : 'border-divider bg-surface',
+          )}
+        >
           <main className="min-h-0 flex-1 overflow-hidden">
             <div className="h-full w-full overflow-y-auto no-scrollbar">
               {children}

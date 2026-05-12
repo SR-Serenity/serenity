@@ -21,8 +21,12 @@ export function useRealtime(token: string | null, enabled = true) {
     }
 
     setStatus('connecting')
-    const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:2992'
-    const url = `${realtimeUrl}/realtime/events?token=${encodeURIComponent(token)}`
+    const realtimeUrl = (process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:2992')
+      .replace(/\/$/, '')
+    const endpoint = realtimeUrl.endsWith('/realtime/events')
+      ? realtimeUrl
+      : `${realtimeUrl}/api/realtime/events`
+    const url = `${endpoint}?token=${encodeURIComponent(token)}`
     const eventSource = new EventSource(url)
     eventSourceRef.current = eventSource
 
@@ -52,6 +56,18 @@ export function useRealtime(token: string | null, enabled = true) {
       notifyListeners('message.created', data)
     })
 
+    eventSource.addEventListener('message.edited', (e) => {
+      const data = JSON.parse(e.data)
+      setLastEvent({ type: 'message.edited', data })
+      notifyListeners('message.edited', data)
+    })
+
+    eventSource.addEventListener('message.unsent', (e) => {
+      const data = JSON.parse(e.data)
+      setLastEvent({ type: 'message.unsent', data })
+      notifyListeners('message.unsent', data)
+    })
+
     eventSource.addEventListener('reaction.added', (e) => {
       const data = JSON.parse(e.data)
       setLastEvent({ type: 'reaction.added', data })
@@ -75,13 +91,15 @@ export function useRealtime(token: string | null, enabled = true) {
     if (!listenersRef.current.has(eventType)) {
       listenersRef.current.set(eventType, new Set())
     }
-    listenersRef.current.get(eventType)!.add(callback)
+    const listeners = listenersRef.current.get(eventType)
+    if (!listeners) return () => undefined
+    listeners.add(callback)
 
     return () => {
-      const listeners = listenersRef.current.get(eventType)
-      if (listeners) {
-        listeners.delete(callback)
-        if (listeners.size === 0) {
+      const currentListeners = listenersRef.current.get(eventType)
+      if (currentListeners) {
+        currentListeners.delete(callback)
+        if (currentListeners.size === 0) {
           listenersRef.current.delete(eventType)
         }
       }

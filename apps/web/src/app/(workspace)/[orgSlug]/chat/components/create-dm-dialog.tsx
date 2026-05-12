@@ -1,149 +1,192 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Search } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Loader2, MessageSquarePlus, Search, X } from 'lucide-react'
+import type { Member } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
-import { Label } from '@/app/shared/components/ui/label'
 import { cn } from '@/lib/utils'
-
-type User = {
-  id: string
-  displayName: string
-  email?: string
-}
 
 type CreateDmDialogProps = {
   currentUserId: string
   onClose: () => void
-  onCreate: (memberIds: string[]) => Promise<void>
-  onLoadUsers: () => Promise<User[]>
+  onCreate: (memberId: string) => Promise<void>
+  onLoadMembers: () => Promise<Member[]>
+}
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || 'U'
 }
 
 export function CreateDmDialog({
   currentUserId,
   onClose,
   onCreate,
-  onLoadUsers,
+  onLoadMembers,
 }: CreateDmDialogProps) {
-  const [users, setUsers] = useState<User[]>([])
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [members, setMembers] = useState<Member[]>([])
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
+    let active = true
     setIsLoading(true)
-    try {
-      const loadedUsers = await onLoadUsers()
-      setUsers(loadedUsers.filter(u => u.id !== currentUserId))
-    } catch (error) {
-      console.error('Failed to load users:', error)
-    } finally {
-      setIsLoading(false)
+    onLoadMembers()
+      .then(loadedMembers => {
+        if (!active) return
+        setMembers(loadedMembers.filter(member => member.id !== currentUserId))
+      })
+      .catch(loadError => {
+        if (!active) return
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load members')
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
     }
-  }
+  }, [currentUserId, onLoadMembers])
 
-  const filteredUsers = users.filter(
-    user =>
-      user.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const toggleUser = (userId: string) => {
-    setSelectedUserIds(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+  const filteredMembers = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) {
+      return members
+    }
+    return members.filter(member =>
+      member.displayName.toLowerCase().includes(query) ||
+      member.email.toLowerCase().includes(query) ||
+      member.role.toLowerCase().includes(query) ||
+      member.departmentName?.toLowerCase().includes(query)
     )
-  }
+  }, [members, search])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (selectedUserIds.length === 0 || isCreating) return
+  const selectedMember = members.find(member => member.id === selectedMemberId)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!selectedMemberId || isCreating) return
 
     setIsCreating(true)
+    setError(null)
     try {
-      await onCreate(selectedUserIds)
+      await onCreate(selectedMemberId)
       onClose()
-    } catch (error) {
-      console.error('Failed to create DM:', error)
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Failed to create DM')
     } finally {
       setIsCreating(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg border border-divider bg-surface p-6 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-caption">New Direct Message</h2>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+      <div className="flex max-h-[82vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <MessageSquarePlus className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-gray-900">New direct message</h2>
+              <p className="text-sm text-gray-500">Search workspace members</p>
+            </div>
+          </div>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} title="Close">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="user-search">Select People</Label>
-            <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b border-gray-100 p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                id="user-search"
-                type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name or email..."
-                className="pl-9"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name, email, role, or department"
+                className="h-10 rounded-xl border-gray-200 bg-white pl-9 focus-visible:ring-blue-100"
                 disabled={isLoading || isCreating}
+                autoFocus
               />
             </div>
+            {selectedMember && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm text-blue-700">
+                <span>{selectedMember.displayName}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMemberId(null)}
+                  className="rounded-full hover:bg-blue-100"
+                  title="Clear selection"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded border border-divider bg-panel p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {isLoading ? (
-              <div className="py-8 text-center text-sm text-muted">Loading users...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted">No users found</div>
+              <div className="flex items-center justify-center py-12 text-gray-400">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-500">No members found</div>
             ) : (
-              filteredUsers.map(user => (
+              filteredMembers.map(member => (
                 <button
-                  key={user.id}
+                  key={member.id}
                   type="button"
-                  onClick={() => toggleUser(user.id)}
+                  onClick={() => setSelectedMemberId(member.id)}
                   disabled={isCreating}
                   className={cn(
-                    'w-full rounded p-2 text-left transition-colors',
-                    selectedUserIds.includes(user.id)
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-hover'
+                    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
+                    selectedMemberId === member.id
+                      ? 'bg-blue-50 text-gray-900'
+                      : 'hover:bg-gray-50'
                   )}
                 >
-                  <div className="font-semibold text-sm">{user.displayName}</div>
-                  {user.email && (
-                    <div className="text-xs text-muted">{user.email}</div>
-                  )}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-xs font-semibold text-white">
+                    {initials(member.displayName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-gray-900">{member.displayName}</div>
+                    <div className="truncate text-xs text-gray-500">
+                      {member.email}
+                      {member.departmentName ? ` · ${member.departmentName}` : ''}
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[11px] uppercase text-gray-500">
+                    {member.role}
+                  </span>
                 </button>
               ))
             )}
           </div>
 
-          {selectedUserIds.length > 0 && (
-            <div className="text-sm text-muted">
-              {selectedUserIds.length} {selectedUserIds.length === 1 ? 'person' : 'people'} selected
-            </div>
-          )}
+          {error && <div className="border-t border-red-100 bg-red-50 px-5 py-2 text-sm text-red-600">{error}</div>}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
             <Button type="button" variant="ghost" onClick={onClose} disabled={isCreating}>
               Cancel
             </Button>
-            <Button type="submit" disabled={selectedUserIds.length === 0 || isCreating}>
-              {isCreating ? 'Creating...' : 'Create'}
+            <Button
+              type="submit"
+              disabled={!selectedMemberId || isCreating}
+              className="gap-2 bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
+              Start DM
             </Button>
           </div>
         </form>
