@@ -1,15 +1,14 @@
-import { request } from './client'
+import { api } from './client'
 import type { AuthResponse, AcceptInvitationResponse, OrgSummary } from '../types'
 
 export const authApi = {
   login: async (email: string, password: string, orgSlug?: string): Promise<AuthResponse> => {
-    return request('auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
+    return api.post('auth/login', {
+      body: {
         email,
         password,
         orgSlug: orgSlug || undefined,
-      }),
+      },
     })
   },
 
@@ -20,9 +19,8 @@ export const authApi = {
     orgName: string
     orgSlug: string
   }): Promise<AuthResponse> => {
-    return request('auth/register', {
-      method: 'POST',
-      body: JSON.stringify(input),
+    return api.post('auth/register', {
+      body: input,
     })
   },
 
@@ -32,31 +30,27 @@ export const authApi = {
     displayName: string
     inviteToken: string
   }): Promise<AcceptInvitationResponse> => {
-    return request('auth/register-with-invite', {
-      method: 'POST',
-      body: JSON.stringify(input),
+    return api.post('auth/register-with-invite', {
+      body: input,
     })
   },
 
   switchOrg: async (token: string, orgSlug: string): Promise<AuthResponse> => {
-    return request('auth/switch-org', {
+    return api.post('auth/switch-org', {
       token,
-      method: 'POST',
-      body: JSON.stringify({ orgSlug }),
+      body: { orgSlug },
     })
   },
 
   organizations: async (token: string): Promise<{ organizations: OrgSummary[] }> => {
-    return request('auth/organizations', {
+    return api.get('auth/organizations', {
       token,
-      method: 'GET',
     })
   },
 
   acceptInvitation: async (token: string): Promise<AcceptInvitationResponse> => {
-    return request('auth/invitations/accept', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
+    return api.post('auth/invitations/accept', {
+      body: { token },
     })
   },
 }

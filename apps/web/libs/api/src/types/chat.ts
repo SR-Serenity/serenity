@@ -16,9 +16,11 @@ export type ChatConversationMember = {
 
 export type ChatAttachment = {
   id: string
-  messageId: string
+  messageId?: string | null
   kind: ChatAttachmentKind
-  url: string
+  uploadStatus?: 'PENDING' | 'COMPLETED' | 'FAILED'
+  publicId?: string
+  url?: string | null
   name: string
   mimeType?: string | null
   size?: number | null
@@ -44,6 +46,8 @@ export type ChatMessage = {
   content: string
   createdAt: string
   updatedAt: string
+  editedAt?: string | null
+  unsentAt?: string | null
   author: ChatUser
   attachments: ChatAttachment[]
   reactions: ChatReaction[]
@@ -63,14 +67,13 @@ export type ChatConversation = {
   lastMessage?: ChatMessage | null
 }
 
-export type ChatAttachmentInput = {
-  kind: ChatAttachmentKind
-  url: string
+export type ChatAttachmentDraft = {
+  id: string
   name: string
-  mimeType?: string
-  size?: number
-  provider?: string
-  metadata?: Record<string, unknown>
+  url?: string | null
+  mimeType?: string | null
+  size?: number | null
+  kind?: ChatAttachmentKind
 }
 
 export type CreateChannelInput = {
@@ -86,7 +89,7 @@ export type CreateDmInput = {
 export type CreateMessageInput = {
   content: string
   parentId?: string
-  attachments?: ChatAttachmentInput[]
+  attachmentIds?: string[]
 }
 
 export type ListConversationsResponse = {
@@ -103,11 +106,50 @@ export type CreateMessageResponse = {
   message: ChatMessage
 }
 
+export type ChatMessageResponse = {
+  message: ChatMessage
+}
+
+export type DeleteMessageResponse = {
+  success: boolean
+}
+
 export type AddReactionResponse = {
   reaction: ChatReaction
 }
 
-export type ListQuery = {
+export type CreateAttachmentUploadIntentInput = {
+  filename: string
+  contentType: string
+  size: number
+  conversationId: string
+}
+
+export type CreateAttachmentUploadIntentResponse = {
+  attachmentId: string
+  uploadUrl: string
+  apiKey: string
+  timestamp: number
+  signature: string
+  publicId: string
+  folder: string
+}
+
+export type CompleteAttachmentUploadInput = {
+  publicId: string
+  secureUrl: string
+  bytes: number
+  resourceType: string
+  format?: string
+  width?: number
+  height?: number
+}
+
+export type CompleteAttachmentUploadResponse = {
+  attachment: ChatAttachment
+}
+
+export type ListPage = {
   limit?: number
   cursor?: string
 }
@@ -120,7 +162,13 @@ export type RealtimeEventTarget = {
 
 type ChatRealtimeEventBase = {
   domain?: 'chat'
-  event?: 'message.created' | 'reaction.added' | 'reaction.removed'
+  event?:
+    | 'message.created'
+    | 'message.edited'
+    | 'message.unsent'
+    | 'message.deleted_for_me'
+    | 'reaction.added'
+    | 'reaction.removed'
   schemaVersion?: number
   eventId?: string
   timestamp?: string
@@ -130,6 +178,18 @@ type ChatRealtimeEventBase = {
 export type ChatRealtimeEvent =
   | (ChatRealtimeEventBase & {
       type: 'message.created'
+      orgId: string
+      conversationId: string
+      payload: ChatMessage
+    })
+  | (ChatRealtimeEventBase & {
+      type: 'message.edited'
+      orgId: string
+      conversationId: string
+      payload: ChatMessage
+    })
+  | (ChatRealtimeEventBase & {
+      type: 'message.unsent'
       orgId: string
       conversationId: string
       payload: ChatMessage

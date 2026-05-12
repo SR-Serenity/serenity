@@ -1,52 +1,41 @@
-import { request } from './client'
+import { api } from './client'
 import type {
   AddReactionResponse,
   ChatConversation,
+  ChatMessageResponse,
+  CompleteAttachmentUploadInput,
+  CompleteAttachmentUploadResponse,
+  CreateAttachmentUploadIntentInput,
+  CreateAttachmentUploadIntentResponse,
   CreateChannelInput,
   CreateDmInput,
   CreateMessageInput,
   CreateMessageResponse,
-  ListQuery,
+  DeleteMessageResponse,
+  ListPage,
   ListConversationsResponse,
   ListMessagesResponse,
 } from '../types/chat'
 
-function listQueryString(query?: ListQuery) {
-  if (!query) {
-    return ''
-  }
-  const params = new URLSearchParams()
-  if (typeof query.limit === 'number') {
-    params.set('limit', String(query.limit))
-  }
-  if (query.cursor) {
-    params.set('cursor', query.cursor)
-  }
-  const serialized = params.toString()
-  return serialized ? `?${serialized}` : ''
-}
-
 export const chatApi = {
   listConversations: async (
     token: string,
-    query?: ListQuery,
+    page?: ListPage,
   ): Promise<ListConversationsResponse> => {
-    return request(`chat/conversations${listQueryString(query)}`, { token, method: 'GET' })
+    return api.post('chat/conversations/list', { token, body: page ?? {} })
   },
 
   createChannel: async (token: string, input: CreateChannelInput): Promise<ChatConversation> => {
-    return request('chat/channels', {
+    return api.post('chat/channels', {
       token,
-      method: 'POST',
-      body: JSON.stringify(input),
+      body: input,
     })
   },
 
   createDm: async (token: string, input: CreateDmInput): Promise<ChatConversation> => {
-    return request('chat/dms', {
+    return api.post('chat/dms', {
       token,
-      method: 'POST',
-      body: JSON.stringify(input),
+      body: input,
     })
   },
 
@@ -54,22 +43,11 @@ export const chatApi = {
     token: string,
     conversationId: string,
     parentId?: string,
-    query?: ListQuery,
+    page?: ListPage,
   ): Promise<ListMessagesResponse> => {
-    const params = new URLSearchParams()
-    if (parentId) {
-      params.set('parentId', parentId)
-    }
-    if (typeof query?.limit === 'number') {
-      params.set('limit', String(query.limit))
-    }
-    if (query?.cursor) {
-      params.set('cursor', query.cursor)
-    }
-    const suffix = params.toString() ? `?${params.toString()}` : ''
-    return request(`chat/conversations/${conversationId}/messages${suffix}`, {
+    return api.post(`chat/conversations/${conversationId}/messages/list`, {
       token,
-      method: 'GET',
+      body: { parentId, ...page },
     })
   },
 
@@ -78,10 +56,53 @@ export const chatApi = {
     conversationId: string,
     input: CreateMessageInput
   ): Promise<CreateMessageResponse> => {
-    return request(`chat/conversations/${conversationId}/messages`, {
+    return api.post(`chat/conversations/${conversationId}/messages`, {
       token,
-      method: 'POST',
-      body: JSON.stringify(input),
+      body: input,
+    })
+  },
+
+  editMessage: async (
+    token: string,
+    messageId: string,
+    content: string
+  ): Promise<ChatMessageResponse> => {
+    return api.patch(`chat/messages/${messageId}`, {
+      token,
+      body: { content },
+    })
+  },
+
+  unsendMessage: async (token: string, messageId: string): Promise<ChatMessageResponse> => {
+    return api.post(`chat/messages/${messageId}/unsend`, {
+      token,
+    })
+  },
+
+  deleteMessageForMe: async (token: string, messageId: string): Promise<DeleteMessageResponse> => {
+    return api.delete(`chat/messages/${messageId}`, {
+      token,
+    })
+  },
+
+  createUploadIntent: async (
+    token: string,
+    input: CreateAttachmentUploadIntentInput
+  ): Promise<CreateAttachmentUploadIntentResponse> => {
+    return api.post('chat/attachments/upload-intent', {
+      token,
+      body: input,
+    })
+  },
+
+  completeAttachmentUpload: async (
+    token: string,
+    attachmentId: string,
+    input: CompleteAttachmentUploadInput
+  ): Promise<CompleteAttachmentUploadResponse> => {
+    return api.post(`chat/attachments/${attachmentId}/complete`, {
+      token,
+      body: input,
     })
   },
 
@@ -90,17 +111,16 @@ export const chatApi = {
     messageId: string,
     emoji: string
   ): Promise<AddReactionResponse> => {
-    return request(`chat/messages/${messageId}/reactions`, {
+    return api.post(`chat/messages/${messageId}/reactions`, {
       token,
-      method: 'POST',
-      body: JSON.stringify({ emoji }),
+      body: { emoji },
     })
   },
 
   removeReaction: async (token: string, messageId: string, emoji: string) => {
-    return request(`chat/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
+    return api.delete(`chat/messages/${messageId}/reactions`, {
       token,
-      method: 'DELETE',
+      body: { emoji },
     })
   },
 }

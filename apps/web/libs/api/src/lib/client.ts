@@ -10,20 +10,21 @@ const client = axios.create({
     timeout: 10000,
 })
 
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+type ApiOptions = {
+    token?: string
+    body?: unknown
+}
 
-export async function request<T>(
+async function send<T>(
+    method: AxiosRequestConfig['method'],
     path: string,
-    init?: RequestInit & { token?: string }
+    options?: ApiOptions
 ): Promise<T> {
-    const { token, method = 'POST', body } = init ?? {}
+    const { token, body } = options ?? {}
 
     const config: AxiosRequestConfig = {
-        method: (method?.toUpperCase() ?? 'POST') as HttpMethod,
-    }
-
-    if (body) {
-        config.data = typeof body === 'string' ? JSON.parse(body) : body
+        method,
+        data: body,
     }
 
     if (token) {
@@ -52,6 +53,17 @@ export async function request<T>(
         }
         throw error
     }
+}
+
+export const api = {
+    get: <T>(path: string, options?: Omit<ApiOptions, 'body'>) =>
+        send<T>('GET', path, options),
+    post: <T>(path: string, options?: ApiOptions) =>
+        send<T>('POST', path, options),
+    patch: <T>(path: string, options?: ApiOptions) =>
+        send<T>('PATCH', path, options),
+    delete: <T>(path: string, options?: ApiOptions) =>
+        send<T>('DELETE', path, options),
 }
 
 export { client }
