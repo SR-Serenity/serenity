@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register', '/invite/']
+const AUTH_ENTRY_PATHS = ['/login', '/register']
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -24,8 +25,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Authenticated user hitting /login or /register → redirect to workspace
-  if (isAuthenticated && PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Authenticated user hitting auth entry pages → redirect to workspace.
+  // Invite links must remain reachable so existing users can join another org.
+  if (isAuthenticated && AUTH_ENTRY_PATHS.some((p) => pathname.startsWith(p))) {
     const orgSlug = request.cookies.get('auth_org_slug')?.value
     if (orgSlug) {
       return NextResponse.redirect(new URL(`/${orgSlug}`, request.url))

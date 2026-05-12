@@ -3,12 +3,24 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { orgApi } from '@serenity/api'
-import type { Member, Invitation, Department, WorkspaceRole } from '@serenity/api'
-import { Plus, Mail, MoreHorizontal, UserCog, Trash2, Loader2 } from 'lucide-react'
+import type { Member, Invitation, Department, WorkspaceRole, CreateInvitationResponse } from '@serenity/api'
+import { Plus, Mail, MoreHorizontal, UserCog, Trash2, Loader2, Copy, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MembersTabProps {
   isOwner: boolean
+}
+
+function toLocalInviteLink(inviteUrl?: string): string {
+  if (!inviteUrl || typeof window === 'undefined') {
+    return inviteUrl || ''
+  }
+
+  try {
+    return `${window.location.origin}${new URL(inviteUrl).pathname}`
+  } catch {
+    return inviteUrl
+  }
 }
 
 export function MembersTab({ isOwner }: MembersTabProps) {
@@ -25,12 +37,16 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState('')
+  const [createdInvite, setCreatedInvite] = useState<CreateInvitationResponse | null>(null)
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false)
 
   const [inviteForm, setInviteForm] = useState({
     email: '',
     role: 'MEMBER' as WorkspaceRole,
     departmentId: '',
   })
+
+  const inviteLink = toLocalInviteLink(createdInvite?.inviteUrl)
 
   useEffect(() => {
     if (token && auth.currentOrg) {
@@ -65,19 +81,36 @@ export function MembersTab({ isOwner }: MembersTabProps) {
     setInviteLoading(true)
     setInviteError('')
     try {
-      await orgApi.createInvitation(auth.currentOrg.id, token, {
+      const invitation = await orgApi.createInvitation(auth.currentOrg.id, token, {
         email: inviteForm.email,
         role: inviteForm.role,
         departmentId: inviteForm.departmentId || undefined,
       })
-      setShowInviteModal(false)
+      setCreatedInvite(invitation)
       setInviteForm({ email: '', role: 'MEMBER', departmentId: '' })
-      loadData()
-    } catch (err: any) {
-      setInviteError(err.message || 'Failed to send invitation')
+      await loadData()
+    } catch (err: unknown) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invitation')
     } finally {
       setInviteLoading(false)
     }
+  }
+
+  function closeInviteModal() {
+    setShowInviteModal(false)
+    setInviteError('')
+    setCreatedInvite(null)
+    setCopiedInviteLink(false)
+    setInviteForm({ email: '', role: 'MEMBER', departmentId: '' })
+  }
+
+  async function copyInviteLink() {
+    if (!inviteLink) {
+      return
+    }
+    await navigator.clipboard.writeText(inviteLink)
+    setCopiedInviteLink(true)
+    setTimeout(() => setCopiedInviteLink(false), 1800)
   }
 
   async function handleRevokeInvitation(invitationId: string) {
@@ -265,7 +298,22 @@ export function MembersTab({ isOwner }: MembersTabProps) {
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-brand mb-4">Invite Member</h3>
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-brand">Invite member</h3>
+                <p className="mt-1 text-sm text-brand-muted">
+                  Send invitation by email, or copy link for local onboarding.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeInviteModal}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
             {inviteError && (
               <div className="mb-4 p-3 bg-danger/10 text-danger text-sm rounded-lg">
@@ -273,64 +321,131 @@ export function MembersTab({ isOwner }: MembersTabProps) {
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-brand mb-1">Email</label>
-                <input
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
-                  placeholder="colleague@company.com"
-                />
-              </div>
+            {createdInvite ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Invitation ready
+                  </div>
+                  <p className="mt-1 text-sm text-green-700">
+                    {createdInvite.email} can use this link to join {createdInvite.orgName}.
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-brand mb-1">Role</label>
-                <select
-                  value={inviteForm.role}
-                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as WorkspaceRole })}
-                  className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
-                >
-                  <option value="MEMBER">Member</option>
-                  {isOwner && <option value="ADMIN">Admin</option>}
-                </select>
-              </div>
+                {inviteLink && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-brand">Invite link</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={inviteLink}
+                        readOnly
+                        className="min-w-0 flex-1 rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-muted"
+                      />
+                      <button
+                        type="button"
+                        onClick={copyInviteLink}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand hover:bg-gray-50"
+                      >
+                        <Copy className="h-4 w-4" />
+                        {copiedInviteLink ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-sm font-medium text-brand mb-1">
-                  Department (optional)
-                </label>
-                <select
-                  value={inviteForm.departmentId}
-                  onChange={(e) => setInviteForm({ ...inviteForm, departmentId: e.target.value })}
-                  className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
-                >
-                  <option value="">No department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatedInvite(null)
+                      setCopiedInviteLink(false)
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-brand-muted hover:text-brand"
+                  >
+                    Invite another
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeInviteModal}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={inviteForm.email}
+                      onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
+                      placeholder="colleague@company.com"
+                      autoFocus
+                    />
+                  </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="px-4 py-2 text-sm font-medium text-brand-muted hover:text-brand"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleInvite}
-                disabled={inviteLoading || !inviteForm.email}
-                className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-50"
-              >
-                {inviteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Invitation'}
-              </button>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand mb-1">Role</label>
+                    <select
+                      value={inviteForm.role}
+                      onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as WorkspaceRole })}
+                      className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
+                    >
+                      <option value="MEMBER">Member</option>
+                      {isOwner && <option value="ADMIN">Admin</option>}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-brand mb-1">
+                      Department (optional)
+                    </label>
+                    <select
+                      value={inviteForm.departmentId}
+                      onChange={(e) => setInviteForm({ ...inviteForm, departmentId: e.target.value })}
+                      className="w-full px-3 py-2 border border-brand-border rounded-lg text-sm"
+                    >
+                      <option value="">No department</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={closeInviteModal}
+                    className="px-4 py-2 text-sm font-medium text-brand-muted hover:text-brand"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleInvite}
+                    disabled={inviteLoading || !inviteForm.email}
+                    className="inline-flex min-w-32 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
+                  >
+                    {inviteLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Sending
+                      </>
+                    ) : (
+                      'Invite member'
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

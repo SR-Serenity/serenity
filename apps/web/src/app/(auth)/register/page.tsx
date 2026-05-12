@@ -16,10 +16,6 @@ export default function RegisterPage() {
   const [inviteOrgName, setInviteOrgName] = useState('')
 
   useEffect(() => {
-    if (!auth.initializing && auth.isAuthenticated && auth.currentOrg) {
-      router.replace(`/${auth.currentOrg.slug}`)
-    }
-
     // Check for invite flow
     const token = sessionStorage.getItem('invite_token')
     const email = sessionStorage.getItem('invite_email')
@@ -32,6 +28,11 @@ export default function RegisterPage() {
       setInviteOrgName(orgName)
       // Clean up but keep for form use
       sessionStorage.removeItem('invite_email')
+      return
+    }
+
+    if (!auth.initializing && auth.isAuthenticated && auth.currentOrg) {
+      router.replace(`/${auth.currentOrg.slug}`)
     }
   }, [auth.isAuthenticated, auth.initializing, auth.currentOrg, router])
 
@@ -45,11 +46,18 @@ export default function RegisterPage() {
 
   const handleSuccess = (slug: string) => {
     const notification = sessionStorage.getItem('invite_notification')
+    const nextPath = notification
+      ? `/${slug}?notification=${encodeURIComponent(notification)}`
+      : `/${slug}`
+
     if (notification) {
       sessionStorage.removeItem('invite_notification')
-      router.push(`/${slug}?notification=${encodeURIComponent(notification)}`)
+    }
+
+    if (isInviteFlow) {
+      window.location.assign(nextPath)
     } else {
-      router.push(`/${slug}`)
+      router.push(nextPath)
     }
   }
 

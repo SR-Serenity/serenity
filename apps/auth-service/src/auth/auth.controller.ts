@@ -46,10 +46,7 @@ export class AuthController {
       inviteToken: string;
     },
   ) {
-    // Then accept the invitation
-    return this.invitationService.acceptInvitation({
-      token: body.inviteToken,
-    });
+    return this.invitationService.registerWithInvitation(body);
   }
 
   @Post('login')
