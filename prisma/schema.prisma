@@ -20,6 +20,22 @@ enum InvitationStatus {
   REVOKED
 }
 
+enum ChatConversationType {
+  PUBLIC_CHANNEL
+  PRIVATE_CHANNEL
+  DM
+}
+
+enum ChatAttachmentKind {
+  FILE
+  GIF
+}
+
+enum ChatAttachmentUploadStatus {
+  PENDING
+  COMPLETED
+}
+
 model Organization {
   id          String            @id @default(cuid())
   name        String
@@ -29,6 +45,8 @@ model Organization {
   memberships WorkspaceMember[]
   departments  Department[]
   invitations Invitation[]
+  chatConversations ChatConversation[]
+  chatAttachments    ChatAttachment[]
 }
 
 model User {
@@ -40,6 +58,11 @@ model User {
   updatedAt    DateTime          @updatedAt
   memberships  WorkspaceMember[]
   invitations  Invitation[]      @relation("Inviter")
+  chatMemberships ChatConversationMember[]
+  chatMessages    ChatMessage[]
+  chatReactions   ChatReaction[]
+  chatMessageVisibilities ChatMessageVisibility[]
+  chatUploads      ChatAttachment[] @relation("ChatAttachmentUploader")
 }
 
 model Department {
@@ -93,4 +116,118 @@ model Invitation {
   @@index([orgId])
   @@index([token])
   @@index([email, orgId])
+}
+
+model ChatConversation {
+  id        String               @id @default(cuid())
+  orgId     String
+  type      ChatConversationType
+  name      String?
+  slug      String?
+  dmKey     String?
+  createdById String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members      ChatConversationMember[]
+  messages     ChatMessage[]
+  attachments  ChatAttachment[]
+
+  @@unique([orgId, slug])
+  @@unique([orgId, dmKey])
+  @@index([orgId, type])
+  @@index([orgId, updatedAt, id])
+}
+
+model ChatConversationMember {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  authorId       String
+  parentId       String?
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  editedAt       DateTime?
+  unsentAt       DateTime?
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent       ChatMessage?     @relation("ChatThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      ChatMessage[]    @relation("ChatThread")
+  reactions    ChatReaction[]
+  attachments  ChatAttachment[]
+  visibilities ChatMessageVisibility[]
+
+  @@index([conversationId, createdAt])
+  @@index([parentId, createdAt])
+  @@index([conversationId, parentId, createdAt, id])
+}
+
+model ChatMessageVisibility {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  deletedAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, deletedAt])
+}
+
+model ChatReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([userId])
+  @@index([messageId, createdAt])
+}
+
+model ChatAttachment {
+  id             String                     @id @default(cuid())
+  messageId      String?
+  orgId          String
+  conversationId String
+  uploadedById   String
+  kind           ChatAttachmentKind
+  uploadStatus   ChatAttachmentUploadStatus @default(PENDING)
+  publicId       String
+  url            String?
+  name           String
+  mimeType       String?
+  size           Int?
+  provider       String?
+  metadata       Json?
+  createdAt      DateTime                   @default(now())
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  uploadedBy   User             @relation("ChatAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  message      ChatMessage?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([publicId])
+  @@index([messageId])
+  @@index([conversationId, uploadedById, uploadStatus])
 }

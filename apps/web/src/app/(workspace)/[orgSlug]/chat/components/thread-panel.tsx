@@ -1,0 +1,253 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Loader2, MessageSquareReply, X } from 'lucide-react'
+import type {
+  ChatAttachmentDraft,
+  ChatMessage,
+  ChatReaction,
+  ChatRealtimeEvent,
+} from '@serenity/api'
+import { chatApi } from '@serenity/api'
+import { Button } from '@/app/shared/components/ui/button'
+import { MessageItem } from './message-item'
+import { MessageInput } from './message-input'
+
+type RealtimeSubscribe = (eventType: string, callback: (data: unknown) => void) => () => void
+
+type ThreadPanelProps = {
+  parentMessage: ChatMessage
+  conversationId: string
+  currentUserId: string
+  token: string
+  onClose: () => void
+  onUploadFile: (file: File) => Promise<ChatAttachmentDraft>
+  onAddReaction: (messageId: string, emoji: string) => void
+  onRemoveReaction: (messageId: string, emoji: string) => void
+  onEditMessage: (messageId: string, content: string) => Promise<void>
+  onUnsendMessage: (messageId: string) => Promise<void>
+  onDeleteMessage: (messageId: string) => Promise<void>
+  realtimeSubscribe: RealtimeSubscribe
+}
+
+function upsertMessage(messages: ChatMessage[], nextMessage: ChatMessage) {
+  if (messages.some(message => message.id === nextMessage.id)) {
+    return messages.map(message => (message.id === nextMessage.id ? nextMessage : message))
+  }
+  return [...messages, nextMessage]
+}
+
+function updateMessageReaction(
+  messages: ChatMessage[],
+  messageId: string,
+  update: (message: ChatMessage) => ChatMessage
+) {
+  return messages.map(message => (message.id === messageId ? update(message) : message))
+}
+
+export function ThreadPanel({
+  parentMessage,
+  conversationId,
+  currentUserId,
+  token,
+  onClose,
+  onUploadFile,
+  onAddReaction,
+  onRemoveReaction,
+  onEditMessage,
+  onUnsendMessage,
+  onDeleteMessage,
+  realtimeSubscribe,
+}: ThreadPanelProps) {
+  const [parent, setParent] = useState(parentMessage)
+  const [replies, setReplies] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setParent(parentMessage)
+  }, [parentMessage])
+
+  useEffect(() => {
+    let active = true
+    setIsLoading(true)
+    setError(null)
+    chatApi.listMessages(token, conversationId, parentMessage.id)
+      .then(response => {
+        if (!active) return
+        setReplies(response.messages)
+      })
+      .catch(loadError => {
+        if (!active) return
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load thread')
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [conversationId, parentMessage.id, token])
+
+  useEffect(() => {
+    const onMessageCreated = realtimeSubscribe('message.created', (data) => {
+      const event = data as ChatRealtimeEvent
+      if (event.type !== 'message.created' || event.conversationId !== conversationId) return
+      if (event.payload.parentId === parentMessage.id) {
+        setReplies(prev => upsertMessage(prev, event.payload))
+      }
+    })
+
+    const onMessageEdited = realtimeSubscribe('message.edited', (data) => {
+      const event = data as ChatRealtimeEvent
+      if (event.type !== 'message.edited' || event.conversationId !== conversationId) return
+      if (event.payload.id === parentMessage.id) {
+        setParent(event.payload)
+      } else if (event.payload.parentId === parentMessage.id) {
+        setReplies(prev => upsertMessage(prev, event.payload))
+      }
+    })
+
+    const onMessageUnsent = realtimeSubscribe('message.unsent', (data) => {
+      const event = data as ChatRealtimeEvent
+      if (event.type !== 'message.unsent' || event.conversationId !== conversationId) return
+      if (event.payload.id === parentMessage.id) {
+        setParent(event.payload)
+      } else if (event.payload.parentId === parentMessage.id) {
+        setReplies(prev => upsertMessage(prev, event.payload))
+      }
+    })
+
+    const onReactionAdded = realtimeSubscribe('reaction.added', (data) => {
+      const event = data as ChatRealtimeEvent
+      if (event.type !== 'reaction.added' || event.conversationId !== conversationId) return
+      const { messageId, reaction } = event.payload as { messageId: string; reaction: ChatReaction }
+      if (messageId === parentMessage.id) {
+        setParent(prev => ({
+          ...prev,
+          reactions: prev.reactions.some(item => item.id === reaction.id)
+            ? prev.reactions
+            : [...prev.reactions, reaction],
+        }))
+      }
+      setReplies(prev =>
+        updateMessageReaction(prev, messageId, message => ({
+          ...message,
+          reactions: message.reactions.some(item => item.id === reaction.id)
+            ? message.reactions
+            : [...message.reactions, reaction],
+        }))
+      )
+    })
+
+    const onReactionRemoved = realtimeSubscribe('reaction.removed', (data) => {
+      const event = data as ChatRealtimeEvent
+      if (event.type !== 'reaction.removed' || event.conversationId !== conversationId) return
+      const { messageId, userId, emoji } = event.payload as {
+        messageId: string
+        userId: string
+        emoji: string
+      }
+      if (messageId === parentMessage.id) {
+        setParent(prev => ({
+          ...prev,
+          reactions: prev.reactions.filter(
+            reaction => !(reaction.userId === userId && reaction.emoji === emoji)
+          ),
+        }))
+      }
+      setReplies(prev =>
+        updateMessageReaction(prev, messageId, message => ({
+          ...message,
+          reactions: message.reactions.filter(
+            reaction => !(reaction.userId === userId && reaction.emoji === emoji)
+          ),
+        }))
+      )
+    })
+
+    return () => {
+      onMessageCreated()
+      onMessageEdited()
+      onMessageUnsent()
+      onReactionAdded()
+      onReactionRemoved()
+    }
+  }, [conversationId, parentMessage.id, realtimeSubscribe])
+
+  const handleSendReply = async (content: string, attachmentIds: string[]) => {
+    const response = await chatApi.createMessage(token, conversationId, {
+      content,
+      parentId: parentMessage.id,
+      attachmentIds,
+    })
+    setReplies(prev => upsertMessage(prev, response.message))
+  }
+
+  return (
+    <aside className="flex h-full w-full max-w-[420px] shrink-0 flex-col border-l border-gray-200 bg-white shadow-xl lg:w-[420px]">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+            <MessageSquareReply className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Thread</h3>
+            <p className="text-xs text-gray-500">{replies.length} replies</p>
+          </div>
+        </div>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} title="Close thread">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white">
+        <div className="border-b border-gray-100 bg-white py-2">
+          <MessageItem
+            message={parent}
+            currentUserId={currentUserId}
+            onAddReaction={onAddReaction}
+            onRemoveReaction={onRemoveReaction}
+            onEditMessage={onEditMessage}
+            onUnsendMessage={onUnsendMessage}
+            onDeleteMessage={onDeleteMessage}
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : error ? (
+          <div className="px-5 py-8 text-center text-sm text-red-600">{error}</div>
+        ) : replies.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-500">
+            No replies yet
+          </div>
+        ) : (
+          <div className="py-2">
+            {replies.map(reply => (
+              <MessageItem
+                key={reply.id}
+                message={reply}
+                currentUserId={currentUserId}
+                onAddReaction={onAddReaction}
+                onRemoveReaction={onRemoveReaction}
+                onEditMessage={onEditMessage}
+                onUnsendMessage={onUnsendMessage}
+                onDeleteMessage={onDeleteMessage}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <MessageInput
+        onSend={handleSendReply}
+        onUploadFile={onUploadFile}
+        placeholder="Reply in thread"
+      />
+    </aside>
+  )
+}

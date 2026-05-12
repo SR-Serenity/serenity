@@ -1,5 +1,5 @@
-export { authApi, orgApi } from './lib'
-export { request, API_BASE } from './lib/client'
+export { authApi, orgApi, chatApi } from './lib'
+export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
   Department,
@@ -9,6 +9,34 @@ export type {
   ListDepartmentsResponse,
   ListMembersResponse,
   ListInvitationsResponse,
+  CreateInvitationResponse,
   CreateInvitationInput,
   CreateDepartmentInput,
 } from './types/members'
+export type {
+  ChatConversationType,
+  ChatAttachmentKind,
+  ChatUser,
+  ChatConversationMember,
+  ChatAttachment,
+  ChatReaction,
+  ChatMessage,
+  ChatConversation,
+  ChatAttachmentDraft,
+  CreateChannelInput,
+  CreateDmInput,
+  CreateMessageInput,
+  ListConversationsResponse,
+  ListMessagesResponse,
+  CreateMessageResponse,
+  ChatMessageResponse,
+  DeleteMessageResponse,
+  AddReactionResponse,
+  CreateAttachmentUploadIntentInput,
+  CreateAttachmentUploadIntentResponse,
+  CompleteAttachmentUploadInput,
+  CompleteAttachmentUploadResponse,
+  ListPage,
+  RealtimeEventTarget,
+  ChatRealtimeEvent,
+} from './types/chat'

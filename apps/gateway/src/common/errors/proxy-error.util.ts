@@ -43,7 +43,7 @@ function getStatus(error: AxiosError): number {
 
   return HttpStatus.BAD_GATEWAY;
 }
-        
+
 export function mapProxyError(error: unknown, upstreamName: string): HttpException {
   if (error instanceof HttpException) {
     return error;

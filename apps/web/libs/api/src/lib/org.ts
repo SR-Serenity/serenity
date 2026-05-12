@@ -1,8 +1,9 @@
-import { request } from './client'
+import { api } from './client'
 import type {
   ListDepartmentsResponse,
   ListMembersResponse,
   ListInvitationsResponse,
+  CreateInvitationResponse,
   CreateInvitationInput,
   CreateDepartmentInput,
   WorkspaceRole,
@@ -10,39 +11,34 @@ import type {
 
 export const orgApi = {
   listDepartments: async (orgId: string, token: string): Promise<ListDepartmentsResponse> => {
-    return request(`auth/departments`, {
+    return api.get(`auth/departments`, {
       token,
-      method: 'GET',
     })
   },
 
   createDepartment: async (orgId: string, token: string, input: CreateDepartmentInput) => {
-    return request(`auth/departments`, {
+    return api.post(`auth/departments`, {
       token,
-      method: 'POST',
-      body: JSON.stringify(input),
+      body: input,
     })
   },
 
   updateDepartment: async (orgId: string, token: string, departmentId: string, input: CreateDepartmentInput) => {
-    return request(`auth/departments/${departmentId}`, {
+    return api.patch(`auth/departments/${departmentId}`, {
       token,
-      method: 'PATCH',
-      body: JSON.stringify(input),
+      body: input,
     })
   },
 
   deleteDepartment: async (orgId: string, token: string, departmentId: string) => {
-    return request(`auth/departments/${departmentId}`, {
+    return api.delete(`auth/departments/${departmentId}`, {
       token,
-      method: 'DELETE',
     })
   },
 
   listMembers: async (orgId: string, token: string): Promise<ListMembersResponse> => {
-    return request(`organizations/${orgId}/members`, {
+    return api.get(`organizations/${orgId}/members`, {
       token,
-      method: 'GET',
     })
   },
 
@@ -52,10 +48,9 @@ export const orgApi = {
     memberUserId: string,
     role: WorkspaceRole
   ) => {
-    return request(`organizations/${orgId}/members/${memberUserId}/role`, {
+    return api.patch(`organizations/${orgId}/members/${memberUserId}/role`, {
       token,
-      method: 'PATCH',
-      body: JSON.stringify({ role }),
+      body: { role },
     })
   },
 
@@ -65,17 +60,15 @@ export const orgApi = {
     memberUserId: string,
     departmentId: string | null
   ) => {
-    return request(`organizations/${orgId}/members/${memberUserId}/department`, {
+    return api.patch(`organizations/${orgId}/members/${memberUserId}/department`, {
       token,
-      method: 'PATCH',
-      body: JSON.stringify(departmentId ? { departmentId } : {}),
+      body: departmentId ? { departmentId } : {},
     })
   },
 
   listInvitations: async (orgId: string, token: string): Promise<ListInvitationsResponse> => {
-    return request(`auth/invitations`, {
+    return api.get(`auth/invitations`, {
       token,
-      method: 'GET',
     })
   },
 
@@ -83,18 +76,16 @@ export const orgApi = {
     orgId: string,
     token: string,
     input: CreateInvitationInput
-  ) => {
-    return request(`auth/invitations`, {
+  ): Promise<CreateInvitationResponse> => {
+    return api.post(`auth/invitations`, {
       token,
-      method: 'POST',
-      body: JSON.stringify(input),
+      body: input,
     })
   },
 
   revokeInvitation: async (orgId: string, token: string, invitationId: string) => {
-    return request(`auth/invitations/${invitationId}`, {
+    return api.delete(`auth/invitations/${invitationId}`, {
       token,
-      method: 'DELETE',
     })
   },
 }

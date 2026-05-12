@@ -52,7 +52,7 @@ export class InvitationController {
 
     this.authUtils.assertOwnerOrAdmin(role, 'invite members');
 
-    return this.invitationService.createInvitation(orgId, userId, role, body);
+    return this.invitationService.createInvitation(orgId, userId, body);
   }
 
   @Get('invitations')
@@ -81,4 +81,3 @@ export class InvitationController {
     return this.invitationService.revokeInvitation(orgId, id);
   }
 }
-

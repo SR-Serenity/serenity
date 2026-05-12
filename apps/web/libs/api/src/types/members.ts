@@ -31,6 +31,10 @@ export interface Invitation {
   createdAt: string
 }
 
+export interface CreateInvitationResponse extends Invitation {
+  inviteUrl?: string
+}
+
 export interface ListDepartmentsResponse {
   departments: Department[]
 }
