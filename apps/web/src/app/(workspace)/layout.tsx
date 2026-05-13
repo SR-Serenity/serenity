@@ -2,9 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { authApi, chatApi, type ChatConversation, type OrgSummary } from '@serenity/api'
+import type { ChatConversation } from '@serenity/api'
 import {
   Briefcase,
   Building2,
@@ -33,8 +34,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
+import { useChatStore } from '@/stores/chat-store'
 import { cn } from '@/lib/utils'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 import { WorkspaceHeader } from '@/app/(workspace)/components/workspace-shell/workspace-header'
 import { ShellDivider, ShellSectionHeader } from '@/app/(workspace)/components/workspace-shell/workspace-shell-primitives'
 import {
@@ -656,12 +659,27 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug?: string }>()
   const pathname = usePathname()
   const router = useRouter()
-  const auth = useAuth()
-  const [navigatorVisible, setNavigatorVisible] = useState(true)
-  const [organizations, setOrganizations] = useState<OrgSummary[]>([])
-  const [chatConversations, setChatConversations] = useState<ChatConversation[]>([])
-  const [chatNavSearch, setChatNavSearch] = useState('')
-  const [switchingOrgSlug, setSwitchingOrgSlug] = useState<string | null>(null)
+  const auth = useAuthStore(
+    useShallow((state) => ({
+      token: state.token,
+      user: state.user,
+      currentOrg: state.currentOrg,
+      initializing: state.initializing,
+      selectOrg: state.selectOrg,
+      logout: state.logout,
+      isAuthenticated: state.token !== null,
+    })),
+  )
+  const navigatorVisible = useWorkspaceStore((state) => state.navigatorVisible)
+  const setNavigatorVisible = useWorkspaceStore((state) => state.setNavigatorVisible)
+  const organizations = useWorkspaceStore((state) => state.organizations)
+  const loadOrganizations = useWorkspaceStore((state) => state.loadOrganizations)
+  const chatNavSearch = useWorkspaceStore((state) => state.chatNavSearch)
+  const setChatNavSearch = useWorkspaceStore((state) => state.setChatNavSearch)
+  const switchingOrgSlug = useWorkspaceStore((state) => state.switchingOrgSlug)
+  const setSwitchingOrgSlug = useWorkspaceStore((state) => state.setSwitchingOrgSlug)
+  const chatConversations = useChatStore((state) => state.conversations)
+  const loadChatConversations = useChatStore((state) => state.loadConversations)
 
   useEffect(() => {
     if (auth.initializing) return
@@ -672,55 +690,23 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     if (orgSlug && auth.currentOrg?.slug !== orgSlug) {
       auth.selectOrg(orgSlug).catch(() => router.replace('/login'))
     }
-  }, [auth, orgSlug, router])
+  }, [
+    auth.currentOrg?.slug,
+    auth.initializing,
+    auth.isAuthenticated,
+    auth.selectOrg,
+    orgSlug,
+    router,
+  ])
 
   useEffect(() => {
-    if (!auth.token || !auth.currentOrg) {
-      setOrganizations([])
-      return
-    }
-
-    let cancelled = false
-    authApi.organizations(auth.token)
-      .then(response => {
-        if (!cancelled) {
-          setOrganizations(response.organizations)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setOrganizations([auth.currentOrg as OrgSummary])
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [auth.token, auth.currentOrg])
+    void loadOrganizations(auth.token, auth.currentOrg)
+  }, [auth.token, auth.currentOrg, loadOrganizations])
 
   useEffect(() => {
-    if (!auth.token || !orgSlug || !pathname.startsWith(`/${orgSlug}/chat`)) {
-      setChatConversations([])
-      return
-    }
-
-    let cancelled = false
-    chatApi.listConversations(auth.token)
-      .then(response => {
-        if (!cancelled) {
-          setChatConversations(response.conversations)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setChatConversations([])
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [auth.token, orgSlug, pathname])
+    const shouldLoadChat = Boolean(orgSlug && pathname.startsWith(`/${orgSlug}/chat`))
+    void loadChatConversations(auth.token, shouldLoadChat)
+  }, [auth.token, loadChatConversations, orgSlug, pathname])
 
   if (auth.initializing || !auth.isAuthenticated || !orgSlug || !auth.currentOrg) {
     return (

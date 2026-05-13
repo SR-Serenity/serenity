@@ -7,6 +7,7 @@ import type {
   ChatMessage,
   ChatReaction,
   ChatRealtimeEvent,
+  ChatUser,
 } from '@serenity/api'
 import { chatApi } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
@@ -19,6 +20,9 @@ type ThreadPanelProps = {
   parentMessage: ChatMessage
   conversationId: string
   currentUserId: string
+  currentUser: ChatUser
+  localReply?: ChatMessage | null
+  onLocalReplyHandled?: () => void
   token: string
   onClose: () => void
   onUploadFile: (file: File) => Promise<ChatAttachmentDraft>
@@ -37,6 +41,32 @@ function upsertMessage(messages: ChatMessage[], nextMessage: ChatMessage) {
   return [...messages, nextMessage]
 }
 
+function mergeReplies(loadedReplies: ChatMessage[], currentReplies: ChatMessage[]) {
+  const loadedIds = new Set(loadedReplies.map(message => message.id))
+  const localReplies = currentReplies.filter(message => !loadedIds.has(message.id))
+  return [...loadedReplies, ...localReplies]
+}
+
+function createOptimisticId(scope: string) {
+  return `optimistic-${scope}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function replaceOptimisticMessage(
+  messages: ChatMessage[],
+  optimisticId: string,
+  nextMessage: ChatMessage,
+) {
+  let replaced = false
+  const withoutDuplicate = messages.filter(message => message.id !== nextMessage.id)
+  const nextMessages = withoutDuplicate.map(message => {
+    if (message.id !== optimisticId) return message
+    replaced = true
+    return nextMessage
+  })
+
+  return replaced ? nextMessages : upsertMessage(nextMessages, nextMessage)
+}
+
 function updateMessageReaction(
   messages: ChatMessage[],
   messageId: string,
@@ -49,6 +79,9 @@ export function ThreadPanel({
   parentMessage,
   conversationId,
   currentUserId,
+  currentUser,
+  localReply,
+  onLocalReplyHandled,
   token,
   onClose,
   onUploadFile,
@@ -75,7 +108,7 @@ export function ThreadPanel({
     chatApi.listMessages(token, conversationId, parentMessage.id)
       .then(response => {
         if (!active) return
-        setReplies(response.messages)
+        setReplies(prev => mergeReplies(response.messages, prev))
       })
       .catch(loadError => {
         if (!active) return
@@ -89,6 +122,12 @@ export function ThreadPanel({
       active = false
     }
   }, [conversationId, parentMessage.id, token])
+
+  useEffect(() => {
+    if (!localReply || localReply.parentId !== parentMessage.id) return
+    setReplies(prev => upsertMessage(prev, localReply))
+    onLocalReplyHandled?.()
+  }, [localReply, onLocalReplyHandled, parentMessage.id])
 
   useEffect(() => {
     const onMessageCreated = realtimeSubscribe('message.created', (data) => {
@@ -177,12 +216,36 @@ export function ThreadPanel({
   }, [conversationId, parentMessage.id, realtimeSubscribe])
 
   const handleSendReply = async (content: string, attachmentIds: string[]) => {
-    const response = await chatApi.createMessage(token, conversationId, {
-      content,
+    const optimisticId = createOptimisticId('reply')
+    const createdAt = new Date().toISOString()
+    const optimisticReply: ChatMessage = {
+      id: optimisticId,
+      conversationId,
+      authorId: currentUser.id,
       parentId: parentMessage.id,
-      attachmentIds,
-    })
-    setReplies(prev => upsertMessage(prev, response.message))
+      content,
+      createdAt,
+      updatedAt: createdAt,
+      editedAt: null,
+      unsentAt: null,
+      author: currentUser,
+      attachments: [],
+      reactions: [],
+    }
+
+    setReplies(prev => upsertMessage(prev, optimisticReply))
+
+    try {
+      const response = await chatApi.createMessage(token, conversationId, {
+        content,
+        parentId: parentMessage.id,
+        attachmentIds,
+      })
+      setReplies(prev => replaceOptimisticMessage(prev, optimisticId, response.message))
+    } catch (sendError) {
+      setReplies(prev => prev.filter(message => message.id !== optimisticId))
+      throw sendError
+    }
   }
 
   return (
@@ -215,7 +278,7 @@ export function ThreadPanel({
           />
         </div>
 
-        {isLoading ? (
+        {isLoading && replies.length === 0 ? (
           <div className="flex justify-center py-10">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>

@@ -1,7 +1,6 @@
 import './global.css'
 import { IBM_Plex_Sans } from 'next/font/google'
-import { AuthProvider } from '@/hooks/use-auth'
-import { ThemeProvider } from '@/lib/theme-provider'
+import { StoreInitializer } from '@/stores/store-initializer'
 import { cn } from '@/lib/utils'
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -20,9 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(ibmPlexSans.variable, 'font-sans')}>
-        <ThemeProvider defaultTheme="theme-light">
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+        <StoreInitializer defaultTheme="theme-light" />
+        {children}
       </body>
     </html>
   )

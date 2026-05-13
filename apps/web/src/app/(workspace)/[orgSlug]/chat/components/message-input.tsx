@@ -68,18 +68,25 @@ export function MessageInput({
   const handleSend = async () => {
     if (!canSend) return
 
+    const nextContent = content.trim()
+    const nextAttachmentIds = readyAttachmentIds
+
     setIsSending(true)
     setError(null)
     try {
-      await onSend(content.trim(), readyAttachmentIds)
       setContent('')
       setAttachments([])
       onCancelReply?.()
       requestAnimationFrame(resizeTextarea)
       textareaRef.current?.focus()
+
+      const sendPromise = onSend(nextContent, nextAttachmentIds)
+      setIsSending(false)
+      void sendPromise.catch((sendError) => {
+        setError(sendError instanceof Error ? sendError.message : 'Failed to send message')
+      })
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : 'Failed to send message')
-    } finally {
       setIsSending(false)
     }
   }

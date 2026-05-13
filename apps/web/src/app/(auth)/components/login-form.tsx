@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import type { LoginResult } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
@@ -16,14 +16,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const auth = useAuth()
+  const login = useAuthStore((state) => state.login)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
     try {
-      const result = await auth.login(email, password)
+      const result = await login(email, password)
       onSuccess(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
