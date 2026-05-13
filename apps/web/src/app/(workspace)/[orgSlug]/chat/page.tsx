@@ -17,6 +17,7 @@ import { chatApi, orgApi } from '@serenity/api'
 import type {
   ChatAttachmentDraft,
   ChatConversation,
+  ChatMessage,
   ChatRealtimeEvent,
   Member,
 } from '@serenity/api'
@@ -65,6 +66,8 @@ export default function ChatPage() {
     editMessage,
     unsendMessage,
     deleteMessageForMe,
+    addReaction,
+    removeReaction,
     createChannel,
     createDm,
     applyRealtimeEvent,
@@ -88,6 +91,8 @@ export default function ChatPage() {
       editMessage: state.editMessage,
       unsendMessage: state.unsendMessage,
       deleteMessageForMe: state.deleteMessageForMe,
+      addReaction: state.addReaction,
+      removeReaction: state.removeReaction,
       createChannel: state.createChannel,
       createDm: state.createDm,
       applyRealtimeEvent: state.applyRealtimeEvent,
@@ -105,6 +110,7 @@ export default function ChatPage() {
 
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showCreateDm, setShowCreateDm] = useState(false)
+  const [localThreadReply, setLocalThreadReply] = useState<ChatMessage | null>(null)
 
   const getConversationName = useCallback(
     (conversation: ChatConversation) => {
@@ -245,21 +251,25 @@ export default function ChatPage() {
   const handleSendMessage = async (content: string, attachmentIds: string[]) => {
     if (!token || !selectedConversation) return
 
-    await createMessage(token, selectedConversation.id, {
+    const sentMessage = await createMessage(token, selectedConversation.id, {
       content,
       parentId: replyingTo?.id,
       attachmentIds,
     })
+
+    if (sentMessage.parentId && threadMessage?.id === sentMessage.parentId) {
+      setLocalThreadReply(sentMessage)
+    }
   }
 
   const handleAddReaction = async (messageId: string, emoji: string) => {
     if (!token) return
-    await chatApi.addReaction(token, messageId, emoji)
+    await addReaction(token, messageId, emoji)
   }
 
   const handleRemoveReaction = async (messageId: string, emoji: string) => {
     if (!token) return
-    await chatApi.removeReaction(token, messageId, emoji)
+    await removeReaction(token, messageId, emoji)
   }
 
   const handleEditMessage = async (messageId: string, content: string) => {
@@ -401,6 +411,9 @@ export default function ChatPage() {
           parentMessage={threadMessage}
           conversationId={selectedConversation.id}
           currentUserId={user.id}
+          currentUser={user}
+          localReply={localThreadReply}
+          onLocalReplyHandled={() => setLocalThreadReply(null)}
           token={token}
           onClose={() => setThreadMessage(null)}
           onUploadFile={uploadChatFile}
