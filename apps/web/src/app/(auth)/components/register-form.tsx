@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import { slugify } from '@/lib/utils'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
@@ -33,7 +33,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [orgSlug, setOrgSlug] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const auth = useAuth()
+  const register = useAuthStore((state) => state.register)
   const onSuccessRef = useRef(onSuccess)
 
   function handleOrgNameChange(name: string) {
@@ -47,7 +47,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     )
   }
 
-  async function handleStep1(e: React.SubmitEvent) {
+  async function submitEmail(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -57,7 +57,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setStep(2)
   }
 
-  async function handleStep2(e: React.SubmitEvent) {
+  async function submitAccountDetails(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     if (!displayName.trim()) {
@@ -72,7 +72,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setStep(3)
   }
 
-  async function handleStep3(e: React.SubmitEvent) {
+  async function submitWorkspaceDetails(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -83,7 +83,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       if (!orgSlug.trim()) {
         throw new Error('Workspace URL is required')
       }
-      await auth.register({
+      await register({
         displayName: displayName.trim(),
         email: email.toLowerCase().trim(),
         password,
@@ -97,8 +97,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       setLoading(false)
     }
   }
-
-  const handlers = { 1: handleStep1, 2: handleStep2, 3: handleStep3 }
 
   // Keep onSuccess ref in sync
   useEffect(() => {
@@ -139,6 +137,12 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   }
 
   const meta = stepMeta[step]
+  const submitCurrentStep =
+    step === 1
+      ? submitEmail
+      : step === 2
+        ? submitAccountDetails
+        : submitWorkspaceDetails
 
   return (
     <div className="space-y-8">
@@ -156,7 +160,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         <p className="text-sm text-brand-muted">{meta.subtitle}</p>
       </div>
 
-      <form onSubmit={handlers[step]} className="space-y-4">
+      <form onSubmit={submitCurrentStep} className="space-y-4">
         {step === 1 && (
           <div className="space-y-1.5">
             <Label htmlFor="email">Work email</Label>

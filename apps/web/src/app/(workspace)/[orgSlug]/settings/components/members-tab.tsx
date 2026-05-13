@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useShallow } from 'zustand/react/shallow'
+import { useAuthStore } from '@/stores/auth-store'
 import { orgApi } from '@serenity/api'
 import type { Member, Invitation, Department, WorkspaceRole, CreateInvitationResponse } from '@serenity/api'
 import { Plus, Mail, MoreHorizontal, UserCog, Trash2, Loader2, Copy, CheckCircle2, X } from 'lucide-react'
@@ -24,9 +25,13 @@ function toLocalInviteLink(inviteUrl?: string): string {
 }
 
 export function MembersTab({ isOwner }: MembersTabProps) {
-  const auth = useAuth()
-  const token = auth.token
-  const userRole = auth.currentOrg?.role
+  const { token, currentOrg } = useAuthStore(
+    useShallow((state) => ({
+      token: state.token,
+      currentOrg: state.currentOrg,
+    })),
+  )
+  const userRole = currentOrg?.role
   // Show invite button for owner, or for testing purposes
   const showInvite = isOwner || userRole === 'ADMIN' || userRole === 'OWNER'
 
@@ -49,20 +54,20 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   const inviteLink = toLocalInviteLink(createdInvite?.inviteUrl)
 
   useEffect(() => {
-    if (token && auth.currentOrg) {
+    if (token && currentOrg) {
       loadData()
     }
-  }, [token, auth.currentOrg])
+  }, [token, currentOrg])
 
   async function loadData() {
-    if (!token || !auth.currentOrg) {
+    if (!token || !currentOrg) {
       return
     }
     try {
       const [membersRes, departmentsRes, invitationsRes] = await Promise.all([
-        orgApi.listMembers(auth.currentOrg.id, token),
-        orgApi.listDepartments(auth.currentOrg.id, token),
-        orgApi.listInvitations(auth.currentOrg.id, token),
+        orgApi.listMembers(currentOrg.id, token),
+        orgApi.listDepartments(currentOrg.id, token),
+        orgApi.listInvitations(currentOrg.id, token),
       ])
       setMembers(membersRes.members)
       setDepartments(departmentsRes.departments)
@@ -75,13 +80,13 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   }
 
   async function handleInvite() {
-    if (!token || !auth.currentOrg) {
+    if (!token || !currentOrg) {
       return
     }
     setInviteLoading(true)
     setInviteError('')
     try {
-      const invitation = await orgApi.createInvitation(auth.currentOrg.id, token, {
+      const invitation = await orgApi.createInvitation(currentOrg.id, token, {
         email: inviteForm.email,
         role: inviteForm.role,
         departmentId: inviteForm.departmentId || undefined,
@@ -114,11 +119,11 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   }
 
   async function handleRevokeInvitation(invitationId: string) {
-    if (!token || !auth.currentOrg) {
+    if (!token || !currentOrg) {
       return
     }
     try {
-      await orgApi.revokeInvitation(auth.currentOrg.id, token, invitationId)
+      await orgApi.revokeInvitation(currentOrg.id, token, invitationId)
       loadData()
     } catch (err) {
       console.error('Failed to revoke invitation:', err)
@@ -126,11 +131,11 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   }
 
   async function handleUpdateRole(memberId: string, role: WorkspaceRole) {
-    if (!token || !auth.currentOrg) {
+    if (!token || !currentOrg) {
       return
     }
     try {
-      await orgApi.updateMemberRole(auth.currentOrg.id, token, memberId, role)
+      await orgApi.updateMemberRole(currentOrg.id, token, memberId, role)
       loadData()
     } catch (err) {
       console.error('Failed to update role:', err)
@@ -138,11 +143,11 @@ export function MembersTab({ isOwner }: MembersTabProps) {
   }
 
   async function handleUpdateDepartment(memberId: string, departmentId: string | null) {
-    if (!token || !auth.currentOrg) {
+    if (!token || !currentOrg) {
       return
     }
     try {
-      await orgApi.updateMemberDepartment(auth.currentOrg.id, token, memberId, departmentId)
+      await orgApi.updateMemberDepartment(currentOrg.id, token, memberId, departmentId)
       loadData()
     } catch (err) {
       console.error('Failed to update department:', err)

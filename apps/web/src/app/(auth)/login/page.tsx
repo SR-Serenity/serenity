@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { LoginForm } from '@/app/(auth)/components/login-form'
 import { OrgPicker } from '@/app/(auth)/components/org-picker'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import type { LoginResult, OrgSummary } from '@serenity/api'
 import { Loader2 } from 'lucide-react'
 
@@ -12,7 +13,14 @@ type Phase = 'credentials' | 'org_select'
 
 export default function LoginPage() {
   const router = useRouter()
-  const auth = useAuth()
+  const auth = useAuthStore(
+    useShallow((state) => ({
+      currentOrg: state.currentOrg,
+      initializing: state.initializing,
+      selectOrg: state.selectOrg,
+      isAuthenticated: state.token !== null,
+    })),
+  )
   const [phase, setPhase] = useState<Phase>('credentials')
   const [pendingOrgs, setPendingOrgs] = useState<OrgSummary[]>([])
 

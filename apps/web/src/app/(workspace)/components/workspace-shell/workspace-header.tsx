@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { useTheme } from '@/lib/theme-provider'
+import { useShallow } from 'zustand/react/shallow'
+import { useThemeStore } from '@/stores/theme-store'
 import { cn } from '@/lib/utils'
 import { Search, ChevronRight, Moon, Sun } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -24,7 +25,13 @@ function titleCase(value: string): string {
 }
 
 export function WorkspaceHeader({ currentPath, orgSlug, activeApp }: WorkspaceHeaderProps) {
-  const { theme, setTheme, isDark } = useTheme()
+  const { theme, setTheme, isDark } = useThemeStore(
+    useShallow((state) => ({
+      theme: state.theme,
+      setTheme: state.setTheme,
+      isDark: state.isDark,
+    })),
+  )
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {

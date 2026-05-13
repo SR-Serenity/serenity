@@ -2,14 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { RegisterForm } from '@/app/(auth)/components/register-form'
 import { JoinOrgForm } from '@/app/(auth)/components/join-org-form'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import { Loader2 } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const auth = useAuth()
+  const auth = useAuthStore(
+    useShallow((state) => ({
+      currentOrg: state.currentOrg,
+      initializing: state.initializing,
+      isAuthenticated: state.token !== null,
+    })),
+  )
   const [isInviteFlow, setIsInviteFlow] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteToken, setInviteToken] = useState('')

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useShallow } from 'zustand/react/shallow'
+import { useAuthStore } from '@/stores/auth-store'
 import { orgApi } from '@serenity/api'
 import type { Department } from '@serenity/api'
 import { Plus, Building2, Trash2, Loader2 } from 'lucide-react'
@@ -11,8 +12,12 @@ interface DepartmentsTabProps {
 }
 
 export function DepartmentsTab({ isOwner }: DepartmentsTabProps) {
-  const auth = useAuth()
-  const token = auth.token
+  const { token, currentOrg } = useAuthStore(
+    useShallow((state) => ({
+      token: state.token,
+      currentOrg: state.currentOrg,
+    })),
+  )
 
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,15 +27,15 @@ export function DepartmentsTab({ isOwner }: DepartmentsTabProps) {
   const [newDepartmentName, setNewDepartmentName] = useState('')
 
   useEffect(() => {
-    if (token && auth.currentOrg) {
+    if (token && currentOrg) {
       loadDepartments()
     }
-  }, [token, auth.currentOrg])
+  }, [token, currentOrg])
 
   async function loadDepartments() {
-    if (!token || !auth.currentOrg) return
+    if (!token || !currentOrg) return
     try {
-      const res = await orgApi.listDepartments(auth.currentOrg.id, token)
+      const res = await orgApi.listDepartments(currentOrg.id, token)
       setDepartments(res.departments)
     } catch (err) {
       console.error('Failed to load departments:', err)
@@ -40,25 +45,25 @@ export function DepartmentsTab({ isOwner }: DepartmentsTabProps) {
   }
 
   async function handleCreate() {
-    if (!token || !auth.currentOrg || !newDepartmentName.trim()) return
+    if (!token || !currentOrg || !newDepartmentName.trim()) return
     setCreateLoading(true)
     setCreateError('')
     try {
-      await orgApi.createDepartment(auth.currentOrg.id, token, { name: newDepartmentName.trim() })
+      await orgApi.createDepartment(currentOrg.id, token, { name: newDepartmentName.trim() })
       setShowCreateModal(false)
       setNewDepartmentName('')
       loadDepartments()
-    } catch (err: any) {
-      setCreateError(err.message || 'Failed to create department')
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create department')
     } finally {
       setCreateLoading(false)
     }
   }
 
   async function handleDelete(departmentId: string) {
-    if (!token || !auth.currentOrg) return
+    if (!token || !currentOrg) return
     try {
-      await orgApi.deleteDepartment(auth.currentOrg.id, token, departmentId)
+      await orgApi.deleteDepartment(currentOrg.id, token, departmentId)
       loadDepartments()
     } catch (err) {
       console.error('Failed to delete department:', err)

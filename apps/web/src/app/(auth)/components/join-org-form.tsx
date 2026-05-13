@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { jwtDecode } from 'jwt-decode'
 import { authApi } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
 import { Label } from '@/app/shared/components/ui/label'
 import { Progress } from '@/app/shared/components/ui/progress'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
-import type { User } from '@serenity/api'
+import { useAuthStore } from '@/stores/auth-store'
 
 interface JoinOrgFormProps {
   onSuccess: (orgSlug: string) => void
@@ -26,44 +25,13 @@ const stepMeta: Record<Exclude<Step, 3>, { title: string; subtitle: string }> = 
   2: { title: 'Joining organization', subtitle: "You're about to join" },
 }
 
-function decodeJwt(token: string, fallbackDisplayName?: string): User | null {
-  try {
-    type JwtPayload = {
-      user_id?: string
-      sub?: string
-      email?: string
-      displayName?: string
-    }
-
-    const payload = jwtDecode<JwtPayload>(token)
-    const id = payload.user_id ?? payload.sub
-    const email = payload.email
-
-    if (!id || !email) {
-      return null
-    }
-
-    let displayName = fallbackDisplayName || ''
-    if (payload.displayName && payload.displayName.trim().length > 0) {
-      displayName = payload.displayName
-    }
-
-    return {
-      id,
-      email,
-      displayName: displayName || email.split('@')[0],
-    }
-  } catch {
-    return null
-  }
-}
-
 export function JoinOrgForm({
   onSuccess,
   prefillEmail,
   inviteToken,
   orgName,
 }: JoinOrgFormProps) {
+  const setSession = useAuthStore((state) => state.setSession)
   const [step, setStep] = useState<Step>(1)
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
@@ -73,7 +41,7 @@ export function JoinOrgForm({
   const [orgSlug, setOrgSlug] = useState('')
   const onSuccessRef = useRef(onSuccess)
 
-  async function handleStep1(e: React.SubmitEvent) {
+  async function submitAccountDetails(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     if (!displayName.trim()) {
@@ -91,7 +59,7 @@ export function JoinOrgForm({
     setStep(2)
   }
 
-  async function handleStep2(e: React.SubmitEvent) {
+  async function submitInviteRegistration(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -104,28 +72,22 @@ export function JoinOrgForm({
       })
 
       if ('accessToken' in registerResponse && registerResponse.organization) {
-        const user = decodeJwt(registerResponse.accessToken, displayName)
-        if (user) {
-          localStorage.setItem('auth_token', registerResponse.accessToken)
-          localStorage.setItem('auth_org', JSON.stringify(registerResponse.organization))
-          document.cookie = `auth_token=${registerResponse.accessToken}; path=/; SameSite=Lax; max-age=86400`
-          document.cookie = `auth_org_slug=${registerResponse.organization.slug}; path=/; SameSite=Lax; max-age=86400`
+        setSession(registerResponse.accessToken, registerResponse.organization, displayName)
 
-          sessionStorage.removeItem('invite_token')
-          sessionStorage.removeItem('invite_email')
-          sessionStorage.removeItem('invite_orgName')
-          sessionStorage.removeItem('invite_role')
-          sessionStorage.removeItem('invite_departmentId')
+        sessionStorage.removeItem('invite_token')
+        sessionStorage.removeItem('invite_email')
+        sessionStorage.removeItem('invite_orgName')
+        sessionStorage.removeItem('invite_role')
+        sessionStorage.removeItem('invite_departmentId')
 
-          sessionStorage.setItem(
-            'invite_notification',
-            `You've been added to ${registerResponse.organization.name}`
-          )
+        sessionStorage.setItem(
+          'invite_notification',
+          `You've been added to ${registerResponse.organization.name}`
+        )
 
-          setOrgSlug(registerResponse.organization.slug)
-          setStep(3)
-          return
-        }
+        setOrgSlug(registerResponse.organization.slug)
+        setStep(3)
+        return
       }
 
       throw new Error('Failed to join organization')
@@ -192,7 +154,10 @@ export function JoinOrgForm({
         </p>
       </div>
 
-      <form onSubmit={step === 1 ? handleStep1 : handleStep2} className="space-y-4">
+      <form
+        onSubmit={step === 1 ? submitAccountDetails : submitInviteRegistration}
+        className="space-y-4"
+      >
         {step === 1 && (
           <>
             <div className="space-y-1.5">

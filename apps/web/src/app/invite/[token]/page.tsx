@@ -2,8 +2,9 @@
 
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { authApi } from '@serenity/api'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import { Loader2 } from 'lucide-react'
 import type { AcceptInvitationResponse, AuthResponse } from '@serenity/api'
 
@@ -14,7 +15,14 @@ function isAuthResponse(res: AcceptInvitationResponse): res is AuthResponse {
 function InvitePageContent() {
   const router = useRouter()
   const params = useParams()
-  const auth = useAuth()
+  const auth = useAuthStore(
+    useShallow((state) => ({
+      initializing: state.initializing,
+      user: state.user,
+      logout: state.logout,
+      isAuthenticated: state.token !== null,
+    })),
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [blockedByAccount, setBlockedByAccount] = useState(false)

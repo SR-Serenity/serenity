@@ -1,18 +1,25 @@
 'use client'
 
-import { useAuth } from '@/hooks/use-auth'
+import { useShallow } from 'zustand/react/shallow'
+import { useAuthStore } from '@/stores/auth-store'
 import { MembersTab } from './members-tab'
 import { DepartmentsTab } from './departments-tab'
 import { SettingsTab } from './settings-sidebar'
 import { ExternalLink, ShieldCheck, Palette, Monitor, AppWindow } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { User } from '@serenity/api'
 
 interface SettingsContentProps {
   activeTab: SettingsTab
 }
 
 export function SettingsContent({ activeTab }: SettingsContentProps) {
-  const { user, currentOrg } = useAuth()
+  const { user, currentOrg } = useAuthStore(
+    useShallow((state) => ({
+      user: state.user,
+      currentOrg: state.currentOrg,
+    })),
+  )
   const isOwner = currentOrg?.role === 'OWNER'
 
   switch (activeTab) {
@@ -75,7 +82,7 @@ export function SettingsContent({ activeTab }: SettingsContentProps) {
   }
 }
 
-function AccountSettings({ user }: { user: any }) {
+function AccountSettings({ user }: { user: User | null }) {
   return (
     <div className="p-8 max-w-4xl space-y-12 overflow-y-auto h-full no-scrollbar bg-white">
       <section className="space-y-8">
