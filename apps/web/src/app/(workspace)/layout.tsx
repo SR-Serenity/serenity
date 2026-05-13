@@ -35,6 +35,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { useChatStore } from '@/stores/chat-store'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { WorkspaceHeader } from '@/app/(workspace)/components/workspace-shell/workspace-header'
@@ -673,12 +674,12 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const setNavigatorVisible = useWorkspaceStore((state) => state.setNavigatorVisible)
   const organizations = useWorkspaceStore((state) => state.organizations)
   const loadOrganizations = useWorkspaceStore((state) => state.loadOrganizations)
-  const chatConversations = useWorkspaceStore((state) => state.chatConversations)
-  const loadChatConversations = useWorkspaceStore((state) => state.loadChatConversations)
   const chatNavSearch = useWorkspaceStore((state) => state.chatNavSearch)
   const setChatNavSearch = useWorkspaceStore((state) => state.setChatNavSearch)
   const switchingOrgSlug = useWorkspaceStore((state) => state.switchingOrgSlug)
   const setSwitchingOrgSlug = useWorkspaceStore((state) => state.setSwitchingOrgSlug)
+  const chatConversations = useChatStore((state) => state.conversations)
+  const loadChatConversations = useChatStore((state) => state.loadConversations)
 
   useEffect(() => {
     if (auth.initializing) return

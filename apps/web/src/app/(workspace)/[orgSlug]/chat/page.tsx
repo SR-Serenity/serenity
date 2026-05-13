@@ -11,13 +11,12 @@ import {
 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
+import { useChatStore } from '@/stores/chat-store'
 import { useRealtime } from '@/hooks/use-realtime'
 import { chatApi, orgApi } from '@serenity/api'
 import type {
   ChatAttachmentDraft,
   ChatConversation,
-  ChatMessage,
-  ChatReaction,
   ChatRealtimeEvent,
   Member,
 } from '@serenity/api'
@@ -38,21 +37,6 @@ function initials(name: string) {
     .toUpperCase() || 'S'
 }
 
-function upsertMessage(messages: ChatMessage[], nextMessage: ChatMessage) {
-  if (messages.some(message => message.id === nextMessage.id)) {
-    return messages.map(message => (message.id === nextMessage.id ? nextMessage : message))
-  }
-  return [...messages, nextMessage]
-}
-
-function updateReaction(
-  messages: ChatMessage[],
-  messageId: string,
-  update: (message: ChatMessage) => ChatMessage
-) {
-  return messages.map(message => (message.id === messageId ? update(message) : message))
-}
-
 export default function ChatPage() {
   const { token, user, currentOrg, isAuthenticated } = useAuthStore(
     useShallow((state) => ({
@@ -60,6 +44,53 @@ export default function ChatPage() {
       user: state.user,
       currentOrg: state.currentOrg,
       isAuthenticated: state.token !== null,
+    })),
+  )
+  const {
+    conversations,
+    messages,
+    hasMoreMessages,
+    nextCursor,
+    isLoadingConversations,
+    isLoadingMessages,
+    conversationError,
+    messageError,
+    replyingTo,
+    threadMessage,
+    setActiveConversation,
+    loadMessages,
+    setReplyingTo,
+    setThreadMessage,
+    createMessage,
+    editMessage,
+    unsendMessage,
+    deleteMessageForMe,
+    createChannel,
+    createDm,
+    applyRealtimeEvent,
+  } = useChatStore(
+    useShallow((state) => ({
+      conversations: state.conversations,
+      messages: state.messages,
+      hasMoreMessages: state.hasMoreMessages,
+      nextCursor: state.nextCursor,
+      isLoadingConversations: state.isLoadingConversations,
+      isLoadingMessages: state.isLoadingMessages,
+      conversationError: state.conversationError,
+      messageError: state.messageError,
+      replyingTo: state.replyingTo,
+      threadMessage: state.threadMessage,
+      setActiveConversation: state.setActiveConversation,
+      loadMessages: state.loadMessages,
+      setReplyingTo: state.setReplyingTo,
+      setThreadMessage: state.setThreadMessage,
+      createMessage: state.createMessage,
+      editMessage: state.editMessage,
+      unsendMessage: state.unsendMessage,
+      deleteMessageForMe: state.deleteMessageForMe,
+      createChannel: state.createChannel,
+      createDm: state.createDm,
+      applyRealtimeEvent: state.applyRealtimeEvent,
     })),
   )
   const realtime = useRealtime(token, isAuthenticated)
@@ -72,16 +103,6 @@ export default function ChatPage() {
     ? routeConversationId[0]
     : routeConversationId
 
-  const [conversations, setConversations] = useState<ChatConversation[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [hasMoreMessages, setHasMoreMessages] = useState(false)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
-  const [conversationError, setConversationError] = useState<string | null>(null)
-  const [messageError, setMessageError] = useState<string | null>(null)
-  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
-  const [threadMessage, setThreadMessage] = useState<ChatMessage | null>(null)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showCreateDm, setShowCreateDm] = useState(false)
 
@@ -106,60 +127,13 @@ export default function ChatPage() {
     ? getConversationName(selectedConversation)
     : 'Messages'
 
-  const loadConversations = useCallback(async () => {
-    if (!token) return
-    setIsLoadingConversations(true)
-    setConversationError(null)
-    try {
-      const response = await chatApi.listConversations(token)
-      setConversations(response.conversations)
-    } catch (error) {
-      setConversationError(error instanceof Error ? error.message : 'Failed to load conversations')
-    } finally {
-      setIsLoadingConversations(false)
-    }
-  }, [token])
-
-  const loadMessages = useCallback(
-    async (conversationId: string, cursor?: string) => {
-      if (!token) return
-      setIsLoadingMessages(true)
-      setMessageError(null)
-      try {
-        const response = await chatApi.listMessages(token, conversationId, undefined, {
-          limit: 50,
-          cursor,
-        })
-        if (cursor) {
-          setMessages(prev => [...response.messages, ...prev])
-        } else {
-          setMessages(response.messages)
-        }
-        setHasMoreMessages(Boolean(response.nextCursor))
-        setNextCursor(response.nextCursor ?? null)
-      } catch (error) {
-        setMessageError(error instanceof Error ? error.message : 'Failed to load messages')
-      } finally {
-        setIsLoadingMessages(false)
-      }
-    },
-    [token]
-  )
-
   useEffect(() => {
-    if (token) {
-      void loadConversations()
+    const nextConversationId = selectedConversationId ?? null
+    setActiveConversation(nextConversationId)
+    if (nextConversationId && token) {
+      void loadMessages(token, nextConversationId)
     }
-  }, [token, loadConversations])
-
-  useEffect(() => {
-    if (selectedConversation && token) {
-      setMessages([])
-      setReplyingTo(null)
-      setThreadMessage(null)
-      void loadMessages(selectedConversation.id)
-    }
-  }, [selectedConversation?.id, token, loadMessages])
+  }, [loadMessages, selectedConversationId, setActiveConversation, token])
 
   useEffect(() => {
     const openDialog = (event: Event) => {
@@ -175,85 +149,13 @@ export default function ChatPage() {
   useEffect(() => {
     if (!token) return
 
-    const unsubscribeCreated = realtime.subscribe('message.created', (data) => {
-      const event = data as ChatRealtimeEvent
-      if (event.type !== 'message.created') return
-      const nextMessage = event.payload
+    const applyChatEvent = (data: unknown) => applyRealtimeEvent(data as ChatRealtimeEvent)
 
-      setConversations(prev =>
-        prev.map(conversation =>
-          conversation.id === event.conversationId
-            ? { ...conversation, lastMessage: nextMessage, updatedAt: nextMessage.createdAt }
-            : conversation
-        )
-      )
-
-      if (event.conversationId === selectedConversation?.id && !nextMessage.parentId) {
-        setMessages(prev => upsertMessage(prev, nextMessage))
-      }
-    })
-
-    const unsubscribeEdited = realtime.subscribe('message.edited', (data) => {
-      const event = data as ChatRealtimeEvent
-      if (event.type !== 'message.edited') return
-      if (event.conversationId === selectedConversation?.id) {
-        setMessages(prev => upsertMessage(prev, event.payload))
-      }
-      setConversations(prev =>
-        prev.map(conversation =>
-          conversation.lastMessage?.id === event.payload.id
-            ? { ...conversation, lastMessage: event.payload }
-            : conversation
-        )
-      )
-    })
-
-    const unsubscribeUnsent = realtime.subscribe('message.unsent', (data) => {
-      const event = data as ChatRealtimeEvent
-      if (event.type !== 'message.unsent') return
-      if (event.conversationId === selectedConversation?.id) {
-        setMessages(prev => upsertMessage(prev, event.payload))
-      }
-      setConversations(prev =>
-        prev.map(conversation =>
-          conversation.lastMessage?.id === event.payload.id
-            ? { ...conversation, lastMessage: event.payload }
-            : conversation
-        )
-      )
-    })
-
-    const unsubscribeReactionAdded = realtime.subscribe('reaction.added', (data) => {
-      const event = data as ChatRealtimeEvent
-      if (event.type !== 'reaction.added') return
-      const { messageId, reaction } = event.payload as { messageId: string; reaction: ChatReaction }
-      setMessages(prev =>
-        updateReaction(prev, messageId, message => ({
-          ...message,
-          reactions: message.reactions.some(item => item.id === reaction.id)
-            ? message.reactions
-            : [...message.reactions, reaction],
-        }))
-      )
-    })
-
-    const unsubscribeReactionRemoved = realtime.subscribe('reaction.removed', (data) => {
-      const event = data as ChatRealtimeEvent
-      if (event.type !== 'reaction.removed') return
-      const { messageId, userId, emoji } = event.payload as {
-        messageId: string
-        userId: string
-        emoji: string
-      }
-      setMessages(prev =>
-        updateReaction(prev, messageId, message => ({
-          ...message,
-          reactions: message.reactions.filter(
-            reaction => !(reaction.userId === userId && reaction.emoji === emoji)
-          ),
-        }))
-      )
-    })
+    const unsubscribeCreated = realtime.subscribe('message.created', applyChatEvent)
+    const unsubscribeEdited = realtime.subscribe('message.edited', applyChatEvent)
+    const unsubscribeUnsent = realtime.subscribe('message.unsent', applyChatEvent)
+    const unsubscribeReactionAdded = realtime.subscribe('reaction.added', applyChatEvent)
+    const unsubscribeReactionRemoved = realtime.subscribe('reaction.removed', applyChatEvent)
 
     return () => {
       unsubscribeCreated()
@@ -262,7 +164,7 @@ export default function ChatPage() {
       unsubscribeReactionAdded()
       unsubscribeReactionRemoved()
     }
-  }, [token, realtime, selectedConversation?.id])
+  }, [applyRealtimeEvent, realtime, token])
 
   const selectConversation = (conversationId: string) => {
     router.push(`/${orgSlug}/chat/${encodeURIComponent(conversationId)}`)
@@ -270,7 +172,7 @@ export default function ChatPage() {
 
   const handleLoadMore = () => {
     if (selectedConversation && nextCursor && !isLoadingMessages) {
-      void loadMessages(selectedConversation.id, nextCursor)
+      void loadMessages(token, selectedConversation.id, nextCursor)
     }
   }
 
@@ -343,23 +245,11 @@ export default function ChatPage() {
   const handleSendMessage = async (content: string, attachmentIds: string[]) => {
     if (!token || !selectedConversation) return
 
-    const response = await chatApi.createMessage(token, selectedConversation.id, {
+    await createMessage(token, selectedConversation.id, {
       content,
       parentId: replyingTo?.id,
       attachmentIds,
     })
-
-    if (!response.message.parentId) {
-      setMessages(prev => upsertMessage(prev, response.message))
-    }
-    setConversations(prev =>
-      prev.map(conversation =>
-        conversation.id === selectedConversation.id
-          ? { ...conversation, lastMessage: response.message, updatedAt: response.message.createdAt }
-          : conversation
-      )
-    )
-    setReplyingTo(null)
   }
 
   const handleAddReaction = async (messageId: string, emoji: string) => {
@@ -374,34 +264,17 @@ export default function ChatPage() {
 
   const handleEditMessage = async (messageId: string, content: string) => {
     if (!token) return
-    const response = await chatApi.editMessage(token, messageId, content)
-    setMessages(prev => upsertMessage(prev, response.message))
-    setConversations(prev =>
-      prev.map(conversation =>
-        conversation.lastMessage?.id === messageId
-          ? { ...conversation, lastMessage: response.message }
-          : conversation
-      )
-    )
+    await editMessage(token, messageId, content)
   }
 
   const handleUnsendMessage = async (messageId: string) => {
     if (!token) return
-    const response = await chatApi.unsendMessage(token, messageId)
-    setMessages(prev => upsertMessage(prev, response.message))
-    setConversations(prev =>
-      prev.map(conversation =>
-        conversation.lastMessage?.id === messageId
-          ? { ...conversation, lastMessage: response.message }
-          : conversation
-      )
-    )
+    await unsendMessage(token, messageId)
   }
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!token) return
-    await chatApi.deleteMessageForMe(token, messageId)
-    setMessages(prev => prev.filter(message => message.id !== messageId))
+    await deleteMessageForMe(token, messageId)
   }
 
   const handleCreateChannel = async (
@@ -410,15 +283,13 @@ export default function ChatPage() {
     memberIds: string[]
   ) => {
     if (!token) return
-    const conversation = await chatApi.createChannel(token, { name, type, memberIds })
-    setConversations(prev => [conversation, ...prev.filter(item => item.id !== conversation.id)])
+    const conversation = await createChannel(token, { name, type, memberIds })
     selectConversation(conversation.id)
   }
 
   const handleCreateDm = async (memberId: string) => {
     if (!token) return
-    const conversation = await chatApi.createDm(token, { memberIds: [memberId] })
-    setConversations(prev => [conversation, ...prev.filter(item => item.id !== conversation.id)])
+    const conversation = await createDm(token, { memberIds: [memberId] })
     selectConversation(conversation.id)
   }
 
