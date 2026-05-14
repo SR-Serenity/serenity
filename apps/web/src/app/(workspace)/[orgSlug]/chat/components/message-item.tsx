@@ -6,6 +6,7 @@ import {
   Download,
   Edit3,
   FileText,
+  MessageSquareReply,
   MoreHorizontal,
   Reply,
   RotateCcw,
@@ -99,6 +100,34 @@ function AttachmentPreview({ attachment }: { attachment: ChatAttachment }) {
   )
 }
 
+function ReplyPreview({ message }: { message: ChatMessage }) {
+  const replyTo = message.replyTo
+  if (!replyTo) return null
+
+  const preview = replyTo.unsentAt
+    ? 'Message unsent'
+    : replyTo.content || 'Attachment'
+
+  return (
+    <div className="mb-1.5 max-w-xl rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 text-xs animate-in fade-in slide-in-from-bottom-1 duration-150">
+      <div className="flex min-w-0 items-start gap-2">
+        <div className="mt-0.5 h-8 w-0.5 shrink-0 rounded-full bg-blue-500" />
+        <div className="min-w-0">
+          <div className="truncate font-semibold text-gray-800">
+            {replyTo.author.displayName}
+          </div>
+          <div className={cn(
+            'line-clamp-2 break-words',
+            replyTo.unsentAt ? 'italic text-gray-500' : 'text-gray-500',
+          )}>
+            {preview}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MessageItem({
   message,
   currentUserId,
@@ -173,12 +202,12 @@ export function MessageItem({
   }
 
   return (
-    <div className="group relative px-4 py-2 transition-colors hover:bg-gray-50/80">
-      <div className="mx-auto flex max-w-5xl gap-3">
+    <div className="group relative px-3 py-1 transition-colors hover:bg-gray-50/80 sm:px-4">
+      <div className="flex w-full gap-2.5">
         {!compact && (
           <div
             className={cn(
-              'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm',
+              'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold text-white shadow-sm',
               isOwnMessage ? 'bg-blue-600' : 'bg-teal-500'
             )}
           >
@@ -186,11 +215,11 @@ export function MessageItem({
           </div>
         )}
 
-        {compact && <div className="w-9 shrink-0 text-right text-[11px] text-transparent group-hover:text-gray-400">{formatTime(message.createdAt)}</div>}
+        {compact && <div className="w-8 shrink-0 text-right text-[11px] leading-5 text-transparent group-hover:text-gray-400">{formatTime(message.createdAt)}</div>}
 
         <div className="min-w-0 flex-1">
           {!compact && (
-            <div className="mb-0.5 flex min-w-0 items-baseline gap-2">
+            <div className="flex min-w-0 items-baseline gap-2">
               <span className="truncate font-semibold text-gray-900">{message.author.displayName}</span>
               <span className="shrink-0 text-xs text-gray-400">{formatTime(message.createdAt)}</span>
               {message.editedAt && !isUnsent && <span className="text-xs text-gray-400">edited</span>}
@@ -235,6 +264,8 @@ export function MessageItem({
             </div>
           ) : (
             <>
+              {!isUnsent && <ReplyPreview message={message} />}
+
               <div
                 className={cn(
                   'whitespace-pre-wrap wrap-break-word text-sm leading-5',
@@ -245,7 +276,7 @@ export function MessageItem({
               </div>
 
               {!isUnsent && message.attachments.length > 0 && (
-                <div className="mt-2 space-y-2">
+                <div className="mt-1.5 space-y-1.5">
                   {message.attachments.map(attachment => (
                     <AttachmentPreview key={attachment.id} attachment={attachment} />
                   ))}
@@ -255,7 +286,7 @@ export function MessageItem({
           )}
 
           {!isUnsent && Object.keys(groupedReactions).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
               {Object.entries(groupedReactions).map(([emoji, reactions]) => {
                 const hasReacted = reactions.some(reaction => reaction.userId === currentUserId)
                 return (
@@ -283,7 +314,7 @@ export function MessageItem({
             <button
               type="button"
               onClick={() => onOpenThread?.(message)}
-              className="mt-2 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+              className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
             >
               <Reply className="h-3 w-3" />
               {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
@@ -297,7 +328,7 @@ export function MessageItem({
       </div>
 
       {!isEditing && (
-        <div className="absolute right-5 top-1 hidden items-center rounded-lg border border-gray-200 bg-white p-1 shadow-lg group-hover:flex">
+        <div className="absolute right-5 top-0 hidden items-center rounded-lg border border-gray-200 bg-white p-1 shadow-lg group-hover:flex">
           {!isUnsent && (
             <div className="relative">
               <Button
@@ -331,9 +362,20 @@ export function MessageItem({
               variant="ghost"
               size="icon-sm"
               onClick={() => onReply?.(message)}
-              title="Reply in thread"
+              title="Reply"
             >
               <Reply className="h-4 w-4" />
+            </Button>
+          )}
+          {!isUnsent && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onOpenThread?.(message)}
+              title="Thread"
+            >
+              <MessageSquareReply className="h-4 w-4" />
             </Button>
           )}
           <div className="relative">

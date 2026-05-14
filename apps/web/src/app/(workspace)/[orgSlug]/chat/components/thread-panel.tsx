@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, MessageSquareReply, X } from 'lucide-react'
+import { ArrowLeft, Loader2, MessageSquareReply, X } from 'lucide-react'
 import type {
   ChatAttachmentDraft,
   ChatMessage,
@@ -249,14 +249,24 @@ export function ThreadPanel({
   }
 
   return (
-    <aside className="flex h-full w-full max-w-[420px] shrink-0 flex-col border-l border-gray-200 bg-white shadow-xl lg:w-[420px]">
+    <div className="flex min-h-0 flex-1 flex-col bg-white animate-in fade-in slide-in-from-right-2 duration-200">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            title="Back to messages"
+            className="sm:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
             <MessageSquareReply className="h-4 w-4" />
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Thread</h3>
+          <div className="min-w-0">
+            <h3 className="truncate font-semibold text-gray-900">Thread</h3>
             <p className="text-xs text-gray-500">{replies.length} replies</p>
           </div>
         </div>
@@ -311,6 +321,6 @@ export function ThreadPanel({
         onUploadFile={onUploadFile}
         placeholder="Reply in thread"
       />
-    </aside>
+    </div>
   )
 }

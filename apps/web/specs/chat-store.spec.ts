@@ -8,6 +8,7 @@ jest.mock('@serenity/api', () => ({
     listConversations: jest.fn(),
     listMessages: jest.fn(),
     createMessage: jest.fn(),
+    addConversationMembers: jest.fn(),
     editMessage: jest.fn(),
     unsendMessage: jest.fn(),
     deleteMessageForMe: jest.fn(),
@@ -90,6 +91,37 @@ it('creates message and updates active conversation state', async () => {
   })
   expect(useChatStore.getState().messages).toEqual([message])
   expect(useChatStore.getState().conversations[0].lastMessage).toEqual(message)
+})
+
+it('adds members and updates conversation state', async () => {
+  const updatedConversation: ChatConversation = {
+    ...conversation,
+    members: [
+      {
+        id: 'conversation-member-1',
+        userId: 'user-2',
+        joinedAt: '2026-05-13T00:00:00.000Z',
+        user: {
+          id: 'user-2',
+          email: 'two@example.com',
+          displayName: 'Member Two',
+        },
+      },
+    ],
+  }
+  useChatStore.setState({ conversations: [conversation] })
+  mockedChatApi.addConversationMembers.mockResolvedValue(updatedConversation)
+
+  await useChatStore.getState().addConversationMembers('token', 'conversation-1', {
+    memberIds: ['user-2'],
+  })
+
+  expect(mockedChatApi.addConversationMembers).toHaveBeenCalledWith(
+    'token',
+    'conversation-1',
+    { memberIds: ['user-2'] },
+  )
+  expect(useChatStore.getState().conversations[0]).toEqual(updatedConversation)
 })
 
 it('optimistically creates message before api resolves', async () => {

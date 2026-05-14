@@ -9,6 +9,7 @@ import type {
   ChatReaction,
   ChatRealtimeEvent,
   ChatUser,
+  AddConversationMembersInput,
   CreateChannelInput,
   CreateDmInput,
 } from '@serenity/api'
@@ -37,7 +38,13 @@ type ChatActions = {
   createMessage: (
     token: string,
     conversationId: string,
-    input: { content: string; parentId?: string; attachmentIds: string[] },
+    input: {
+      content: string
+      parentId?: string
+      replyToId?: string
+      replyTo?: ChatMessage | null
+      attachmentIds: string[]
+    },
   ) => Promise<ChatMessage>
   editMessage: (token: string, messageId: string, content: string) => Promise<void>
   unsendMessage: (token: string, messageId: string) => Promise<void>
@@ -46,6 +53,11 @@ type ChatActions = {
   removeReaction: (token: string, messageId: string, emoji: string) => Promise<void>
   createChannel: (token: string, input: CreateChannelInput) => Promise<ChatConversation>
   createDm: (token: string, input: CreateDmInput) => Promise<ChatConversation>
+  addConversationMembers: (
+    token: string,
+    conversationId: string,
+    input: AddConversationMembersInput,
+  ) => Promise<ChatConversation>
   applyRealtimeEvent: (event: ChatRealtimeEvent) => void
 }
 
@@ -332,6 +344,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
   createMessage: async (token, conversationId, input) => {
     const author = getCurrentChatUser()
     const parentId = input.parentId ?? null
+    const replyToId = input.replyToId ?? null
     const createdAt = new Date().toISOString()
     const optimisticMessageId = author ? createOptimisticId('message') : null
     const previousConversation = get().conversations.find(
@@ -344,12 +357,14 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         conversationId,
         authorId: author.id,
         parentId,
+        replyToId,
         content: input.content,
         createdAt,
         updatedAt: createdAt,
         editedAt: null,
         unsentAt: null,
         author,
+        replyTo: input.replyTo ?? null,
         attachments: [],
         reactions: [],
       }
@@ -376,7 +391,13 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
     }
 
     try {
-      const response = await chatApi.createMessage(token, conversationId, input)
+      const apiInput = {
+        content: input.content,
+        parentId: input.parentId,
+        replyToId: input.replyToId,
+        attachmentIds: input.attachmentIds,
+      }
+      const response = await chatApi.createMessage(token, conversationId, apiInput)
       const nextMessage = response.message
       const nextParentId = nextMessage.parentId ?? null
 
@@ -682,6 +703,14 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
 
   createDm: async (token, input) => {
     const conversation = await chatApi.createDm(token, input)
+    set(state => ({
+      conversations: upsertConversation(state.conversations, conversation),
+    }))
+    return conversation
+  },
+
+  addConversationMembers: async (token, conversationId, input) => {
+    const conversation = await chatApi.addConversationMembers(token, conversationId, input)
     set(state => ({
       conversations: upsertConversation(state.conversations, conversation),
     }))
