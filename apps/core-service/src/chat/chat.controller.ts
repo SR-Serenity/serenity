@@ -14,6 +14,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { ChatService } from './chat.service';
 import {
   AddReactionDto,
+  AddConversationMembersDto,
   CompleteAttachmentUploadDto,
   CreateAttachmentUploadIntentDto,
   CreateChannelDto,
@@ -21,6 +22,7 @@ import {
   CreateMessageDto,
   CursorPageDto,
   EditMessageDto,
+  ListConversationAssetsDto,
   ListMessagesDto,
 } from './dto/chat.dto';
 
@@ -47,6 +49,26 @@ export class ChatController {
   @ApiOperation({ summary: 'Create a direct message conversation' })
   createDm(@CurrentUser() user: AuthUser, @Body() body: CreateDmDto) {
     return this.chatService.createDm(user, body);
+  }
+
+  @Post('conversations/:conversationId/members')
+  @ApiOperation({ summary: 'Add members to a group chat conversation' })
+  addConversationMembers(
+    @CurrentUser() user: AuthUser,
+    @Param('conversationId') conversationId: string,
+    @Body() body: AddConversationMembersDto,
+  ) {
+    return this.chatService.addConversationMembers(user, conversationId, body);
+  }
+
+  @Post('conversations/:conversationId/assets/list')
+  @ApiOperation({ summary: 'List sent files or documents for a conversation' })
+  listConversationAssets(
+    @CurrentUser() user: AuthUser,
+    @Param('conversationId') conversationId: string,
+    @Body() body: ListConversationAssetsDto,
+  ) {
+    return this.chatService.listConversationAssets(user, conversationId, body);
   }
 
   @Post('attachments/upload-intent')

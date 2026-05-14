@@ -38,17 +38,27 @@ export type ChatReaction = {
   user?: Pick<ChatUser, 'id' | 'displayName'>
 }
 
+export type ChatReplyTarget = {
+  id: string
+  authorId: string
+  content: string
+  unsentAt?: string | null
+  author: ChatUser
+}
+
 export type ChatMessage = {
   id: string
   conversationId: string
   authorId: string
   parentId?: string | null
+  replyToId?: string | null
   content: string
   createdAt: string
   updatedAt: string
   editedAt?: string | null
   unsentAt?: string | null
   author: ChatUser
+  replyTo?: ChatReplyTarget | null
   attachments: ChatAttachment[]
   reactions: ChatReaction[]
   replies?: Array<{ id: string }>
@@ -86,10 +96,19 @@ export type CreateDmInput = {
   memberIds: string[]
 }
 
+export type AddConversationMembersInput = {
+  memberIds: string[]
+}
+
 export type CreateMessageInput = {
   content: string
   parentId?: string
+  replyToId?: string
   attachmentIds?: string[]
+}
+
+export type ListConversationAssetsInput = ListPage & {
+  kind?: 'ALL' | 'DOC'
 }
 
 export type ListConversationsResponse = {
@@ -99,6 +118,11 @@ export type ListConversationsResponse = {
 
 export type ListMessagesResponse = {
   messages: ChatMessage[]
+  nextCursor?: string | null
+}
+
+export type ListConversationAssetsResponse = {
+  attachments: ChatAttachment[]
   nextCursor?: string | null
 }
 

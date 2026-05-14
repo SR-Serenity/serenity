@@ -55,6 +55,34 @@ export class ChatController {
     );
   }
 
+  @Post('conversations/:conversationId/members')
+  @ApiOperation({ summary: 'Add members to a group chat conversation' })
+  addConversationMembers(
+    @Req() req: RequestWithAuth,
+    @Param('conversationId') conversationId: string,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `chat/conversations/${conversationId}/members`,
+      body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('conversations/:conversationId/assets/list')
+  @ApiOperation({ summary: 'List sent files or documents for a conversation' })
+  listConversationAssets(
+    @Req() req: RequestWithAuth,
+    @Param('conversationId') conversationId: string,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `chat/conversations/${conversationId}/assets/list`,
+      body,
+      req.headers.authorization,
+    );
+  }
+
   @Post('attachments/upload-intent')
   @ApiOperation({ summary: 'Create a Cloudinary upload intent for a chat attachment' })
   createUploadIntent(
