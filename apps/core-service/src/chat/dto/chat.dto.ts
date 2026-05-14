@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBase64,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -55,6 +56,11 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString()
     parentId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    replyToId?: string;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
@@ -167,4 +173,19 @@ export class ListMessagesDto extends CursorPageDto {
   @IsOptional()
   @IsString()
     parentId?: string;
+}
+
+export class AddConversationMembersDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+    memberIds!: string[];
+}
+
+export class ListConversationAssetsDto extends CursorPageDto {
+  @ApiPropertyOptional({ enum: ['ALL', 'DOC'], default: 'ALL' })
+  @IsOptional()
+  @IsIn(['ALL', 'DOC'])
+    kind?: 'ALL' | 'DOC';
 }

@@ -9,6 +9,8 @@ describe('ChatController', () => {
     service = {
       listConversations: jest.fn(),
       listMessages: jest.fn(),
+      addConversationMembers: jest.fn(),
+      listConversationAssets: jest.fn(),
     };
     controller = new ChatController(service as never);
   });
@@ -30,6 +32,27 @@ describe('ChatController', () => {
       'conversation_1',
       'message_1',
       { parentId: 'message_1', limit: 50 },
+    );
+  });
+
+  it('routes member and asset requests to service', () => {
+    controller.addConversationMembers(user, 'conversation_1', {
+      memberIds: ['user_2'],
+    });
+    controller.listConversationAssets(user, 'conversation_1', {
+      kind: 'DOC',
+      limit: 50,
+    });
+
+    expect(service.addConversationMembers).toHaveBeenCalledWith(
+      user,
+      'conversation_1',
+      { memberIds: ['user_2'] },
+    );
+    expect(service.listConversationAssets).toHaveBeenCalledWith(
+      user,
+      'conversation_1',
+      { kind: 'DOC', limit: 50 },
     );
   });
 });

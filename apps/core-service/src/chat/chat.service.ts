@@ -18,6 +18,7 @@ import { UploadsService } from '../uploads/uploads.service';
 import { ChatEventsService } from './chat-events.service';
 import type {
   AddReactionDto,
+  AddConversationMembersDto,
   CompleteAttachmentUploadDto,
   CreateAttachmentUploadIntentDto,
   CreateChannelDto,
@@ -25,6 +26,7 @@ import type {
   CreateMessageDto,
   CursorPageDto,
   EditMessageDto,
+  ListConversationAssetsDto,
   ListMessagesDto,
 } from './dto/chat.dto';
 
@@ -34,18 +36,34 @@ type AuthContext = {
 };
 type ConversationCursor = { updatedAt: string; id: string };
 type MessageCursor = { createdAt: string; id: string };
+type AttachmentCursor = { createdAt: string; id: string };
 type CursorPage<T> = { items: T[]; nextCursor: string | null };
 
 const userSelect = { id: true, email: true, displayName: true };
 const reactionUserSelect = { id: true, displayName: true };
 const messageInclude = {
   author: { select: userSelect },
+  replyTo: {
+    select: {
+      id: true,
+      authorId: true,
+      content: true,
+      unsentAt: true,
+      author: { select: userSelect },
+    },
+  },
   attachments: true,
   reactions: {
     include: { user: { select: reactionUserSelect } },
     orderBy: { createdAt: 'asc' as const },
   },
   replies: { select: { id: true } },
+};
+const conversationInclude = {
+  members: {
+    include: { user: { select: userSelect } },
+    orderBy: { joinedAt: 'asc' as const },
+  },
 };
 type MessageWithInclude = Prisma.ChatMessageGetPayload<{
   include: typeof messageInclude;
@@ -89,10 +107,7 @@ export class ChatService {
         }
         : baseWhere,
       include: {
-        members: {
-          include: { user: { select: userSelect } },
-          orderBy: { joinedAt: 'asc' },
-        },
+        ...conversationInclude,
         messages: {
           take: 1,
           where: {
@@ -273,6 +288,15 @@ export class ChatService {
       }
     }
 
+    if (input.replyToId) {
+      const replyTo = await this.prisma.chatMessage.findFirst({
+        where: { id: input.replyToId, conversationId },
+      });
+      if (!replyTo) {
+        throw new NotFoundException('Reply target message not found');
+      }
+    }
+
     const message = await this.prisma.$transaction(async (tx) => {
       if (attachmentIds.length > 0) {
         const attachments = await tx.chatAttachment.findMany({
@@ -297,6 +321,7 @@ export class ChatService {
           conversationId,
           authorId: auth.userId,
           parentId: input.parentId,
+          replyToId: input.replyToId,
           content,
         },
       });
@@ -342,6 +367,81 @@ export class ChatService {
     });
 
     return { message };
+  }
+
+  async addConversationMembers(
+    auth: AuthContext,
+    conversationId: string,
+    input: AddConversationMembersDto
+  ) {
+    const conversation = await this.ensureConversationAccess(auth, conversationId);
+    if (conversation.type === ChatConversationType.DM) {
+      throw new BadRequestException('Cannot add members to a direct message');
+    }
+
+    const memberIds = await this.filterOrgMembers(auth.orgId, input.memberIds);
+    if (memberIds.length > 0) {
+      await this.prisma.chatConversationMember.createMany({
+        data: memberIds.map((userId) => ({ conversationId, userId })),
+        skipDuplicates: true,
+      });
+    }
+
+    const updated = await this.prisma.chatConversation.findFirst({
+      where: { id: conversationId, orgId: auth.orgId },
+      include: conversationInclude,
+    });
+    if (!updated) {
+      throw new NotFoundException('Conversation not found');
+    }
+    return updated;
+  }
+
+  async listConversationAssets(
+    auth: AuthContext,
+    conversationId: string,
+    page?: ListConversationAssetsDto
+  ) {
+    await this.ensureConversationAccess(auth, conversationId);
+    const limit = page?.limit ?? 50;
+    const cursor = this.decodeCursor<AttachmentCursor>(page?.cursor);
+    const baseWhere: Prisma.ChatAttachmentWhereInput = {
+      conversationId,
+      orgId: auth.orgId,
+      uploadStatus: ChatAttachmentUploadStatus.COMPLETED,
+      messageId: { not: null },
+      ...(page?.kind === 'DOC' ? this.documentAttachmentWhere() : {}),
+    };
+
+    const attachments = await this.prisma.chatAttachment.findMany({
+      where: cursor
+        ? {
+          AND: [
+            baseWhere,
+            {
+              OR: [
+                { createdAt: { lt: new Date(cursor.createdAt) } },
+                {
+                  createdAt: new Date(cursor.createdAt),
+                  id: { lt: cursor.id },
+                },
+              ],
+            },
+          ],
+        }
+        : baseWhere,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+    });
+    const cursorPage = this.toCursorPage(attachments, limit, (attachment) => ({
+      createdAt: attachment.createdAt.toISOString(),
+      id: attachment.id,
+    }));
+
+    return {
+      attachments: cursorPage.items,
+      nextCursor: cursorPage.nextCursor,
+    };
   }
 
   async createUploadIntent(
@@ -645,6 +745,45 @@ export class ChatService {
     }
 
     return foundIds;
+  }
+
+  private documentAttachmentWhere(): Prisma.ChatAttachmentWhereInput {
+    const documentMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
+      'text/markdown',
+      'application/rtf',
+    ];
+    const extensions = [
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.csv',
+      '.md',
+      '.rtf',
+    ];
+
+    return {
+      OR: [
+        { mimeType: { in: documentMimeTypes } },
+        { mimeType: { startsWith: 'text/' } },
+        ...extensions.map((extension) => ({
+          name: { endsWith: extension, mode: Prisma.QueryMode.insensitive },
+        })),
+      ],
+    };
   }
 
   private dmKey(memberIds: string[]) {

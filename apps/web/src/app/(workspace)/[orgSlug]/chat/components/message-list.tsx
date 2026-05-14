@@ -39,7 +39,7 @@ function sameAuthorCluster(current: ChatMessage, previous?: ChatMessage) {
 
 function DateDivider({ value }: { value: string }) {
   return (
-    <div className="sticky top-2 z-10 my-3 flex justify-center">
+    <div className="sticky top-2 z-10 my-2 flex justify-center">
       <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-500 shadow-sm">
         {new Date(value).toLocaleDateString([], {
           weekday: 'short',
@@ -131,7 +131,7 @@ export function MessageList({
       onScroll={handleScroll}
       className="min-h-0 flex-1 overflow-y-auto bg-white"
     >
-      <div className="mx-auto flex max-w-5xl justify-center py-3">
+      <div className="flex justify-center py-2">
         {hasMore && (
           <Button
             type="button"
@@ -152,7 +152,7 @@ export function MessageList({
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="pb-4">
+        <div className="pb-3">
           {rows.map(({ message, compact, showDate }) => (
             <div key={message.id}>
               {showDate && <DateDivider value={message.createdAt} />}

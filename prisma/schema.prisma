@@ -158,6 +158,7 @@ model ChatMessage {
   conversationId String
   authorId       String
   parentId       String?
+  replyToId      String?
   content        String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -168,12 +169,15 @@ model ChatMessage {
   author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parent       ChatMessage?     @relation("ChatThread", fields: [parentId], references: [id], onDelete: Cascade)
   replies      ChatMessage[]    @relation("ChatThread")
+  replyTo      ChatMessage?     @relation("ChatInlineReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  inlineReplies ChatMessage[]   @relation("ChatInlineReply")
   reactions    ChatReaction[]
   attachments  ChatAttachment[]
   visibilities ChatMessageVisibility[]
 
   @@index([conversationId, createdAt])
   @@index([parentId, createdAt])
+  @@index([replyToId])
   @@index([conversationId, parentId, createdAt, id])
 }
 

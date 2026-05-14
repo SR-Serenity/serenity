@@ -69,6 +69,27 @@ describe('Gateway ChatController', () => {
     );
   });
 
+  it('proxies group member and conversation asset routes', () => {
+    controller.addConversationMembers(req, 'conversation_1', {
+      memberIds: ['user_2'],
+    });
+    controller.listConversationAssets(req, 'conversation_1', {
+      kind: 'DOC',
+      limit: 50,
+    });
+
+    expect(apiProxy.forwardPostRequest).toHaveBeenCalledWith(
+      'chat/conversations/conversation_1/members',
+      { memberIds: ['user_2'] },
+      'Bearer token',
+    );
+    expect(apiProxy.forwardPostRequest).toHaveBeenCalledWith(
+      'chat/conversations/conversation_1/assets/list',
+      { kind: 'DOC', limit: 50 },
+      'Bearer token',
+    );
+  });
+
   it('proxies message edit, unsend, and delete-for-me routes', () => {
     controller.editMessage(req, 'message_1', { content: 'updated' });
     controller.unsendMessage(req, 'message_1');

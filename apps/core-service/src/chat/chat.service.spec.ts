@@ -44,8 +44,12 @@ describe('ChatService', () => {
           type: ChatConversationType.DM,
           members: [{ userId: 'user_1' }],
         }),
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn().mockResolvedValue({ id: 'dm_1' }),
         update: jest.fn().mockResolvedValue({ id: 'conversation_1' }),
+      },
+      chatConversationMember: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       chatMessage: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -60,6 +64,7 @@ describe('ChatService', () => {
       },
       chatAttachment: {
         create: jest.fn().mockResolvedValue({ id: 'attachment_1' }),
+        findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
@@ -106,12 +111,95 @@ describe('ChatService', () => {
       .rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('adds workspace members to group conversations and dedupes through createMany', async () => {
+    const updatedConversation = {
+      id: 'conversation_1',
+      type: ChatConversationType.PUBLIC_CHANNEL,
+      members: [
+        {
+          id: 'member_1',
+          userId: 'user_1',
+          user: { id: 'user_1', displayName: 'User One' },
+        },
+        {
+          id: 'member_2',
+          userId: 'user_2',
+          user: { id: 'user_2', displayName: 'User Two' },
+        },
+      ],
+    };
+    prisma.chatConversation.findFirst
+      .mockResolvedValueOnce({
+        id: 'conversation_1',
+        type: ChatConversationType.PUBLIC_CHANNEL,
+        members: [{ userId: 'user_1' }],
+      })
+      .mockResolvedValueOnce(updatedConversation);
+    prisma.workspaceMember.findMany.mockResolvedValueOnce([{ userId: 'user_2' }]);
+
+    await expect(service.addConversationMembers(auth, 'conversation_1', {
+      memberIds: ['user_2', 'user_2'],
+    })).resolves.toBe(updatedConversation);
+
+    expect(prisma.chatConversationMember.createMany).toHaveBeenCalledWith({
+      data: [{ conversationId: 'conversation_1', userId: 'user_2' }],
+      skipDuplicates: true,
+    });
+  });
+
+  it('rejects adding members to DMs and rejects non-workspace members', async () => {
+    await expect(service.addConversationMembers(auth, 'conversation_1', {
+      memberIds: ['user_2'],
+    })).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.chatConversation.findFirst.mockResolvedValueOnce({
+      id: 'conversation_1',
+      type: ChatConversationType.PUBLIC_CHANNEL,
+      members: [{ userId: 'user_1' }],
+    });
+    prisma.workspaceMember.findMany.mockResolvedValueOnce([]);
+
+    await expect(service.addConversationMembers(auth, 'conversation_1', {
+      memberIds: ['user_2'],
+    })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('filters messages deleted for current user', async () => {
     await service.listMessages(auth, 'conversation_1');
 
     expect(prisma.chatMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         visibilities: { none: { userId: 'user_1' } },
+      }),
+    }));
+  });
+
+  it('lists conversation assets with doc filters and access checks', async () => {
+    const attachment = {
+      id: 'attachment_1',
+      conversationId: 'conversation_1',
+      orgId: 'org_1',
+      name: 'brief.pdf',
+      mimeType: 'application/pdf',
+      createdAt: new Date(),
+    };
+    prisma.chatAttachment.findMany.mockResolvedValue([attachment]);
+
+    await expect(service.listConversationAssets(auth, 'conversation_1', {
+      kind: 'DOC',
+      limit: 50,
+    })).resolves.toEqual({
+      attachments: [attachment],
+      nextCursor: null,
+    });
+
+    expect(prisma.chatAttachment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        conversationId: 'conversation_1',
+        orgId: 'org_1',
+        uploadStatus: ChatAttachmentUploadStatus.COMPLETED,
+        messageId: { not: null },
+        OR: expect.any(Array),
       }),
     }));
   });

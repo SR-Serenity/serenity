@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuthStore } from '@/stores/auth-store'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 import { orgApi } from '@serenity/api'
-import type { Member, Invitation, Department, WorkspaceRole, CreateInvitationResponse } from '@serenity/api'
+import type { WorkspaceRole, CreateInvitationResponse } from '@serenity/api'
 import { Plus, Mail, MoreHorizontal, UserCog, Trash2, Loader2, Copy, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -31,13 +32,24 @@ export function MembersTab({ isOwner }: MembersTabProps) {
       currentOrg: state.currentOrg,
     })),
   )
+  const orgId = currentOrg?.id
+  const {
+    members,
+    departments,
+    invitations,
+    loadOrgData,
+  } = useWorkspaceStore(
+    useShallow((state) => ({
+      members: orgId ? state.membersByOrgId[orgId] ?? [] : [],
+      departments: orgId ? state.departmentsByOrgId[orgId] ?? [] : [],
+      invitations: orgId ? state.invitationsByOrgId[orgId] ?? [] : [],
+      loadOrgData: state.loadOrgData,
+    })),
+  )
   const userRole = currentOrg?.role
   // Show invite button for owner, or for testing purposes
   const showInvite = isOwner || userRole === 'ADMIN' || userRole === 'OWNER'
 
-  const [members, setMembers] = useState<Member[]>([])
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteLoading, setInviteLoading] = useState(false)
@@ -53,31 +65,25 @@ export function MembersTab({ isOwner }: MembersTabProps) {
 
   const inviteLink = toLocalInviteLink(createdInvite?.inviteUrl)
 
-  useEffect(() => {
-    if (token && currentOrg) {
-      loadData()
-    }
-  }, [token, currentOrg])
-
-  async function loadData() {
+  const loadData = useCallback(async (options?: { force?: boolean }) => {
     if (!token || !currentOrg) {
       return
     }
+    setLoading(true)
     try {
-      const [membersRes, departmentsRes, invitationsRes] = await Promise.all([
-        orgApi.listMembers(currentOrg.id, token),
-        orgApi.listDepartments(currentOrg.id, token),
-        orgApi.listInvitations(currentOrg.id, token),
-      ])
-      setMembers(membersRes.members)
-      setDepartments(departmentsRes.departments)
-      setInvitations(invitationsRes.invitations)
+      await loadOrgData(currentOrg.id, token, options)
     } catch (err) {
       console.error('Failed to load data:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentOrg, loadOrgData, token])
+
+  useEffect(() => {
+    if (token && currentOrg) {
+      void loadData()
+    }
+  }, [currentOrg, loadData, token])
 
   async function handleInvite() {
     if (!token || !currentOrg) {
@@ -93,7 +99,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
       })
       setCreatedInvite(invitation)
       setInviteForm({ email: '', role: 'MEMBER', departmentId: '' })
-      await loadData()
+      await loadData({ force: true })
     } catch (err: unknown) {
       setInviteError(err instanceof Error ? err.message : 'Failed to send invitation')
     } finally {
@@ -124,7 +130,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
     }
     try {
       await orgApi.revokeInvitation(currentOrg.id, token, invitationId)
-      loadData()
+      void loadData({ force: true })
     } catch (err) {
       console.error('Failed to revoke invitation:', err)
     }
@@ -136,7 +142,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
     }
     try {
       await orgApi.updateMemberRole(currentOrg.id, token, memberId, role)
-      loadData()
+      void loadData({ force: true })
     } catch (err) {
       console.error('Failed to update role:', err)
     }
@@ -148,7 +154,7 @@ export function MembersTab({ isOwner }: MembersTabProps) {
     }
     try {
       await orgApi.updateMemberDepartment(currentOrg.id, token, memberId, departmentId)
-      loadData()
+      void loadData({ force: true })
     } catch (err) {
       console.error('Failed to update department:', err)
     }

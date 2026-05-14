@@ -53,6 +53,7 @@ interface NavItem {
   label: string
   href: string
   icon?: LucideIcon
+  avatarLabel?: string
   count?: number
   children?: NavItem[]
 }
@@ -93,6 +94,16 @@ function getChatConversationName(conversation: ChatConversation, currentUserId?:
     .filter(member => member.userId !== currentUserId)
     .map(member => member.user.displayName)
     .join(', ') || 'You'
+}
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || 'U'
 }
 
 function buildSections(
@@ -136,7 +147,7 @@ function buildSections(
             id: conversation.id,
             label: getChatConversationName(conversation, currentUserId),
             href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
-            icon: MessageSquare,
+            avatarLabel: initials(getChatConversationName(conversation, currentUserId)),
           })),
         },
       ]
@@ -412,7 +423,7 @@ function ChatSubnav({
               id: conversation.id,
               label: getChatConversationName(conversation, currentUserId),
               href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
-              icon: MessageSquare,
+              avatarLabel: initials(getChatConversationName(conversation, currentUserId)),
             }))}
             currentPath={currentPath}
           />
@@ -468,6 +479,7 @@ function ChatSubnavSection({
                 currentPath={currentPath}
                 label={item.label}
                 icon={item.icon}
+                avatarLabel={item.avatarLabel}
               />
             ))
           )}
@@ -482,11 +494,13 @@ function ChatSubnavLink({
   currentPath,
   label,
   icon: Icon,
+  avatarLabel,
 }: {
   href: string
   currentPath: string
   label: string
   icon?: LucideIcon
+  avatarLabel?: string
 }) {
   const active = currentPath === href
 
@@ -498,7 +512,13 @@ function ChatSubnavLink({
         active && 'bg-white text-primary shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-primary',
       )}
     >
-      {Icon && <Icon className={cn('h-4 w-4 shrink-0 text-gray-400', active && 'text-primary')} />}
+      {avatarLabel ? (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-500 text-[10px] font-semibold text-white">
+          {avatarLabel}
+        </span>
+      ) : Icon ? (
+        <Icon className={cn('h-4 w-4 shrink-0 text-gray-400', active && 'text-primary')} />
+      ) : null}
       <span className="truncate">{label}</span>
     </Link>
   )

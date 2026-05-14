@@ -4,16 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   Hash,
+  FileText,
   Loader2,
   Lock,
   MessageSquare,
+  UserPlus,
   Users,
+  Video,
 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useRealtime } from '@/hooks/use-realtime'
-import { chatApi, orgApi } from '@serenity/api'
+import { chatApi } from '@serenity/api'
 import type {
   ChatAttachmentDraft,
   ChatConversation,
@@ -27,16 +31,10 @@ import { MessageInput } from './components/message-input'
 import { ThreadPanel } from './components/thread-panel'
 import { CreateChannelDialog } from './components/create-channel-dialog'
 import { CreateDmDialog } from './components/create-dm-dialog'
+import { ConversationAssetsPanel } from './components/conversation-assets-panel'
+import { ConversationMembersDialog } from './components/conversation-members-dialog'
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'S'
-}
+type ChatTab = 'messages' | 'files' | 'docs'
 
 export default function ChatPage() {
   const { token, user, currentOrg, isAuthenticated } = useAuthStore(
@@ -70,6 +68,7 @@ export default function ChatPage() {
     removeReaction,
     createChannel,
     createDm,
+    addConversationMembers,
     applyRealtimeEvent,
   } = useChatStore(
     useShallow((state) => ({
@@ -95,10 +94,12 @@ export default function ChatPage() {
       removeReaction: state.removeReaction,
       createChannel: state.createChannel,
       createDm: state.createDm,
+      addConversationMembers: state.addConversationMembers,
       applyRealtimeEvent: state.applyRealtimeEvent,
     })),
   )
   const realtime = useRealtime(token, isAuthenticated)
+  const loadWorkspaceMembers = useWorkspaceStore((state) => state.loadMembers)
   const router = useRouter()
   const { orgSlug, conversationId: routeConversationId } = useParams<{
     orgSlug: string
@@ -110,6 +111,8 @@ export default function ChatPage() {
 
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showCreateDm, setShowCreateDm] = useState(false)
+  const [memberDialogMode, setMemberDialogMode] = useState<'view' | 'add' | null>(null)
+  const [activeTab, setActiveTab] = useState<ChatTab>('messages')
   const [localThreadReply, setLocalThreadReply] = useState<ChatMessage | null>(null)
 
   const getConversationName = useCallback(
@@ -132,6 +135,9 @@ export default function ChatPage() {
   const selectedConversationName = selectedConversation
     ? getConversationName(selectedConversation)
     : 'Messages'
+  const isGroupConversation = Boolean(
+    selectedConversation && selectedConversation.type !== 'DM',
+  )
 
   useEffect(() => {
     const nextConversationId = selectedConversationId ?? null
@@ -139,6 +145,7 @@ export default function ChatPage() {
     if (nextConversationId && token) {
       void loadMessages(token, nextConversationId)
     }
+    setActiveTab('messages')
   }, [loadMessages, selectedConversationId, setActiveConversation, token])
 
   useEffect(() => {
@@ -184,9 +191,8 @@ export default function ChatPage() {
 
   const loadMembers = useCallback(async (): Promise<Member[]> => {
     if (!token || !currentOrg?.id) return []
-    const response = await orgApi.listMembers(currentOrg.id, token)
-    return response.members
-  }, [currentOrg?.id, token])
+    return loadWorkspaceMembers(currentOrg.id, token)
+  }, [currentOrg?.id, loadWorkspaceMembers, token])
 
   const uploadChatFile = async (file: File): Promise<ChatAttachmentDraft> => {
     if (!token || !selectedConversation) {
@@ -253,13 +259,19 @@ export default function ChatPage() {
 
     const sentMessage = await createMessage(token, selectedConversation.id, {
       content,
-      parentId: replyingTo?.id,
+      replyToId: replyingTo?.id,
+      replyTo: replyingTo,
       attachmentIds,
     })
 
     if (sentMessage.parentId && threadMessage?.id === sentMessage.parentId) {
       setLocalThreadReply(sentMessage)
     }
+  }
+
+  const handleOpenThread = (message: ChatMessage) => {
+    setActiveTab('messages')
+    setThreadMessage(message)
   }
 
   const handleAddReaction = async (messageId: string, emoji: string) => {
@@ -303,6 +315,11 @@ export default function ChatPage() {
     selectConversation(conversation.id)
   }
 
+  const handleAddMembers = async (memberIds: string[]) => {
+    if (!token || !selectedConversation || selectedConversation.type === 'DM') return
+    await addConversationMembers(token, selectedConversation.id, { memberIds })
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <div className="flex h-full items-center justify-center bg-white">
@@ -314,42 +331,102 @@ export default function ChatPage() {
   return (
     <div className="flex h-full min-w-0 bg-white">
       <main className="flex min-w-0 flex-1 flex-col bg-white">
-        <div className="flex min-h-16 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-5 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-              {selectedConversation ? (
-                selectedConversation.type === 'DM' ? (
-                  <span className="text-xs font-semibold">{initials(selectedConversationName)}</span>
-                ) : selectedConversation.type === 'PRIVATE_CHANNEL' ? (
-                  <Lock className="h-5 w-5" />
-                ) : (
-                  <Hash className="h-5 w-5" />
-                )
-              ) : (
-                <MessageSquare className="h-5 w-5" />
+        <div className="shrink-0 border-b border-gray-100 bg-white">
+          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2">
+            <div className="flex min-w-0 items-center gap-2.5">
+              {selectedConversation?.type !== 'DM' && (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  {selectedConversation ? (
+                    selectedConversation.type === 'PRIVATE_CHANNEL' ? (
+                      <Lock className="h-4 w-4" />
+                    ) : (
+                      <Hash className="h-4 w-4" />
+                    )
+                  ) : (
+                    <MessageSquare className="h-4 w-4" />
+                  )}
+                </div>
               )}
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-gray-900">
-                {selectedConversationName}
-              </h2>
-              <div className="truncate text-xs text-gray-500">
-                {selectedConversation
-                  ? `${selectedConversation.members.length} members · ${selectedConversation.type.toLowerCase().replace('_', ' ')}`
-                  : 'Pick a conversation'}
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold text-gray-900">
+                  {selectedConversationName}
+                </h2>
+                {selectedConversation && selectedConversation.type !== 'DM' && (
+                  <div className="truncate text-xs text-gray-500">
+                    {selectedConversation.members.length} members
+                  </div>
+                )}
               </div>
             </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {isGroupConversation && (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setMemberDialogMode('view')}
+                    title="Members"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setMemberDialogMode('add')}
+                    title="Add member"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled
+                    title="Video call"
+                  >
+                    <Video className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              {!selectedConversation && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCreateDm(true)}
+                  className="gap-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <Users className="h-4 w-4" />
+                  New DM
+                </Button>
+              )}
+            </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowCreateDm(true)}
-            className="gap-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <Users className="h-4 w-4" />
-            New DM
-          </Button>
+          {selectedConversation && (
+            <div className="flex h-9 items-end gap-1 px-3">
+              {([
+                ['messages', MessageSquare, 'Messages'],
+                ['files', FileText, 'Files'],
+                ['docs', FileText, 'Docs'],
+              ] as const).map(([tab, Icon, label]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex h-8 items-center gap-1.5 border-b-2 px-3 text-sm font-medium transition-colors ${
+                    activeTab === tab
+                      ? 'border-blue-600 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {conversationError && (
@@ -365,29 +442,59 @@ export default function ChatPage() {
                 {messageError}
               </div>
             )}
-            <MessageList
-              messages={messages}
-              currentUserId={user.id}
-              conversationName={selectedConversationName}
-              hasMore={hasMoreMessages}
-              isLoading={isLoadingMessages}
-              onLoadMore={handleLoadMore}
-              onReply={setReplyingTo}
-              onAddReaction={handleAddReaction}
-              onRemoveReaction={handleRemoveReaction}
-              onOpenThread={setThreadMessage}
-              onEditMessage={handleEditMessage}
-              onUnsendMessage={handleUnsendMessage}
-              onDeleteMessage={handleDeleteMessage}
-            />
+            {activeTab === 'messages' ? (
+              threadMessage && token ? (
+                <ThreadPanel
+                  parentMessage={threadMessage}
+                  conversationId={selectedConversation.id}
+                  currentUserId={user.id}
+                  currentUser={user}
+                  localReply={localThreadReply}
+                  onLocalReplyHandled={() => setLocalThreadReply(null)}
+                  token={token}
+                  onClose={() => setThreadMessage(null)}
+                  onUploadFile={uploadChatFile}
+                  onAddReaction={handleAddReaction}
+                  onRemoveReaction={handleRemoveReaction}
+                  onEditMessage={handleEditMessage}
+                  onUnsendMessage={handleUnsendMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  realtimeSubscribe={realtime.subscribe}
+                />
+              ) : (
+                <>
+                  <MessageList
+                    messages={messages}
+                    currentUserId={user.id}
+                    conversationName={selectedConversationName}
+                    hasMore={hasMoreMessages}
+                    isLoading={isLoadingMessages}
+                    onLoadMore={handleLoadMore}
+                    onReply={setReplyingTo}
+                    onAddReaction={handleAddReaction}
+                    onRemoveReaction={handleRemoveReaction}
+                    onOpenThread={handleOpenThread}
+                    onEditMessage={handleEditMessage}
+                    onUnsendMessage={handleUnsendMessage}
+                    onDeleteMessage={handleDeleteMessage}
+                  />
 
-            <MessageInput
-              onSend={handleSendMessage}
-              onUploadFile={uploadChatFile}
-              replyingTo={replyingTo}
-              onCancelReply={() => setReplyingTo(null)}
-              placeholder={`Message ${selectedConversationName}`}
-            />
+                  <MessageInput
+                    onSend={handleSendMessage}
+                    onUploadFile={uploadChatFile}
+                    replyingTo={replyingTo}
+                    onCancelReply={() => setReplyingTo(null)}
+                    placeholder={`Message ${selectedConversationName}`}
+                  />
+                </>
+              )
+            ) : (
+              <ConversationAssetsPanel
+                token={token ?? ''}
+                conversationId={selectedConversation.id}
+                kind={activeTab === 'docs' ? 'DOC' : 'ALL'}
+              />
+            )}
           </>
         ) : isLoadingConversations ? (
           <div className="flex flex-1 items-center justify-center">
@@ -406,26 +513,6 @@ export default function ChatPage() {
         )}
       </main>
 
-      {threadMessage && token && selectedConversation && (
-        <ThreadPanel
-          parentMessage={threadMessage}
-          conversationId={selectedConversation.id}
-          currentUserId={user.id}
-          currentUser={user}
-          localReply={localThreadReply}
-          onLocalReplyHandled={() => setLocalThreadReply(null)}
-          token={token}
-          onClose={() => setThreadMessage(null)}
-          onUploadFile={uploadChatFile}
-          onAddReaction={handleAddReaction}
-          onRemoveReaction={handleRemoveReaction}
-          onEditMessage={handleEditMessage}
-          onUnsendMessage={handleUnsendMessage}
-          onDeleteMessage={handleDeleteMessage}
-          realtimeSubscribe={realtime.subscribe}
-        />
-      )}
-
       {showCreateChannel && (
         <CreateChannelDialog
           currentUserId={user.id}
@@ -441,6 +528,17 @@ export default function ChatPage() {
           onClose={() => setShowCreateDm(false)}
           onCreate={handleCreateDm}
           onLoadMembers={loadMembers}
+        />
+      )}
+
+      {memberDialogMode && selectedConversation && selectedConversation.type !== 'DM' && (
+        <ConversationMembersDialog
+          mode={memberDialogMode}
+          conversation={selectedConversation}
+          currentUserId={user.id}
+          onClose={() => setMemberDialogMode(null)}
+          onLoadMembers={loadMembers}
+          onAddMembers={handleAddMembers}
         />
       )}
     </div>

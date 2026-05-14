@@ -155,14 +155,18 @@ export function MessageInput({
   }
 
   return (
-    <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
-      <div className="mx-auto max-w-5xl">
+    <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-2 sm:px-4">
+      <div>
         {replyingTo && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm">
+          <div className="mb-2 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm animate-in fade-in slide-in-from-bottom-1 duration-150">
+            <div className="mt-0.5 h-9 w-0.5 shrink-0 rounded-full bg-blue-500" />
             <div className="min-w-0 flex-1">
-              <span className="text-gray-500">Replying to </span>
-              <span className="font-semibold text-gray-900">{replyingTo.author.displayName}</span>
-              <span className="ml-2 truncate text-gray-500">{replyingTo.content || 'Message'}</span>
+              <div className="text-xs font-medium text-blue-700">
+                Replying to {replyingTo.author.displayName}
+              </div>
+              <div className="mt-0.5 line-clamp-2 break-words text-gray-600">
+                {replyingTo.unsentAt ? 'Message unsent' : replyingTo.content || 'Attachment'}
+              </div>
             </div>
             <Button
               type="button"
@@ -238,12 +242,12 @@ export function MessageInput({
             disabled={disabled || isSending}
             rows={1}
             className={cn(
-              'block min-h-12 w-full resize-none bg-transparent px-4 py-3 text-sm leading-5 text-gray-900 outline-none',
+              'block min-h-10 w-full resize-none bg-transparent px-3 py-2.5 text-sm leading-5 text-gray-900 outline-none',
               'placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
 
-          <div className="flex items-center justify-between border-t border-gray-100 px-2 py-2">
+          <div className="flex items-center justify-between border-t border-gray-100 px-2 py-1.5">
             <div className="flex items-center gap-1">
               <input
                 ref={fileInputRef}

@@ -1,6 +1,7 @@
 import { api } from './client'
 import type {
   AddReactionResponse,
+  AddConversationMembersInput,
   ChatConversation,
   ChatMessageResponse,
   CompleteAttachmentUploadInput,
@@ -13,6 +14,8 @@ import type {
   CreateMessageResponse,
   DeleteMessageResponse,
   ListPage,
+  ListConversationAssetsInput,
+  ListConversationAssetsResponse,
   ListConversationsResponse,
   ListMessagesResponse,
 } from '../types/chat'
@@ -36,6 +39,28 @@ export const chatApi = {
     return api.post('chat/dms', {
       token,
       body: input,
+    })
+  },
+
+  addConversationMembers: async (
+    token: string,
+    conversationId: string,
+    input: AddConversationMembersInput,
+  ): Promise<ChatConversation> => {
+    return api.post(`chat/conversations/${conversationId}/members`, {
+      token,
+      body: input,
+    })
+  },
+
+  listConversationAssets: async (
+    token: string,
+    conversationId: string,
+    input?: ListConversationAssetsInput,
+  ): Promise<ListConversationAssetsResponse> => {
+    return api.post(`chat/conversations/${conversationId}/assets/list`, {
+      token,
+      body: input ?? {},
     })
   },
 
