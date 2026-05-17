@@ -5,13 +5,17 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { orgApi } from '@serenity/api'
-import type { WorkspaceRole, CreateInvitationResponse } from '@serenity/api'
+import type { CreateInvitationResponse, Department, Invitation, Member, WorkspaceRole } from '@serenity/api'
 import { Plus, Mail, MoreHorizontal, UserCog, Trash2, Loader2, Copy, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MembersTabProps {
   isOwner: boolean
 }
+
+const EMPTY_MEMBERS: Member[] = []
+const EMPTY_DEPARTMENTS: Department[] = []
+const EMPTY_INVITATIONS: Invitation[] = []
 
 function toLocalInviteLink(inviteUrl?: string): string {
   if (!inviteUrl || typeof window === 'undefined') {
@@ -40,9 +44,9 @@ export function MembersTab({ isOwner }: MembersTabProps) {
     loadOrgData,
   } = useWorkspaceStore(
     useShallow((state) => ({
-      members: orgId ? state.membersByOrgId[orgId] ?? [] : [],
-      departments: orgId ? state.departmentsByOrgId[orgId] ?? [] : [],
-      invitations: orgId ? state.invitationsByOrgId[orgId] ?? [] : [],
+      members: orgId ? state.membersByOrgId[orgId] ?? EMPTY_MEMBERS : EMPTY_MEMBERS,
+      departments: orgId ? state.departmentsByOrgId[orgId] ?? EMPTY_DEPARTMENTS : EMPTY_DEPARTMENTS,
+      invitations: orgId ? state.invitationsByOrgId[orgId] ?? EMPTY_INVITATIONS : EMPTY_INVITATIONS,
       loadOrgData: state.loadOrgData,
     })),
   )

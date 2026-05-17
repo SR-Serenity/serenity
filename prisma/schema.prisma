@@ -36,6 +36,18 @@ enum ChatAttachmentUploadStatus {
   COMPLETED
 }
 
+enum ContactType {
+  EMPLOYEE
+  GUEST
+  AI_AGENT
+}
+
+enum ContactStatus {
+  ACTIVE
+  INVITED
+  ARCHIVED
+}
+
 model Organization {
   id          String            @id @default(cuid())
   name        String
@@ -47,6 +59,7 @@ model Organization {
   invitations Invitation[]
   chatConversations ChatConversation[]
   chatAttachments    ChatAttachment[]
+  contacts           Contact[]
 }
 
 model User {
@@ -74,8 +87,33 @@ model Department {
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   members      WorkspaceMember[]
   invitations  Invitation[]
+  contacts     Contact[]
 
   @@index([orgId])
+}
+
+model Contact {
+  id           String        @id @default(cuid())
+  orgId        String
+  type         ContactType
+  status       ContactStatus @default(ACTIVE)
+  displayName  String
+  email        String?
+  phone        String?
+  company      String?
+  title        String?
+  departmentId String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([orgId, type])
+  @@index([departmentId])
+  @@index([email])
 }
 
 model WorkspaceMember {
