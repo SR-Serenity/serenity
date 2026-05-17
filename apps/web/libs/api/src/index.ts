@@ -1,6 +1,15 @@
-export { authApi, orgApi, chatApi } from './lib'
+export { authApi, orgApi, chatApi, contactsApi } from './lib'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
+export type {
+  ArchiveContactResponse,
+  ContactDirectoryItem,
+  ContactStatus,
+  ContactType,
+  CreateContactInput,
+  ListContactsResponse,
+  UpdateContactInput,
+} from './types'
 export type {
   Department,
   Member,
