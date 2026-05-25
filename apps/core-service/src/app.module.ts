@@ -5,8 +5,9 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, UsersModule, OrganizationsModule, ChatModule, ContactsModule],
+  imports: [AuthModule, DatabaseModule, UsersModule, OrganizationsModule, ChatModule, ContactsModule, CalendarModule],
 })
 export class AppModule {}
