@@ -5,12 +5,12 @@ import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import {
   Bell,
+  Bot,
   CalendarDays,
   Command,
   FileText,
   HelpCircle,
   Home,
-  Inbox,
   LogOut,
   MessageSquare,
   Settings2,
@@ -61,7 +61,7 @@ const utilityActions = [
   { id: 'notifications', title: 'Notifications', icon: Bell },
   { id: 'calendar', title: 'Calendar', icon: CalendarDays },
   { id: 'messages', title: 'Messages', icon: MessageSquare },
-  { id: 'inbox', title: 'Inbox', icon: Inbox },
+  { id: 'inbox', title: 'AI agent', icon: Bot },
   { id: 'notes', title: 'Notes', icon: FileText },
 ]
 
