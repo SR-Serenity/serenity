@@ -4,10 +4,11 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import Link from 'next/link'
-import { useParams, usePathname, useRouter } from 'next/navigation'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { ChatConversation } from '@serenity/api'
 import {
   Briefcase,
+  Bot,
   Building2,
   Calendar,
   CheckCircle2,
@@ -26,7 +27,7 @@ import {
   MessageSquare,
   Plus,
   Search,
-  Send,
+  Settings2,
   Sparkles,
   Star,
   TestTube,
@@ -45,6 +46,11 @@ import {
   WorkspaceUtilityRail,
   type WorkspaceRailItem,
 } from '@/app/(workspace)/components/workspace-shell/workspace-rail'
+import {
+  calendarDateTone,
+  datePillClassName,
+  toDateKey,
+} from '@/app/(workspace)/components/calendar-date-helpers'
 
 type WorkspaceLayoutProps = { children: ReactNode }
 
@@ -68,7 +74,7 @@ function buildApps(basePath: string): WorkspaceRailItem[] {
   return [
     {
       id: 'inbox',
-      icon: Inbox,
+      icon: Bot,
       label: 'Inbox',
       href: `${basePath}/inbox`,
       position: 'top',
@@ -104,6 +110,18 @@ function initials(name: string) {
     .map(part => part[0])
     .join('')
     .toUpperCase() || 'U'
+}
+
+function plannerMonthDays(anchor = new Date()) {
+  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+  const gridStart = new Date(monthStart)
+  gridStart.setDate(monthStart.getDate() - monthStart.getDay())
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(gridStart)
+    day.setDate(gridStart.getDate() + index)
+    return day
+  })
 }
 
 function buildSections(
@@ -155,26 +173,48 @@ function buildSections(
     case 'inbox':
       return [
         {
-          id: 'inbox',
-          label: 'Inbox',
-          items: [
-            { id: 'open', label: 'Open', href: `${basePath}/inbox`, icon: Inbox, count: 8 },
-            { id: 'priority', label: 'Priority', href: `${basePath}/inbox/priority`, icon: Star, count: 3 },
-            { id: 'later', label: 'Later', href: `${basePath}/tasks`, icon: Clock },
-            { id: 'sent', label: 'Sent', href: `${basePath}/mail`, icon: Send },
-            { id: 'done', label: 'Done', href: `${basePath}/inbox/done`, icon: CheckCircle2 },
-          ],
+          id: 'chat-history',
+          label: 'Chat history',
+          items: [],
         },
       ]
     case 'planner':
       return [
         {
-          id: 'planner',
+          id: 'create',
+          label: 'Create',
+          items: [
+            { id: 'new-meeting', label: 'New meeting', href: `${basePath}/calendar?create=meeting`, icon: Plus },
+            { id: 'new-event', label: 'New event', href: `${basePath}/calendar?create=event`, icon: Calendar },
+            { id: 'new-task', label: 'New task', href: `${basePath}/calendar?create=task`, icon: CheckSquare },
+          ],
+        },
+        {
+          id: 'views',
           label: 'Planner',
           items: [
             { id: 'calendar', label: 'Calendar', href: `${basePath}/calendar`, icon: Calendar },
             { id: 'tasks', label: 'Tasks', href: `${basePath}/tasks`, icon: CheckSquare },
             { id: 'later', label: 'Later', href: `${basePath}/tasks/later`, icon: Clock },
+          ],
+        },
+        {
+          id: 'calendar-filter',
+          label: 'Calendar filters',
+          items: [
+            { id: 'all-calendar-items', label: 'All items', href: `${basePath}/calendar`, icon: Layers },
+            { id: 'events-only', label: 'Events', href: `${basePath}/calendar?type=EVENT`, icon: Calendar },
+            { id: 'meetings-only', label: 'Meetings', href: `${basePath}/calendar?type=MEETING`, icon: Users },
+            { id: 'tasks-only', label: 'Tasks', href: `${basePath}/calendar?type=TASK`, icon: CheckSquare },
+          ],
+        },
+        {
+          id: 'calendar-scope',
+          label: 'Visibility',
+          items: [
+            { id: 'all-visibility', label: 'All calendars', href: `${basePath}/calendar`, icon: Calendar },
+            { id: 'company-calendar', label: 'Company', href: `${basePath}/calendar?visibility=COMPANY`, icon: Building2 },
+            { id: 'personal-calendar', label: 'Personal', href: `${basePath}/calendar?visibility=PERSONAL`, icon: UserSquare },
           ],
         },
       ]
@@ -314,6 +354,193 @@ function ModuleSubnav({
           {sections.map(section => (
             <NavGroup key={section.id} section={section} currentPath={currentPath} />
           ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PlannerSubnav({
+  basePath,
+  currentPath,
+}: {
+  basePath: string
+  currentPath: string
+}) {
+  const today = new Date()
+  const todayParam = toDateKey(today)
+  const currentQuery = currentPath.includes('?') ? currentPath.split('?')[1] : ''
+  const activeParams = new URLSearchParams(currentQuery)
+  const activeDate = activeParams.get('date') ?? todayParam
+  const parsedSelectedDate = new Date(`${activeDate}T00:00`)
+  const selectedDate = Number.isNaN(parsedSelectedDate.getTime()) ? today : parsedSelectedDate
+  const days = plannerMonthDays(selectedDate)
+
+  return (
+    <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col bg-nav">
+      <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
+        <div className="flex h-14 shrink-0 items-center justify-between px-5">
+          <h2 className="text-base font-medium text-primary-text">Calendar</h2>
+          <Link
+            href={`${basePath}/calendar?create=meeting`}
+            title="Create meeting"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
+          >
+            <Plus className="h-4 w-4" />
+          </Link>
+        </div>
+        <ShellDivider />
+
+        <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-3 py-3">
+          <div className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className="text-sm font-semibold text-primary-text">
+                {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <Link
+                href={`${basePath}/calendar?date=${todayParam}`}
+                className="rounded-md px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-ui hover:text-caption"
+              >
+                Today
+              </Link>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-tertiary-text">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                <span key={`${day}-${index}`}>{day}</span>
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-7 gap-1">
+              {days.map(day => {
+                const dateParam = toDateKey(day)
+                const inMonth = day.getMonth() === selectedDate.getMonth()
+                const { selected, current } = calendarDateTone({ date: day, selectedDate, today })
+                return (
+                  <Link
+                    key={dateParam}
+                    href={`${basePath}/calendar?date=${dateParam}`}
+                    className={cn(
+                      'flex h-8 items-center justify-center rounded-lg transition-colors hover:bg-slate-100',
+                      !inMonth && 'opacity-60',
+                    )}
+                  >
+                    <span className={datePillClassName({ selected, current, inMonth, size: 'sm' })}>
+                      {day.getDate()}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-5">
+            <div>
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-tertiary-text">Create</div>
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?create=meeting`} icon={Plus} label="New meeting" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?create=event`} icon={Calendar} label="New event" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?create=task`} icon={CheckSquare} label="New task" />
+            </div>
+
+            <div>
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-tertiary-text">Scheduling</div>
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar`} icon={Calendar} label="All calendar items" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?type=EVENT`} icon={Calendar} label="Events" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?type=MEETING`} icon={Users} label="Meetings" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?type=TASK`} icon={CheckSquare} label="Tasks" />
+            </div>
+
+            <div>
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-tertiary-text">Calendars</div>
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar`} icon={Calendar} label="All calendars" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?visibility=COMPANY`} icon={Building2} label="Company" />
+              <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?visibility=PERSONAL`} icon={UserSquare} label="Personal" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PlannerSubnavLink({
+  href,
+  currentPath,
+  label,
+  icon: Icon,
+}: {
+  href: string
+  currentPath: string
+  label: string
+  icon: LucideIcon
+}) {
+  const currentPathOnly = currentPath.split('?')[0]
+  const active = href.includes('?') ? currentPath === href : currentPathOnly === href
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'mb-1 flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm transition-all',
+        active ? 'bg-white font-medium text-primary-text shadow-sm ring-1 ring-black/5' : 'text-content hover:bg-ui hover:text-caption',
+      )}
+    >
+      <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-accent-txt' : 'text-muted')} />
+      <span className="truncate">{label}</span>
+    </Link>
+  )
+}
+
+function AiHistorySubnav({
+  basePath,
+}: {
+  basePath: string
+}) {
+  return (
+    <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col bg-nav">
+      <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
+        <div className="flex h-14 shrink-0 items-center justify-between px-5">
+          <h2 className="text-base font-medium text-primary-text">Chat history</h2>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              title="Pin history"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
+            >
+              <Settings2 className="h-4 w-4" />
+            </button>
+            <Link
+              href={`${basePath}/inbox`}
+              title="New AI chat"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
+            >
+              <Plus className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+        <ShellDivider />
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 no-scrollbar">
+          <p className="px-2 text-xs text-muted">Serenity AI</p>
+          <div className="mt-3 flex gap-5 px-2">
+            <Link href={`${basePath}/inbox`} className="space-y-2 text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-divider bg-panel text-primary-text shadow-sm">
+                <Bot className="h-6 w-6" />
+              </span>
+              <span className="block text-xs text-muted">AI agent</span>
+            </Link>
+            <Link href={`${basePath}/contact`} className="space-y-2 text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-divider bg-panel text-muted transition-colors hover:border-focus hover:text-caption">
+                <Plus className="h-5 w-5" />
+              </span>
+              <span className="block text-xs text-muted">New agent</span>
+            </Link>
+          </div>
+
+          <div className="mt-7">
+            <p className="px-2 text-xs text-muted">Today</p>
+            <div className="mt-2 rounded-lg px-2 py-3 text-sm text-muted">
+              No chats yet.
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -502,7 +729,7 @@ function ChatSubnavLink({
   icon?: LucideIcon
   avatarLabel?: string
 }) {
-  const active = currentPath === href
+  const active = currentPath.split('?')[0] === href
 
   return (
     <Link
@@ -539,16 +766,16 @@ function NavGroup({
         type="button"
         onClick={() => setOpen(value => !value)}
         className={cn(
-          'group mx-3 flex min-h-10 w-auto shrink-0 cursor-pointer items-center justify-between rounded-xl border-none bg-transparent px-2 py-2 outline-none',
-          'transition-colors duration-150 hover:bg-nav-hover',
+          'group mx-3 mt-2 flex h-8 w-auto shrink-0 cursor-pointer items-center justify-between rounded-lg border-none bg-transparent px-2 outline-none',
+          'transition-colors duration-150 hover:bg-transparent',
           'focus-visible:bg-primary/10 focus-visible:text-accent-txt',
         )}
       >
         <div className="flex min-w-0 items-center gap-1">
           <span
             className={cn(
-              'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-transparent text-disabled-text',
-              'transition-all duration-100 group-hover:bg-ui group-hover:text-subtle-label',
+              'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-transparent text-tertiary-text',
+              'transition-colors duration-100 group-hover:bg-ui group-hover:text-primary-text',
             )}
           >
             <ChevronRight
@@ -561,8 +788,8 @@ function NavGroup({
 
           <span
             className={cn(
-              'inline-flex min-w-0 items-center rounded-lg px-1 py-0.5 text-xs font-medium uppercase tracking-[0.08em] text-tertiary-text',
-              'transition-colors duration-150 group-hover:bg-ui-hover group-hover:text-primary-text',
+              'inline-flex min-w-0 items-center rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-tertiary-text',
+              'transition-colors duration-150 group-hover:text-primary-text',
             )}
           >
             {section.label}
@@ -599,16 +826,19 @@ function NavItemRow({
   const [open, setOpen] = useState(false)
   const hasChildren = !!item.children?.length
   const itemPath = item.href.split('?')[0]
-  const isActive = currentPath === item.href || (!item.href.includes('?') && currentPath.startsWith(itemPath + '/'))
+  const currentPathOnly = currentPath.split('?')[0]
+  const isActive = item.href.includes('?')
+    ? currentPath === item.href
+    : currentPathOnly === item.href || currentPathOnly.startsWith(itemPath + '/')
   const Icon = item.icon
 
   return (
     <>
       <div
         className={cn(
-          'mx-3 flex h-9 min-h-9 min-w-0 shrink-0 cursor-pointer select-none items-center rounded-xl px-3',
+          'mx-3 flex h-8 min-h-8 min-w-0 shrink-0 cursor-pointer select-none items-center rounded-lg px-2.5',
           'transition-colors duration-150',
-          isActive ? 'bg-primary/10' : 'hover:bg-nav-hover',
+          isActive ? 'bg-primary/10' : 'hover:bg-ui',
           depth > 0 && 'pl-10',
         )}
       >
@@ -617,8 +847,8 @@ function NavItemRow({
             type="button"
             onClick={() => setOpen(value => !value)}
             className={cn(
-              'mr-1.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-lg text-trans outline-none',
-              'transition-colors duration-150 hover:bg-btn-hover hover:text-caption',
+              'mr-1.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-trans outline-none',
+              'transition-colors duration-150 hover:bg-ui-hover hover:text-caption',
             )}
           >
             <ChevronRight
@@ -678,6 +908,7 @@ function NavItemRow({
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { orgSlug } = useParams<{ orgSlug?: string }>()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const auth = useAuthStore(
     useShallow((state) => ({
@@ -748,7 +979,8 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     app => pathname === app.href || pathname.startsWith(app.href + '/'),
   )
   const sections = buildSections(activeApp?.id, basePath, chatConversations, auth.user?.id)
-  const currentPath = pathname
+  const currentQuery = searchParams.toString()
+  const currentPath = currentQuery ? `${pathname}?${currentQuery}` : pathname
   const userInitials = (auth.user?.displayName ?? auth.user?.email ?? 'U')
     .split(/\s+/)
     .slice(0, 2)
@@ -822,6 +1054,15 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                     currentUserId={auth.user?.id}
                     search={chatNavSearch}
                     onSearchChange={setChatNavSearch}
+                  />
+                ) : activeApp?.id === 'inbox' ? (
+                  <AiHistorySubnav
+                    basePath={basePath}
+                  />
+                ) : activeApp?.id === 'planner' ? (
+                  <PlannerSubnav
+                    basePath={basePath}
+                    currentPath={currentPath}
                   />
                 ) : (
                   <ModuleSubnav

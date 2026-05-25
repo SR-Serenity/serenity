@@ -1,4 +1,4 @@
-export { authApi, orgApi, chatApi, contactsApi } from './lib'
+export { authApi, orgApi, chatApi, contactsApi, calendarApi } from './lib'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
@@ -10,6 +10,18 @@ export type {
   ListContactsResponse,
   UpdateContactInput,
 } from './types'
+export type {
+  CalendarAttendee,
+  CalendarItem,
+  CalendarItemType,
+  CalendarVisibility,
+  CalendarTaskStatus,
+  CreateCalendarItemInput,
+  DeleteCalendarItemResponse,
+  ListCalendarItemsInput,
+  ListCalendarItemsResponse,
+  UpdateCalendarItemInput,
+} from './types/calendar'
 export type {
   Department,
   Member,

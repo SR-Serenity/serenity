@@ -48,6 +48,22 @@ enum ContactStatus {
   ARCHIVED
 }
 
+enum CalendarItemType {
+  EVENT
+  MEETING
+  TASK
+}
+
+enum CalendarVisibility {
+  COMPANY
+  PERSONAL
+}
+
+enum CalendarTaskStatus {
+  TODO
+  DONE
+}
+
 model Organization {
   id          String            @id @default(cuid())
   name        String
@@ -60,6 +76,7 @@ model Organization {
   chatConversations ChatConversation[]
   chatAttachments    ChatAttachment[]
   contacts           Contact[]
+  calendarItems      CalendarItem[]
 }
 
 model User {
@@ -76,6 +93,8 @@ model User {
   chatReactions   ChatReaction[]
   chatMessageVisibilities ChatMessageVisibility[]
   chatUploads      ChatAttachment[] @relation("ChatAttachmentUploader")
+  calendarItems    CalendarItem[] @relation("CalendarItemCreator")
+  calendarAttendances CalendarAttendee[]
 }
 
 model Department {
@@ -114,6 +133,48 @@ model Contact {
   @@index([orgId, type])
   @@index([departmentId])
   @@index([email])
+}
+
+model CalendarItem {
+  id                  String              @id @default(cuid())
+  orgId               String
+  createdById         String
+  type                CalendarItemType
+  visibility          CalendarVisibility  @default(PERSONAL)
+  title               String
+  descriptionMarkdown String?
+  location            String?
+  startAt             DateTime?
+  endAt               DateTime?
+  allDay              Boolean             @default(false)
+  taskStatus          CalendarTaskStatus?
+  dueDate             DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User         @relation("CalendarItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  attendees    CalendarAttendee[]
+
+  @@index([orgId, startAt])
+  @@index([orgId, dueDate])
+  @@index([orgId, visibility])
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+model CalendarAttendee {
+  id        String   @id @default(cuid())
+  itemId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  item CalendarItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, userId])
+  @@index([userId])
 }
 
 model WorkspaceMember {

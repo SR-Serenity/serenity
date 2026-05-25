@@ -35,8 +35,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <div className="space-y-8">
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold text-brand tracking-tight">Welcome back</h1>
-        <p className="text-sm text-brand-muted">Sign in to your workspace to continue</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">Welcome back</h1>
+        <p className="text-sm text-[var(--theme-darker-color)]">Sign in to your workspace to continue</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,15 +76,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+          className="h-10 w-full cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-brand-muted">
+      <p className="text-center text-sm text-[var(--theme-darker-color)]">
         Don&apos;t have an account?{' '}
-        <a href="/register" className="text-brand font-medium hover:underline underline-offset-4">
+        <a href="/register" className="font-medium text-blue-600 underline-offset-4 hover:underline">
           Create one
         </a>
       </p>
