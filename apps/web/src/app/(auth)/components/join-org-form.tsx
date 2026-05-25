@@ -116,17 +116,17 @@ export function JoinOrgForm({
     return (
       <div className="space-y-8 text-center">
         <div className="flex justify-center">
-          <CheckCircle2 className="w-14 h-14 text-brand" strokeWidth={1.5} />
+          <CheckCircle2 className="h-14 w-14 text-blue-600" strokeWidth={1.5} />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-brand tracking-tight">You&apos;re all set!</h1>
-          <p className="text-sm text-brand-muted">
-            You've been added to <span className="font-medium text-brand">{orgName}</span>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">You&apos;re all set!</h1>
+          <p className="text-sm text-[var(--theme-darker-color)]">
+            You've been added to <span className="font-medium text-[var(--theme-caption-color)]">{orgName}</span>
           </p>
         </div>
         <Button
           onClick={() => onSuccessRef.current(orgSlug)}
-          className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+          className="h-10 w-full cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
         >
           Open workspace →
         </Button>
@@ -139,16 +139,16 @@ export function JoinOrgForm({
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <div className="flex justify-between text-xs text-brand-muted">
+        <div className="flex justify-between text-xs text-[var(--theme-darker-color)]">
           <span>Step {step} of {TOTAL_STEPS}</span>
           <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1" />
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1 [&_[data-slot=progress-indicator]]:bg-blue-600 [&_[data-slot=progress-track]]:bg-slate-100" />
       </div>
 
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold text-brand tracking-tight">{meta.title}</h1>
-        <p className="text-sm text-brand-muted">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">{meta.title}</h1>
+        <p className="text-sm text-[var(--theme-darker-color)]">
           {meta.subtitle}
           {step === 2 && <span className="font-medium"> {orgName}</span>}
         </p>
@@ -167,7 +167,7 @@ export function JoinOrgForm({
                 type="email"
                 value={prefillEmail}
                 disabled
-                className="bg-muted text-brand-muted"
+                className="bg-slate-50 text-[var(--theme-darker-color)]"
               />
             </div>
             <div className="space-y-1.5">
@@ -211,8 +211,8 @@ export function JoinOrgForm({
         )}
 
         {step === 2 && (
-          <div className="rounded-lg bg-brand-light p-4">
-            <p className="text-sm text-brand">
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+            <p className="text-sm text-blue-900">
               Click &quot;Join organization&quot; to confirm and join{' '}
               <span className="font-semibold">{orgName}</span>.
             </p>
@@ -237,14 +237,14 @@ export function JoinOrgForm({
               disabled={loading}
               className="flex items-center gap-1.5 cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Button>
           )}
           <Button
             type="submit"
             disabled={loading}
-            className="flex-1 h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+            className="h-10 flex-1 cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
           >
             {loading ? 'Joining…' : step === 2 ? 'Join organization' : 'Continue →'}
           </Button>

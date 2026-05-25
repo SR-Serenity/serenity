@@ -9,7 +9,7 @@ export function AuthHeroPanel() {
   return (
     <>
       {/* Background image layer */}
-      <div className="absolute inset-0 opacity-25">
+      <div className="absolute inset-0 opacity-10">
         <Image
           src={teamImages.authHero.src}
           alt={teamImages.authHero.alt}
@@ -21,10 +21,11 @@ export function AuthHeroPanel() {
       </div>
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand/95 via-brand/85 to-brand-hover/80" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50/95 to-slate-100/90" />
+      <div className="absolute inset-x-0 top-0 h-32 bg-blue-50/60" />
 
       {/* Supporting image card */}
-      <div className="absolute -right-14 bottom-20 w-[220px] xl:w-[260px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl rotate-3">
+      <div className="absolute -right-14 bottom-20 w-[220px] overflow-hidden rounded-xl border border-[var(--theme-divider-color)] bg-white shadow-xl rotate-3 xl:w-[260px]">
         <Image
           src={teamImages.authSupport.src}
           alt={teamImages.authSupport.alt}
@@ -36,22 +37,22 @@ export function AuthHeroPanel() {
       </div>
 
       {/* Logo - absolute positioned above background */}
-      <div className="flex items-center gap-2.5 relative z-10">
-        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+      <div className="relative z-10 flex items-center gap-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="white" />
           </svg>
         </div>
-        <span className="text-lg font-semibold tracking-tight">Serenity</span>
+        <span className="text-lg font-semibold tracking-tight text-[var(--theme-caption-color)]">Serenity</span>
       </div>
 
       {/* Main content - messaging */}
-      <div className="space-y-6 relative z-10">
+      <div className="relative z-10 space-y-6">
         <div className="space-y-3">
-          <h1 className="text-4xl font-bold leading-tight">
+          <h1 className="text-4xl font-bold leading-tight text-[var(--theme-caption-color)]">
             Where teams<br />do their best work
           </h1>
-          <p className="text-white/60 text-lg leading-relaxed">
+          <p className="text-lg leading-relaxed text-[var(--theme-darker-color)]">
             One platform for messages, projects, and everything your team needs to move fast.
           </p>
         </div>
@@ -63,8 +64,8 @@ export function AuthHeroPanel() {
             'Multi-workspace support',
             'Enterprise-grade security',
           ].map((feature) => (
-            <div key={feature} className="flex items-center gap-2.5 text-white/80 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
+            <div key={feature} className="flex items-center gap-2.5 text-sm text-[var(--theme-content-color)]">
+              <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
               {feature}
             </div>
           ))}
@@ -72,7 +73,7 @@ export function AuthHeroPanel() {
       </div>
 
       {/* Footer */}
-      <p className="text-white/30 text-xs relative z-10">© 2026 Serenity. All rights reserved.</p>
+      <p className="relative z-10 text-xs text-[var(--theme-darker-color)]">© 2026 Serenity. All rights reserved.</p>
     </>
   )
 }

@@ -118,17 +118,17 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     return (
       <div className="space-y-8 text-center">
         <div className="flex justify-center">
-          <CheckCircle2 className="w-14 h-14 text-brand" strokeWidth={1.5} />
+          <CheckCircle2 className="h-14 w-14 text-blue-600" strokeWidth={1.5} />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-brand tracking-tight">You&apos;re all set!</h1>
-          <p className="text-sm text-brand-muted">
-            Your workspace <span className="font-medium text-brand">{orgName}</span> is ready.
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">You&apos;re all set!</h1>
+          <p className="text-sm text-[var(--theme-darker-color)]">
+            Your workspace <span className="font-medium text-[var(--theme-caption-color)]">{orgName}</span> is ready.
           </p>
         </div>
         <Button
           onClick={() => onSuccessRef.current(orgSlug)}
-          className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+          className="h-10 w-full cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
         >
           Open workspace →
         </Button>
@@ -148,16 +148,16 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     <div className="space-y-8">
       {/* Progress */}
       <div className="space-y-2">
-        <div className="flex justify-between text-xs text-brand-muted">
+        <div className="flex justify-between text-xs text-[var(--theme-darker-color)]">
           <span>Step {step} of {TOTAL_STEPS}</span>
           <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1" />
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1 [&_[data-slot=progress-indicator]]:bg-blue-600 [&_[data-slot=progress-track]]:bg-slate-100" />
       </div>
 
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold text-brand tracking-tight">{meta.title}</h1>
-        <p className="text-sm text-brand-muted">{meta.subtitle}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">{meta.title}</h1>
+        <p className="text-sm text-[var(--theme-darker-color)]">{meta.subtitle}</p>
       </div>
 
       <form onSubmit={submitCurrentStep} className="space-y-4">
@@ -237,7 +237,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <div className="space-y-1.5">
               <Label htmlFor="orgSlug">Workspace URL</Label>
               <div className="flex items-center gap-0">
-                <span className="h-9 px-3 flex items-center text-sm text-brand-muted bg-muted border border-r-0 border-brand-border rounded-l-md shrink-0">
+                <span className="flex h-8 shrink-0 items-center rounded-l-lg border border-r-0 border-[var(--theme-button-border)] bg-slate-50 px-3 text-sm text-[var(--theme-darker-color)]">
                   serenity.app/
                 </span>
                 <Input
@@ -272,14 +272,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               disabled={loading}
               className="flex items-center gap-1.5 cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Button>
           )}
           <Button
             type="submit"
             disabled={loading}
-            className="flex-1 h-10 bg-brand hover:bg-brand-hover text-white font-medium cursor-pointer"
+            className="h-10 flex-1 cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
           >
             {loading ? 'Creating…' : step === 3 ? 'Create workspace' : 'Continue →'}
           </Button>
@@ -287,9 +287,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       </form>
 
       {step === 1 && (
-        <p className="text-center text-sm text-brand-muted">
+        <p className="text-center text-sm text-[var(--theme-darker-color)]">
           Already have an account?{' '}
-          <a href="/login" className="text-brand font-medium hover:underline underline-offset-4">
+          <a href="/login" className="font-medium text-blue-600 underline-offset-4 hover:underline">
             Sign in
           </a>
         </p>

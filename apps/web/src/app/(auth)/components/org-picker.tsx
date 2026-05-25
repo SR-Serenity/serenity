@@ -38,15 +38,15 @@ export function OrgPicker({ organizations, onSelect, onBack }: OrgPickerProps) {
     <div className="space-y-8">
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-brand-muted hover:text-brand transition-colors"
+        className="flex items-center gap-1.5 text-sm text-[var(--theme-darker-color)] transition-colors hover:text-[var(--theme-caption-color)]"
       >
-        <ArrowLeft className="w-3.5 h-3.5" />
+        <ArrowLeft className="h-3.5 w-3.5" />
         Back
       </button>
 
       <div className="space-y-1.5">
-        <h2 className="text-2xl font-bold text-brand tracking-tight">Choose a workspace</h2>
-        <p className="text-sm text-brand-muted">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">Choose a workspace</h2>
+        <p className="text-sm text-[var(--theme-darker-color)]">
           You have access to {organizations.length} workspace{organizations.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -57,18 +57,18 @@ export function OrgPicker({ organizations, onSelect, onBack }: OrgPickerProps) {
             key={org.id}
             onClick={() => handleSelect(org.slug)}
             disabled={loading !== ''}
-            className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-brand-border bg-white hover:border-brand hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all text-left"
+            className="flex w-full items-center gap-3 rounded-lg border border-[var(--theme-divider-color)] bg-[var(--theme-panel-color)] p-3.5 text-left transition-all hover:border-blue-300 hover:bg-[var(--highlight-hover)] hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center text-white text-sm font-semibold shrink-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-600 text-sm font-semibold text-white">
               {getInitials(org.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-brand text-sm truncate">{org.name}</p>
-              <p className="text-xs text-brand-muted truncate">{org.slug}</p>
+              <p className="truncate text-sm font-medium text-[var(--theme-caption-color)]">{org.name}</p>
+              <p className="truncate text-xs text-[var(--theme-darker-color)]">{org.slug}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="secondary" className="text-xs capitalize">{org.role}</Badge>
-              {loading === org.slug && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
+              {loading === org.slug && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
             </div>
           </button>
         ))}
