@@ -11,3 +11,15 @@ export type {
   ListContactsResponse,
   UpdateContactInput,
 } from './types/contacts'
+export type {
+  CalendarAttendee,
+  CalendarItem,
+  CalendarItemType,
+  CalendarVisibility,
+  CalendarTaskStatus,
+  CreateCalendarItemInput,
+  DeleteCalendarItemResponse,
+  ListCalendarItemsInput,
+  ListCalendarItemsResponse,
+  UpdateCalendarItemInput,
+} from './types/calendar'
