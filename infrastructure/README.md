@@ -170,15 +170,21 @@ healthcheck:
 ### Development (.env)
 ```bash
 NODE_ENV=development
-MONGODB_URI=mongodb://mongodb:27017/serenity
+DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+DIRECT_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+REDIS_URL=redis://redis:6379
 DEBUG=serenity:*
 NEXT_PUBLIC_API_URL=http://localhost:2991
+NEXT_PUBLIC_REALTIME_URL=http://localhost:2996
 ```
 
 ### Production (.env)
 ```bash
 NODE_ENV=production
-MONGODB_URI=mongodb://mongodb:27017/serenity
+POSTGRES_USER=serenity
+POSTGRES_PASSWORD=change-me
+DATABASE_URL=postgresql://serenity:change-me@postgres:5432/serenity?schema=public
+REDIS_URL=redis://redis:6379
 CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoixxxxxxxx...
 NEXT_PUBLIC_API_URL=https://yourdomain.com
 ```

@@ -15,7 +15,6 @@ import {
   hourHeight,
   hourRows,
   itemDate,
-  lastSlot,
 } from './calendar-utils'
 import type { DraftSelection } from './calendar-types'
 import { EventChip } from './event-chip'

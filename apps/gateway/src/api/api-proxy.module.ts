@@ -5,9 +5,21 @@ import { OrganizationsController } from './organizations.controller';
 import { ChatController } from './chat.controller';
 import { ContactsController } from './contacts.controller';
 import { CalendarController } from './calendar.controller';
+import { WikiController } from './wiki.controller';
+import { MailController } from './mail.controller';
+import { OfficeController } from './office.controller';
 
 @Module({
   providers: [ApiProxyService],
-  controllers: [UsersController, OrganizationsController, ChatController, ContactsController, CalendarController],
+  controllers: [
+    UsersController,
+    OrganizationsController,
+    ChatController,
+    ContactsController,
+    CalendarController,
+    WikiController,
+    MailController,
+    OfficeController,
+  ],
 })
 export class ApiProxyModule {}

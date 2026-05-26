@@ -12,14 +12,18 @@ import {
   HelpCircle,
   Home,
   LogOut,
+  Maximize2,
   MessageSquare,
-  Settings2,
+  MoreVertical,
   PanelRight,
+  Plus,
   Search,
   Settings,
+  Settings2,
   Shuffle,
+  X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { OrgSummary, User } from '@serenity/api'
 import {
   Popover,
@@ -28,6 +32,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/app/shared/components/ui/popover'
+import { AiAgentMiniPanelContent } from './ai-agent-panel'
 import { ShellDivider, ShellIconActionButton } from './workspace-shell-primitives'
 
 export interface WorkspaceRailItem {
@@ -63,7 +68,22 @@ const utilityActions = [
   { id: 'messages', title: 'Messages', icon: MessageSquare },
   { id: 'inbox', title: 'AI agent', icon: Bot },
   { id: 'notes', title: 'Notes', icon: FileText },
+] as const
+
+type UtilityActionId = typeof utilityActions[number]['id']
+type AddonViewId = UtilityActionId | 'add'
+
+const routeAddonConflicts: Array<{ addon: UtilityActionId; segment: string }> = [
+  { addon: 'calendar', segment: 'calendar' },
+  { addon: 'messages', segment: 'chat' },
+  { addon: 'inbox', segment: 'inbox' },
 ]
+
+function getConflictingAddon(currentPath: string): UtilityActionId | null {
+  const pathSegments = currentPath.split('?')[0].split('/').filter(Boolean)
+  const activeSegment = pathSegments[1]
+  return routeAddonConflicts.find(item => item.segment === activeSegment)?.addon ?? null
+}
 
 function HomeButton({ orgSlug, currentPath }: { orgSlug: string; currentPath: string }) {
   const href = `/${orgSlug}/dashboard`
@@ -82,7 +102,7 @@ function HomeButton({ orgSlug, currentPath }: { orgSlug: string; currentPath: st
           : 'border-transparent bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
       )}
     >
-      <Home className="h-4 w-4" />
+      <Home className="h-[18px] w-[18px]" />
     </Link>
   )
 }
@@ -126,7 +146,7 @@ function AppButton({
             : 'text-nav-icon group-hover:text-caption',
         )}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="h-[18px] w-[18px]" />
       </span>
 
       {item.notify && (
@@ -367,36 +387,224 @@ export function WorkspaceRail({
   )
 }
 
-export function WorkspaceUtilityRail() {
-  const [activeAction, setActiveAction] = useState('calendar')
+function CalendarAddonPanel() {
+  const today = new Date()
+  const days = Array.from({ length: 14 }, (_, index) => {
+    const day = new Date(today)
+    day.setDate(today.getDate() + index)
+    return day
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-divider bg-surface p-3">
+        <p className="text-sm font-semibold text-primary-text">
+          {today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+        </p>
+        <p className="mt-1 text-sm text-muted">No scheduled events.</p>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map(day => {
+          const isToday = day.toDateString() === today.toDateString()
+          return (
+            <button
+              key={day.toISOString()}
+              type="button"
+              className={cn(
+                'flex h-10 flex-col items-center justify-center rounded-lg text-xs transition-colors',
+                isToday ? 'bg-primary/10 text-accent-txt' : 'text-content hover:bg-btn-hover',
+              )}
+            >
+              <span className="text-[10px] text-muted">
+                {day.toLocaleDateString('en-US', { weekday: 'narrow' })}
+              </span>
+              <span className="font-semibold">{day.getDate()}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function AddonContent({
+  activeView,
+  onSelectView,
+}: {
+  activeView: AddonViewId
+  onSelectView: (view: UtilityActionId) => void
+}) {
+  if (activeView === 'add') {
+    return (
+      <div className="space-y-2">
+        <p className="px-1 text-xs font-medium text-muted">Add a panel view</p>
+        {utilityActions.map(action => {
+          const Icon = action.icon
+          return (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => onSelectView(action.id)}
+              className="flex h-10 w-full items-center gap-3 rounded-lg px-2 text-left text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
+            >
+              <Icon className="h-4 w-4 text-muted" />
+              <span>{action.title}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (activeView === 'calendar') return <CalendarAddonPanel />
+
+  if (activeView === 'search') {
+    return (
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input
+            placeholder="Search workspace"
+            className="h-10 w-full rounded-lg border border-divider bg-surface pl-9 pr-3 text-sm outline-none focus:border-focus"
+          />
+        </div>
+        <p className="text-sm text-muted">Search results will appear here.</p>
+      </div>
+    )
+  }
+
+  if (activeView === 'notifications') {
+    return <div className="rounded-lg bg-surface p-3 text-sm text-muted">No new notifications.</div>
+  }
+
+  if (activeView === 'messages') {
+    return <div className="rounded-lg bg-surface p-3 text-sm text-muted">Recent messages will appear here.</div>
+  }
+
+  if (activeView === 'inbox') {
+    return <AiAgentMiniPanelContent />
+  }
+
+  return (
+    <textarea
+      placeholder="Quick notes"
+      className="h-56 w-full resize-none rounded-lg border border-divider bg-surface p-3 text-sm outline-none focus:border-focus"
+    />
+  )
+}
+
+function WorkspaceAddonPanel({
+  activeView,
+  onClose,
+  onSelectView,
+}: {
+  activeView: AddonViewId
+  onClose: () => void
+  onSelectView: (view: UtilityActionId) => void
+}) {
+  const action = activeView === 'add'
+    ? { title: 'Add view', icon: Plus }
+    : utilityActions.find(item => item.id === activeView) ?? utilityActions[0]
+  const Icon = action.icon
+  const aiPanel = activeView === 'inbox'
 
   return (
     <aside
       className={cn(
-        'flex h-full w-15 shrink-0 flex-col items-center justify-between',
-        'bg-nav border border-nav-divider',
-        'rounded-xl',
+        'flex h-full w-[360px] shrink-0 flex-col overflow-hidden rounded-xl border',
+        aiPanel ? 'border-blue-100 bg-[#f7f9ff]' : 'border-nav-divider bg-panel',
       )}
-      aria-label="Quick actions"
+      aria-label={`${action.title} panel`}
     >
-      <div className="flex w-full flex-col items-center gap-1 px-2 pt-5">
-        <ShellIconActionButton title="Panel" icon={PanelRight} />
-        <ShellDivider className="my-2 w-8" />
-        {utilityActions.map(action => (
-          <ShellIconActionButton
-            key={action.id}
-            title={action.title}
-            icon={action.icon}
-            active={activeAction === action.id}
-            onClick={() => setActiveAction(action.id)}
-          />
-        ))}
+      <div className={cn('flex h-14 shrink-0 items-center justify-between border-b px-4', aiPanel ? 'border-blue-100' : 'border-nav-divider')}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', aiPanel ? 'bg-white text-[#2f6fed] shadow-sm ring-1 ring-blue-100' : 'bg-btn-hover text-caption')}>
+            <Icon className="h-4 w-4" />
+          </span>
+          <h2 className="truncate text-sm font-semibold text-primary-text">{action.title}</h2>
+        </div>
+        <div className="flex items-center gap-1">
+          <ShellIconActionButton title="Expand panel" icon={Maximize2} />
+          <ShellIconActionButton title="Panel options" icon={MoreVertical} />
+          <ShellIconActionButton title="Close panel" icon={X} onClick={onClose} />
+        </div>
       </div>
 
-      <div className="flex w-full flex-col items-center gap-1 px-2 pb-5">
-        <ShellDivider className="mb-2 w-8" />
-        <ShellIconActionButton title="Command menu" icon={Command} />
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <AddonContent activeView={activeView} onSelectView={onSelectView} />
       </div>
     </aside>
+  )
+}
+
+export function WorkspaceUtilityRail({ currentPath }: { currentPath: string }) {
+  const [activeView, setActiveView] = useState<AddonViewId>('calendar')
+  const [panelOpen, setPanelOpen] = useState(false)
+  const conflictingAddon = useMemo(() => getConflictingAddon(currentPath), [currentPath])
+
+  useEffect(() => {
+    if (panelOpen && activeView === conflictingAddon) {
+      setPanelOpen(false)
+    }
+  }, [activeView, conflictingAddon, panelOpen])
+
+  function openView(view: AddonViewId) {
+    if (view === conflictingAddon) return
+    setActiveView(view)
+    setPanelOpen(true)
+  }
+
+  return (
+    <>
+      {panelOpen && (
+        <WorkspaceAddonPanel
+          activeView={activeView}
+          onClose={() => setPanelOpen(false)}
+          onSelectView={openView}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'flex h-full w-15 shrink-0 flex-col items-center justify-between',
+          'bg-nav border border-nav-divider',
+          'rounded-xl',
+        )}
+        aria-label="Quick actions"
+      >
+        <div className="flex w-full flex-col items-center gap-1 px-2 pt-5">
+          <ShellIconActionButton
+            title={panelOpen ? 'Close side panel' : 'Open side panel'}
+            icon={PanelRight}
+            active={panelOpen}
+            onClick={() => setPanelOpen(open => !open)}
+          />
+          <ShellDivider className="my-2 w-8" />
+          {utilityActions.map(action => (
+            <ShellIconActionButton
+              key={action.id}
+              title={action.id === conflictingAddon ? `${action.title} is already open` : action.title}
+              icon={action.icon}
+              active={panelOpen && activeView === action.id}
+              disabled={action.id === conflictingAddon}
+              onClick={() => openView(action.id)}
+            />
+          ))}
+          <ShellDivider className="my-2 w-8" />
+          <ShellIconActionButton
+            title="Add view"
+            icon={Plus}
+            active={panelOpen && activeView === 'add'}
+            onClick={() => openView('add')}
+          />
+        </div>
+
+        <div className="flex w-full flex-col items-center gap-1 px-2 pb-5">
+          <ShellDivider className="mb-2 w-8" />
+          <ShellIconActionButton title="Command menu" icon={Command} />
+        </div>
+      </aside>
+    </>
   )
 }

@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Development Docker Compose Configuration
 # Features: Hot reload, debugging, all dev tools enabled
 # Usage: docker-compose -f infrastructure/dev/docker-compose.yml up
@@ -26,6 +24,24 @@ services:
       retries: 5
       start_period: 20s
 
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: serenity-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - serenity-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # API Gateway
   gateway:
     build:
@@ -39,6 +55,7 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
       - JWT_SECRET=dev-secret
       - NODE_ENV=development
       - DEBUG=serenity:*
@@ -64,6 +81,7 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
       - JWT_SECRET=dev-secret
       - NODE_ENV=development
     depends_on:
@@ -88,11 +106,15 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev-secret
       - AUTH_SERVICE_URL=http://auth-service:3000/api
       - NODE_ENV=development
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - serenity-dev
@@ -113,9 +135,13 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+      - REDIS_URL=redis://redis:6379
       - NODE_ENV=development
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - serenity-dev
@@ -134,6 +160,7 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:2991
+      - NEXT_PUBLIC_REALTIME_URL=http://localhost:2996
       - NEXT_DIST_DIR=/app/dist/apps/web
     depends_on:
       - gateway
@@ -150,6 +177,8 @@ networks:
 
 volumes:
   postgres_data_dev:
+    driver: local
+  redis_data_dev:
     driver: local
   web_node_modules:
     driver: local

@@ -29,12 +29,12 @@ fi
 # Build images
 echo ""
 echo "Building Docker images..."
-docker compose build
+docker compose -f infrastructure/dev/docker-compose.yml build
 
 # Start services
 echo ""
 echo "Starting services..."
-docker compose up -d
+docker compose -f infrastructure/dev/docker-compose.yml up -d
 
 # Wait for services to start
 echo ""
@@ -46,7 +46,7 @@ echo ""
 echo "================================"
 echo "Checking service status..."
 echo "================================"
-docker compose ps
+docker compose -f infrastructure/dev/docker-compose.yml ps
 
 echo ""
 echo "✓ Services are starting!"
@@ -54,12 +54,14 @@ echo ""
 echo "Access your services:"
 echo "  API Gateway:  http://localhost:2991/api"
 echo "  Web UI:       http://localhost:2997"
-echo "  MongoDB:      localhost:27017"
+echo "  PostgreSQL:   localhost:5432"
+echo "  Redis:        localhost:6379"
 echo ""
 echo "Useful commands:"
 echo "  make logs              - View all logs"
 echo "  make logs-gateway      - View gateway logs"
-echo "  docker-compose ps      - Check service status"
-echo "  make mongo-shell       - Access MongoDB"
+echo "  docker compose ps      - Check service status"
+echo "  make postgres-shell    - Access PostgreSQL"
+echo "  make redis-shell       - Access Redis"
 echo "  make down              - Stop all services"
 echo ""

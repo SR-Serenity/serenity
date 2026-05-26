@@ -3,6 +3,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.serenity-notion-editor .bn-container,
+.serenity-notion-editor .bn-editor {
+  background: transparent;
+  color: #37352f;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.serenity-notion-editor .bn-editor {
+  padding-inline: 0;
+}
+
+.serenity-notion-editor .bn-block-content {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.serenity-notion-editor .bn-block-outer {
+  margin-block: 1px;
+}
+
+.serenity-notion-editor [data-placeholder]::before {
+  color: #b8b5ad;
+}
+
 /* ─── Serenity Design Tokens ──────────────────────────────────────── */
 /*
   Token conventions (keep this order):
@@ -429,3 +453,36 @@ body {
 /* ─── Utility: hide scrollbar but keep scrollable ─────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── LiveKit: pin button + thumbnail strip ───────────────────── */
+/* ParticipantTile shows its pin/focus button on hover            */
+.meeting-room-wrapper .lk-focus-toggle-button {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.meeting-room-wrapper .lk-participant-tile:hover .lk-focus-toggle-button {
+  opacity: 1;
+}
+
+/* ─── LiveKit theme overrides ─────────────────────────────────── */
+/* LiveKitRoom renders a div with data-lk-theme="default" and     */
+/* class="lk-room-container" automatically. We need a parent      */
+/* wrapper class to get higher specificity (0,2,0) than the       */
+/* default [data-lk-theme=default] selector (0,1,0).              */
+/* Real button vars: --lk-control-bg, NOT --lk-button-bg.         */
+.meeting-room-wrapper[data-lk-theme=default] {
+  --lk-bg:                      #070738;
+  --lk-bg2:                     rgba(255, 255, 255, 0.08);
+  --lk-bg3:                     rgba(255, 255, 255, 0.12);
+  --lk-bg4:                     rgba(255, 255, 255, 0.18);
+  --lk-bg5:                     rgba(255, 255, 255, 0.24);
+  --lk-border-color:            rgba(255, 255, 255, 0.08);
+  --lk-control-bg:              rgba(255, 255, 255, 0.08);
+  --lk-control-hover-bg:        rgba(255, 255, 255, 0.14);
+  --lk-control-active-bg:       rgba(255, 255, 255, 0.2);
+  --lk-control-active-hover-bg: rgba(255, 255, 255, 0.26);
+  --lk-accent-bg:               #205DC2;
+  --lk-accent2:                 #3575de;
+  --lk-accent3:                 #4a88e8;
+  --lk-accent4:                 #5f9bf0;
+}

@@ -26,6 +26,7 @@ Access:
 - **Web**: http://localhost:2997
 - **API Gateway**: http://localhost:2991
 - **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
 
 ## Services
 
@@ -39,14 +40,14 @@ Access:
 
 ## Running Services Locally
 
-**Prerequisites:** PostgreSQL running locally
+**Prerequisites:** PostgreSQL and Redis running locally
 
 ```bash
-# Terminal 1: Start PostgreSQL (macOS)
-brew services start postgresql@16
+# Terminal 1: Start PostgreSQL and Redis with Docker
+make up-infra
 
 # Terminal 2: Run migrations
-pnpm nx run prisma:migrate
+pnpm prisma:migrate:dev
 
 # Terminal 3: Start core backend services together (parallel)
 pnpm nx run-many -t serve --projects=auth-service,core-service,gateway --parallel=3
@@ -163,7 +164,11 @@ src/
 
 ```env
 # Database
-DATABASE_URL=postgresql://serenity:serenity@postgres:5432/serenity?schema=public
+DATABASE_URL=postgresql://serenity:serenity@localhost:5432/serenity?schema=public
+DIRECT_URL=postgresql://serenity:serenity@localhost:5432/serenity?schema=public
+
+# Realtime
+REDIS_URL=redis://localhost:6379
 
 # Services
 NODE_ENV=development
@@ -212,16 +217,13 @@ lsof -i :2991
 kill -9 <PID>
 ```
 
-**PostgreSQL connection error:**
+**PostgreSQL or Redis connection error:**
 ```bash
 # Check if running
-psql -U postgres
+docker compose -f infrastructure/dev/docker-compose.yml ps
 
-# Start PostgreSQL (macOS)
-brew services start postgresql@16
-
-# Start PostgreSQL (Linux)
-sudo systemctl start postgresql
+# Start local dependencies
+make up-infra
 ```
 
 **Clear cache:**
@@ -248,6 +250,7 @@ docker compose up --build
 | Backend | NestJS 11 |
 | Frontend | Next.js 16, React 19 |
 | Database | PostgreSQL 16 + Prisma |
+| Realtime Transport | Redis 7 Pub/Sub |
 | Testing | Jest, Playwright |
 | Containers | Docker, Docker Compose |
 

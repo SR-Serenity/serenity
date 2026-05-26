@@ -57,13 +57,15 @@ echo.
 echo Access your services:
 echo   API Gateway:  http://localhost:2991/api
 echo   Web UI:       http://localhost:2997
-echo   MongoDB:      localhost:27017
+echo   PostgreSQL:   localhost:5432
+echo   Redis:        localhost:6379
 echo.
 echo Useful commands:
 echo   make logs              - View all logs
 echo   make logs-gateway      - View gateway logs
 echo   docker-compose ps      - Check service status
-echo   make mongo-shell       - Access MongoDB
+echo   make postgres-shell    - Access PostgreSQL
+echo   make redis-shell       - Access Redis
 echo   docker-compose down    - Stop all services
 echo.
 pause

@@ -97,9 +97,7 @@ export class RealtimeService {
   private channelsForUser(user: RealtimeUser) {
     return [
       `org:${user.orgId}:${RealtimeDomain.CHAT}`,
-      // Future domains can be added here, for example:
-      // `org:${user.orgId}:${RealtimeDomain.NOTIFICATION}`,
-      // `user:${user.userId}:${RealtimeDomain.NOTIFICATION}`,
+      `org:${user.orgId}:${RealtimeDomain.OFFICE}`,
     ];
   }
 

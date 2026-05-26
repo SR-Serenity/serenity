@@ -7,35 +7,29 @@ import Link from 'next/link'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { ChatConversation } from '@serenity/api'
 import {
-  Briefcase,
   Bot,
   Building2,
   Calendar,
-  CheckCircle2,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
-  GitMerge,
   Hash,
-  HardDrive,
-  Inbox,
   Layers,
   Loader2,
   Lock,
+  Mail,
   MessageSquare,
   Plus,
   Search,
   Settings2,
-  Sparkles,
-  Star,
-  TestTube,
   UserSquare,
   Users,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { WikiSubnav } from '@/app/(workspace)/[orgSlug]/wiki/components/wiki-subnav'
 import { useChatStore } from '@/stores/chat-store'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -81,16 +75,10 @@ function buildApps(basePath: string): WorkspaceRailItem[] {
     },
     { id: 'planner', icon: Calendar, label: 'Planner', href: `${basePath}/calendar` },
     { id: 'office', icon: Building2, label: 'Office', href: `${basePath}/office` },
-    { id: 'cards', icon: Layers, label: 'Cards', href: `${basePath}/cards` },
     { id: 'contact', icon: UserSquare, label: 'Contact', href: `${basePath}/contact` },
+    { id: 'mail', icon: Mail, label: 'Mail', href: `${basePath}/mail` },
     { id: 'chat', icon: MessageSquare, label: 'Chat', href: `${basePath}/chat` },
-    { id: 'hr', icon: Briefcase, label: 'HR', href: `${basePath}/hr` },
-    { id: 'trackers', icon: CheckSquare, label: 'Trackers', href: `${basePath}/trackers` },
-    { id: 'documents', icon: FileText, label: 'Documents', href: `${basePath}/documents` },
-    { id: 'team', icon: Users, label: 'Team', href: `${basePath}/team` },
-    { id: 'processes', icon: GitMerge, label: 'Processes', href: `${basePath}/processes` },
-    { id: 'drive', icon: HardDrive, label: 'Drive', href: `${basePath}/drive` },
-    { id: 'test-management', icon: TestTube, label: 'Test Management', href: `${basePath}/test-management` },
+    { id: 'wiki', icon: FileText, label: 'Wiki', href: `${basePath}/wiki` },
   ]
 }
 
@@ -224,20 +212,7 @@ function buildSections(
           id: 'office',
           label: 'Office',
           items: [
-            { id: 'overview', label: 'Overview', href: `${basePath}/workspace`, icon: Building2 },
-            { id: 'team', label: 'Team', href: `${basePath}/team`, icon: Users },
-            { id: 'documents', label: 'Documents', href: `${basePath}/documents`, icon: FileText },
-          ],
-        },
-      ]
-    case 'cards':
-      return [
-        {
-          id: 'cards',
-          label: 'Cards',
-          items: [
-            { id: 'all', label: 'All Cards', href: `${basePath}/cards`, icon: Layers },
-            { id: 'starred', label: 'Starred', href: `${basePath}/cards/starred`, icon: Star },
+            { id: 'floor', label: 'Floor', href: `${basePath}/office`, icon: Building2 },
           ],
         },
       ]
@@ -248,87 +223,11 @@ function buildSections(
           label: 'Contact',
           items: [
             { id: 'people', label: 'People', href: `${basePath}/contact`, icon: UserSquare },
-            { id: 'teams', label: 'Teams', href: `${basePath}/team`, icon: Users },
           ],
         },
       ]
-    case 'hr':
-      return [
-        {
-          id: 'hr',
-          label: 'HR',
-          items: [
-            { id: 'people', label: 'People', href: `${basePath}/hr`, icon: Briefcase },
-            { id: 'requests', label: 'Requests', href: `${basePath}/hr/requests`, icon: Inbox },
-          ],
-        },
-      ]
-    case 'trackers':
-      return [
-        {
-          id: 'trackers',
-          label: 'Trackers',
-          items: [
-            { id: 'all', label: 'All Trackers', href: `${basePath}/trackers`, icon: CheckSquare },
-            { id: 'done', label: 'Done', href: `${basePath}/trackers/done`, icon: CheckCircle2 },
-          ],
-        },
-      ]
-    case 'documents':
-      return [
-        {
-          id: 'documents',
-          label: 'Documents',
-          items: [
-            { id: 'all', label: 'All Documents', href: `${basePath}/documents`, icon: FileText },
-            { id: 'shared', label: 'Shared', href: `${basePath}/documents/shared`, icon: Users },
-          ],
-        },
-      ]
-    case 'team':
-      return [
-        {
-          id: 'team',
-          label: 'Team',
-          items: [
-            { id: 'members', label: 'Members', href: `${basePath}/team`, icon: Users },
-            { id: 'groups', label: 'Groups', href: `${basePath}/team/groups`, icon: UserSquare },
-          ],
-        },
-      ]
-    case 'processes':
-      return [
-        {
-          id: 'processes',
-          label: 'Processes',
-          items: [
-            { id: 'all', label: 'All Processes', href: `${basePath}/processes`, icon: GitMerge },
-            { id: 'handoffs', label: 'Handoffs', href: `${basePath}/processes/handoffs`, icon: Sparkles },
-          ],
-        },
-      ]
-    case 'drive':
-      return [
-        {
-          id: 'drive',
-          label: 'Drive',
-          items: [
-            { id: 'files', label: 'Files', href: `${basePath}/drive`, icon: HardDrive },
-            { id: 'shared', label: 'Shared', href: `${basePath}/drive/shared`, icon: Users },
-          ],
-        },
-      ]
-    case 'test-management':
-      return [
-        {
-          id: 'test-management',
-          label: 'Test Management',
-          items: [
-            { id: 'tests', label: 'Tests', href: `${basePath}/test-management`, icon: TestTube },
-            { id: 'runs', label: 'Runs', href: `${basePath}/test-management/runs`, icon: CheckCircle2 },
-          ],
-        },
-      ]
+    case 'wiki':
+      return [{ id: 'wiki', label: 'Wiki', items: [] }]
     default:
       return []
   }
@@ -1009,7 +908,12 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
       <WorkspaceHeader
         currentPath={pathname}
         orgSlug={orgSlug}
-        activeApp={activeApp ? { label: activeApp.label, icon: activeApp.icon } : undefined}
+        activeApp={activeApp ? {
+          id: activeApp.id,
+          label: activeApp.label,
+          icon: activeApp.icon,
+          href: activeApp.href,
+        } : undefined}
       />
 
       <div className="flex min-h-0 w-full flex-1 gap-2 overflow-hidden bg-back p-2">
@@ -1064,6 +968,8 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                     basePath={basePath}
                     currentPath={currentPath}
                   />
+                ) : activeApp?.id === 'wiki' ? (
+                  <WikiSubnav />
                 ) : (
                   <ModuleSubnav
                     title={activeApp?.label ?? 'Workspace'}
@@ -1111,7 +1017,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
           </main>
         </div>
 
-        <WorkspaceUtilityRail />
+        <WorkspaceUtilityRail currentPath={pathname} />
       </div>
     </div>
   )
