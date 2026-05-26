@@ -3,6 +3,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.serenity-notion-editor .bn-container,
+.serenity-notion-editor .bn-editor {
+  background: transparent;
+  color: #37352f;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.serenity-notion-editor .bn-editor {
+  padding-inline: 0;
+}
+
+.serenity-notion-editor .bn-block-content {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.serenity-notion-editor .bn-block-outer {
+  margin-block: 1px;
+}
+
+.serenity-notion-editor [data-placeholder]::before {
+  color: #b8b5ad;
+}
+
 /* ─── Serenity Design Tokens ──────────────────────────────────────── */
 /*
   Token conventions (keep this order):

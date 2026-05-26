@@ -10,6 +10,7 @@ interface ShellIconActionButtonProps {
   as?: 'button' | 'link'
   href?: string
   active?: boolean
+  disabled?: boolean
   className?: string
   id?: string
 }
@@ -21,6 +22,7 @@ export function ShellIconActionButton({
   as = 'button',
   href,
   active = false,
+  disabled = false,
   className,
   id,
 }: ShellIconActionButtonProps) {
@@ -32,20 +34,21 @@ export function ShellIconActionButton({
     active
       ? 'bg-primary/10 text-accent-txt'
       : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
+    disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-nav-icon',
     className,
   )
 
   if (as === 'link' && href) {
     return (
       <Link href={href} id={id} title={title} className={classes}>
-        <Icon className="w-4 h-4" />
+        <Icon className="h-[18px] w-[18px]" />
       </Link>
     )
   }
 
   return (
-    <button type="button" id={id} title={title} onClick={onClick} className={classes}>
-      <Icon className="w-4 h-4" />
+    <button type="button" id={id} title={title} onClick={onClick} disabled={disabled} className={classes}>
+      <Icon className="h-[18px] w-[18px]" />
     </button>
   )
 }
