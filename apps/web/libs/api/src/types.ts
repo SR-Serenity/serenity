@@ -23,3 +23,16 @@ export type {
   ListCalendarItemsResponse,
   UpdateCalendarItemInput,
 } from './types/calendar'
+export type {
+  CreateWikiPageInput,
+  DeleteWikiPageResponse,
+  ListWikiPagesResponse,
+  ListWikiSharesResponse,
+  UpdateWikiPageInput,
+  WikiFavoriteResponse,
+  WikiPage,
+  WikiPageShare,
+  WikiPageShareUser,
+  WikiPageVisibility,
+  WikiSharePermission,
+} from './types/wiki'

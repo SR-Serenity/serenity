@@ -1,4 +1,4 @@
-export { authApi, orgApi, chatApi, contactsApi, calendarApi } from './lib'
+export { authApi, orgApi, chatApi, contactsApi, calendarApi, wikiApi } from './lib'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
@@ -22,6 +22,19 @@ export type {
   ListCalendarItemsResponse,
   UpdateCalendarItemInput,
 } from './types/calendar'
+export type {
+  CreateWikiPageInput,
+  DeleteWikiPageResponse,
+  ListWikiPagesResponse,
+  ListWikiSharesResponse,
+  UpdateWikiPageInput,
+  WikiFavoriteResponse,
+  WikiPage,
+  WikiPageShare,
+  WikiPageShareUser,
+  WikiPageVisibility,
+  WikiSharePermission,
+} from './types/wiki'
 export type {
   Department,
   Member,

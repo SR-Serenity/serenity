@@ -64,6 +64,18 @@ enum CalendarTaskStatus {
   DONE
 }
 
+enum WikiPageVisibility {
+  WORKSPACE
+  DEPARTMENT
+  PRIVATE
+}
+
+enum WikiSharePermission {
+  VIEW
+  COMMENT
+  EDIT
+}
+
 model Organization {
   id          String            @id @default(cuid())
   name        String
@@ -77,6 +89,7 @@ model Organization {
   chatAttachments    ChatAttachment[]
   contacts           Contact[]
   calendarItems      CalendarItem[]
+  wikiPages          WikiPage[]
 }
 
 model User {
@@ -95,6 +108,11 @@ model User {
   chatUploads      ChatAttachment[] @relation("ChatAttachmentUploader")
   calendarItems    CalendarItem[] @relation("CalendarItemCreator")
   calendarAttendances CalendarAttendee[]
+  wikiPages            WikiPage[]      @relation("WikiPageCreator")
+  wikiFavorites        WikiPageFavorite[]
+  wikiRecents          WikiPageRecent[]
+  wikiSharesReceived   WikiPageShare[] @relation("WikiShareReceiver")
+  wikiSharesGranted    WikiPageShare[] @relation("WikiShareGrantor")
 }
 
 model Department {
@@ -107,6 +125,7 @@ model Department {
   members      WorkspaceMember[]
   invitations  Invitation[]
   contacts     Contact[]
+  wikiPages    WikiPage[]
 
   @@index([orgId])
 }
@@ -174,6 +193,83 @@ model CalendarAttendee {
   user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([itemId, userId])
+  @@index([userId])
+}
+
+model WikiPage {
+  id              String             @id @default(cuid())
+  orgId           String
+  parentId        String?
+  createdById     String
+  title           String
+  icon            String?
+  coverColor      String?
+  contentMarkdown String             @default("")
+  contentJson     Json?
+  visibility      WikiPageVisibility @default(PRIVATE)
+  departmentId    String?
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent       WikiPage?          @relation("WikiPageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     WikiPage[]         @relation("WikiPageTree")
+  creator      User               @relation("WikiPageCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  department   Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  favorites    WikiPageFavorite[]
+  recents      WikiPageRecent[]
+  shares       WikiPageShare[]
+
+  @@index([orgId, parentId])
+  @@index([orgId, visibility])
+  @@index([orgId, updatedAt])
+  @@index([createdById])
+  @@index([departmentId])
+  @@index([deletedAt])
+}
+
+model WikiPageFavorite {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId, createdAt])
+}
+
+model WikiPageRecent {
+  id       String   @id @default(cuid())
+  pageId   String
+  userId   String
+  viewedAt DateTime @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId, viewedAt])
+}
+
+model WikiPageShare {
+  id          String              @id @default(cuid())
+  pageId      String
+  userId      String
+  permission  WikiSharePermission @default(VIEW)
+  grantedById String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user      User     @relation("WikiShareReceiver", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User     @relation("WikiShareGrantor", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([pageId])
   @@index([userId])
 }
 

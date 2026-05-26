@@ -6,8 +6,9 @@ import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { WikiModule } from './wiki/wiki.module';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, UsersModule, OrganizationsModule, ChatModule, ContactsModule, CalendarModule],
+  imports: [AuthModule, DatabaseModule, UsersModule, OrganizationsModule, ChatModule, ContactsModule, CalendarModule, WikiModule],
 })
 export class AppModule {}
