@@ -19,6 +19,7 @@ import {
   Layers,
   Loader2,
   Lock,
+  Mail,
   MessageSquare,
   Plus,
   Search,
@@ -75,6 +76,7 @@ function buildApps(basePath: string): WorkspaceRailItem[] {
     { id: 'planner', icon: Calendar, label: 'Planner', href: `${basePath}/calendar` },
     { id: 'office', icon: Building2, label: 'Office', href: `${basePath}/office` },
     { id: 'contact', icon: UserSquare, label: 'Contact', href: `${basePath}/contact` },
+    { id: 'mail', icon: Mail, label: 'Mail', href: `${basePath}/mail` },
     { id: 'chat', icon: MessageSquare, label: 'Chat', href: `${basePath}/chat` },
     { id: 'wiki', icon: FileText, label: 'Wiki', href: `${basePath}/wiki` },
   ]
@@ -210,8 +212,7 @@ function buildSections(
           id: 'office',
           label: 'Office',
           items: [
-            { id: 'overview', label: 'Overview', href: `${basePath}/workspace`, icon: Building2 },
-            { id: 'documents', label: 'Documents', href: `${basePath}/documents`, icon: FileText },
+            { id: 'floor', label: 'Floor', href: `${basePath}/office`, icon: Building2 },
           ],
         },
       ]
