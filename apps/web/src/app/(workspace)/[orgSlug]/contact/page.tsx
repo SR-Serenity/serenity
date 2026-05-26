@@ -7,9 +7,12 @@ import { useShallow } from 'zustand/react/shallow'
 import {
   Bot,
   Building2,
+  BriefcaseBusiness,
+  Filter,
   Loader2,
   Mail,
   MessageSquare,
+  Phone,
   Plus,
   Search,
   Trash2,
@@ -25,6 +28,7 @@ import type {
   Department,
   UpdateContactInput,
 } from '@serenity/api'
+import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -189,6 +193,12 @@ export default function ContactPage() {
     () => contacts.find(contact => contact.id === selectedId) ?? filteredContacts[0] ?? null,
     [contacts, filteredContacts, selectedId],
   )
+  const contactStats = useMemo(() => ({
+    employees: contacts.filter(contact => contact.type === 'EMPLOYEE').length,
+    guests: contacts.filter(contact => contact.type === 'GUEST').length,
+    agents: contacts.filter(contact => contact.type === 'AI_AGENT').length,
+  }), [contacts])
+  const resultLabel = `${filteredContacts.length} ${filteredContacts.length === 1 ? 'contact' : 'contacts'}`
 
   function openCreateForm(type: Exclude<ContactType, 'EMPLOYEE'> = 'GUEST') {
     setEditingContact(null)
@@ -266,124 +276,124 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-surface">
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="shrink-0 border-b border-divider px-7 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm text-muted">Company directory</p>
-              <h1 className="mt-1 truncate text-2xl font-semibold text-primary-text">Contacts</h1>
-            </div>
-            {canManage && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openCreateForm('AI_AGENT')}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-divider px-3 text-sm font-medium text-primary-text hover:bg-btn-hover"
-                >
-                  <Bot className="h-4 w-4" />
-                  AI agent
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openCreateForm('GUEST')}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-medium text-white hover:bg-primary/90"
-                >
-                  <Plus className="h-4 w-4" />
-                  Guest
-                </button>
-              </div>
-            )}
+    <div className="flex h-full min-h-0 bg-slate-50 text-slate-900 [color-scheme:light]">
+      <main className="flex min-w-0 flex-1 flex-col bg-slate-50">
+        <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4">
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold text-slate-950">Contacts</h1>
+            <p className="text-xs text-slate-500">
+              {resultLabel} · {contactStats.employees} employees · {contactStats.guests} guests · {contactStats.agents} agents
+            </p>
           </div>
-
-          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(240px,1fr)_180px_220px]">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <input
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder="Search contacts"
-                className="h-10 w-full rounded-xl border border-divider bg-panel pl-9 pr-3 text-sm text-primary-text outline-none focus:border-focus"
-              />
-            </label>
-            <select
-              value={typeFilter}
-              onChange={event => setTypeFilter(event.target.value as ContactType | 'ALL')}
-              className="h-10 rounded-xl border border-divider bg-panel px-3 text-sm text-primary-text outline-none focus:border-focus"
-            >
-              <option value="ALL">All types</option>
-              <option value="EMPLOYEE">Employees</option>
-              <option value="GUEST">Guests</option>
-              <option value="AI_AGENT">AI agents</option>
-            </select>
-            <select
-              value={departmentFilter}
-              onChange={event => setDepartmentFilter(event.target.value)}
-              className="h-10 rounded-xl border border-divider bg-panel px-3 text-sm text-primary-text outline-none focus:border-focus"
-            >
-              <option value="ALL">All departments</option>
-              <option value="NONE">No department</option>
-              {departments.map(department => (
-                <option key={department.id} value={department.id}>{department.name}</option>
-              ))}
-            </select>
-          </div>
-        </header>
-
-        {error && (
-          <div className="mx-7 mt-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
-          </div>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-5">
-          {loading ? (
-            <div className="flex h-64 items-center justify-center text-muted">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading contacts
-            </div>
-          ) : groupedContacts.length === 0 ? (
-            <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-divider bg-panel text-center">
-              <div>
-                <Users className="mx-auto h-8 w-8 text-muted" />
-                <h2 className="mt-3 text-base font-semibold text-primary-text">No contacts found</h2>
-                <p className="mt-1 text-sm text-muted">Adjust filters or add a guest contact.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {groupedContacts.map(([departmentName, items]) => (
-                <section key={departmentName}>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-text">
-                    <Building2 className="h-4 w-4 text-muted" />
-                    {departmentName}
-                    <span className="rounded-lg bg-btn-hover px-2 py-0.5 text-xs text-muted">{items.length}</span>
-                  </div>
-                  <div className="overflow-hidden rounded-xl border border-divider bg-panel">
-                    {items.map(contact => (
-                      <ContactRow
-                        key={contact.id}
-                        contact={contact}
-                        active={selectedContact?.id === contact.id}
-                        onSelect={() => setSelectedId(contact.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
+          {canManage && (
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="lg" className="rounded-lg border-slate-200 bg-white" onClick={() => openCreateForm('AI_AGENT')}>
+                <Bot className="size-4" />
+                AI agent
+              </Button>
+              <Button size="lg" className="rounded-lg bg-blue-600 px-3 text-white hover:bg-blue-700" onClick={() => openCreateForm('GUEST')}>
+                <Plus className="size-4" />
+                Guest
+              </Button>
             </div>
           )}
-        </div>
-      </section>
+        </header>
 
-      <ContactDetail
-        contact={selectedContact}
-        canManage={canManage}
-        saving={saving}
-        onMessage={handleMessage}
-        onEdit={openEditForm}
-        onArchive={handleArchive}
-      />
+        {error && <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+
+        <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-4">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+            <div className="grid shrink-0 gap-3 border-b border-slate-200 bg-white p-3 lg:grid-cols-[minmax(240px,1fr)_180px_220px]">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  placeholder="Search contacts"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+              <label className="relative block">
+                <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={typeFilter}
+                  onChange={event => setTypeFilter(event.target.value as ContactType | 'ALL')}
+                  className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-9 pr-8 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="ALL">All types</option>
+                  <option value="EMPLOYEE">Employees</option>
+                  <option value="GUEST">Guests</option>
+                  <option value="AI_AGENT">AI agents</option>
+                </select>
+              </label>
+              <label className="relative block">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={departmentFilter}
+                  onChange={event => setDepartmentFilter(event.target.value)}
+                  className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-9 pr-8 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="ALL">All departments</option>
+                  <option value="NONE">No department</option>
+                  {departments.map(department => (
+                    <option key={department.id} value={department.id}>{department.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-h-0 overflow-y-auto">
+                {loading ? (
+                  <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                    <Loader2 className="mr-2 size-5 animate-spin" />
+                    Loading contacts
+                  </div>
+                ) : groupedContacts.length === 0 ? (
+                  <div className="flex h-full min-h-72 items-center justify-center px-4 text-center">
+                    <div>
+                      <Users className="mx-auto size-9 text-slate-400" />
+                      <h2 className="mt-3 text-base font-semibold text-slate-950">No contacts found</h2>
+                      <p className="mt-1 text-sm text-slate-500">Adjust filters or add a guest contact.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-200">
+                    {groupedContacts.map(([departmentName, items]) => (
+                      <section key={departmentName}>
+                        <div className="sticky top-0 z-10 flex h-9 items-center gap-2 border-b border-slate-100 bg-slate-50/95 px-4 text-xs font-semibold uppercase text-slate-500 backdrop-blur">
+                          <Building2 className="size-3.5" />
+                          <span className="truncate">{departmentName}</span>
+                          <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] text-slate-500 ring-1 ring-slate-200">{items.length}</span>
+                        </div>
+                        <div>
+                          {items.map(contact => (
+                            <ContactRow
+                              key={contact.id}
+                              contact={contact}
+                              active={selectedContact?.id === contact.id}
+                              onSelect={() => setSelectedId(contact.id)}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <ContactDetail
+                contact={selectedContact}
+                canManage={canManage}
+                saving={saving}
+                onMessage={handleMessage}
+                onEdit={openEditForm}
+                onArchive={handleArchive}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
 
       {formOpen && (
         <ContactFormModal
@@ -416,31 +426,31 @@ function ContactRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex w-full items-center gap-3 border-b border-divider px-4 py-3 text-left last:border-b-0 hover:bg-btn-hover',
-        active && 'bg-primary/5',
+        'grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-slate-50',
+        active && 'bg-blue-50/80 hover:bg-blue-50',
       )}
     >
       <span className={cn(
-        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold',
-        contact.type === 'EMPLOYEE' && 'bg-teal-500 text-white',
+        'flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ring-1 ring-inset',
+        contact.type === 'EMPLOYEE' && 'bg-emerald-600 text-white ring-emerald-600',
         contact.type === 'GUEST' && 'bg-blue-100 text-blue-700',
-        contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700',
+        contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
       )}>
-        {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : <Icon className="h-4 w-4" />}
+        {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : <Icon className="size-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-primary-text">{contact.displayName}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted">
+        <span className="block truncate text-sm font-medium text-slate-950">{contact.displayName}</span>
+        <span className="mt-0.5 block truncate text-xs text-slate-500">
           {[contact.title, contact.email, contact.company].filter(Boolean).join(' · ') || typeLabels[contact.type]}
         </span>
       </span>
       <span className={cn(
-        'shrink-0 rounded-lg px-2 py-1 text-xs font-medium',
-        contact.status === 'ACTIVE' && 'bg-success/10 text-success',
-        contact.status === 'INVITED' && 'bg-primary/10 text-accent-txt',
-        contact.status === 'ARCHIVED' && 'bg-btn-hover text-muted',
+        'shrink-0 rounded-md px-2 py-1 text-xs font-medium',
+        contact.status === 'ACTIVE' && 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100',
+        contact.status === 'INVITED' && 'bg-blue-50 text-blue-700 ring-1 ring-blue-100',
+        contact.status === 'ARCHIVED' && 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
       )}>
-        {contact.status}
+        {contact.status.toLowerCase()}
       </span>
     </button>
   )
@@ -463,66 +473,68 @@ function ContactDetail({
 }) {
   if (!contact) {
     return (
-      <aside className="hidden w-90 shrink-0 border-l border-divider bg-panel p-5 xl:block">
-        <p className="text-sm text-muted">Select a contact</p>
+      <aside className="hidden border-l border-slate-200 bg-white p-5 xl:block">
+        <p className="text-sm text-slate-500">Select a contact</p>
       </aside>
     )
   }
 
   const editable = canManage && contact.type !== 'EMPLOYEE' && contact.status !== 'INVITED'
+  const Icon = contactIcon(contact.type)
 
   return (
-    <aside className="hidden w-95 shrink-0 border-l border-divider bg-panel xl:flex xl:flex-col">
-      <div className="border-b border-divider p-5">
+    <aside className="hidden min-h-0 border-l border-slate-200 bg-white xl:flex xl:flex-col">
+      <div className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-sm font-semibold text-white">
-            {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : typeLabels[contact.type][0]}
+          <div className={cn(
+            'flex size-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ring-1 ring-inset',
+            contact.type === 'EMPLOYEE' && 'bg-emerald-600 text-white ring-emerald-600',
+            contact.type === 'GUEST' && 'bg-blue-100 text-blue-700 ring-blue-200',
+            contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
+          )}>
+            {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : <Icon className="size-5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-semibold text-primary-text">{contact.displayName}</h2>
-            <p className="mt-1 text-sm text-muted">{typeLabels[contact.type]}</p>
+            <h2 className="truncate text-lg font-semibold text-slate-950">{contact.displayName}</h2>
+            <p className="mt-1 text-sm text-slate-500">{typeLabels[contact.type]}</p>
           </div>
         </div>
         <div className="mt-5 flex gap-2">
           {contact.sourceUserId && (
-            <button
-              type="button"
+            <Button
               onClick={() => onMessage(contact)}
               disabled={saving}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
+              className="h-9 flex-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
             >
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="size-4" />
               Message
-            </button>
+            </Button>
           )}
           {editable && (
             <>
-              <button
-                type="button"
-                onClick={() => onEdit(contact)}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-divider px-3 text-sm font-medium text-primary-text hover:bg-btn-hover"
-              >
+              <Button variant="outline" className="h-9 flex-1 rounded-lg border-slate-200 bg-white" onClick={() => onEdit(contact)}>
                 Edit
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="destructive"
+                size="icon-lg"
                 onClick={() => onArchive(contact)}
                 disabled={saving}
                 title="Archive contact"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-divider text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-60"
+                className="rounded-lg"
               >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                <Trash2 className="size-4" />
+              </Button>
             </>
           )}
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
         <DetailItem label="Email" value={contact.email} icon={Mail} />
-        <DetailItem label="Phone" value={contact.phone} />
-        <DetailItem label="Company" value={contact.company} />
-        <DetailItem label="Title" value={contact.title ?? contact.role} />
-        <DetailItem label="Department" value={contact.departmentName} />
+        <DetailItem label="Phone" value={contact.phone} icon={Phone} />
+        <DetailItem label="Company" value={contact.company} icon={BriefcaseBusiness} />
+        <DetailItem label="Title" value={contact.title ?? contact.role} icon={UserRound} />
+        <DetailItem label="Department" value={contact.departmentName} icon={Building2} />
         <DetailItem label="Notes" value={contact.notes} multiline />
       </div>
     </aside>
@@ -542,11 +554,11 @@ function DetailItem({
 }) {
   return (
     <div>
-      <p className="flex items-center gap-2 text-xs font-medium uppercase text-muted">
-        {Icon && <Icon className="h-3.5 w-3.5" />}
+      <p className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
+        {Icon && <Icon className="size-3.5" />}
         {label}
       </p>
-      <p className={cn('mt-1 text-sm text-primary-text', multiline && 'whitespace-pre-wrap leading-6')}>
+      <p className={cn('mt-1 text-sm text-slate-950', multiline && 'whitespace-pre-wrap leading-6')}>
         {value || '—'}
       </p>
     </div>
@@ -571,22 +583,22 @@ function ContactFormModal({
   onSave: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-2xl rounded-xl bg-panel shadow-xl">
-        <div className="flex items-start justify-between border-b border-divider p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-slate-200">
+        <div className="flex items-start justify-between border-b border-slate-200 p-5">
           <div>
-            <h2 className="text-lg font-semibold text-primary-text">
+            <h2 className="text-lg font-semibold text-slate-950">
               {editing ? 'Edit contact' : 'New contact'}
             </h2>
-            <p className="mt-1 text-sm text-muted">Manage guest and AI agent directory records.</p>
+            <p className="mt-1 text-sm text-slate-500">Manage guest and AI agent directory records.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-muted hover:bg-btn-hover"
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
             title="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-2">
@@ -595,7 +607,7 @@ function ContactFormModal({
               value={form.type}
               disabled={editing}
               onChange={event => onChange({ ...form, type: event.target.value as Exclude<ContactType, 'EMPLOYEE'> })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus disabled:opacity-60"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
             >
               <option value="GUEST">Guest</option>
               <option value="AI_AGENT">AI agent</option>
@@ -605,7 +617,7 @@ function ContactFormModal({
             <input
               value={form.displayName}
               onChange={event => onChange({ ...form, displayName: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               autoFocus
             />
           </Field>
@@ -613,35 +625,35 @@ function ContactFormModal({
             <input
               value={form.email}
               onChange={event => onChange({ ...form, email: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </Field>
           <Field label="Phone">
             <input
               value={form.phone}
               onChange={event => onChange({ ...form, phone: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </Field>
           <Field label="Company">
             <input
               value={form.company}
               onChange={event => onChange({ ...form, company: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </Field>
           <Field label="Title">
             <input
               value={form.title}
               onChange={event => onChange({ ...form, title: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </Field>
           <Field label="Department">
             <select
               value={form.departmentId}
               onChange={event => onChange({ ...form, departmentId: event.target.value })}
-              className="h-10 w-full rounded-xl border border-divider bg-surface px-3 text-sm outline-none focus:border-focus"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="">No department</option>
               {departments.map(department => (
@@ -654,28 +666,19 @@ function ContactFormModal({
               <textarea
                 value={form.notes}
                 onChange={event => onChange({ ...form, notes: event.target.value })}
-                className="min-h-24 w-full resize-none rounded-xl border border-divider bg-surface px-3 py-2 text-sm outline-none focus:border-focus"
+                className="min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </Field>
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-divider p-5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 rounded-xl px-4 text-sm font-medium text-muted hover:bg-btn-hover"
-          >
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+          <Button variant="ghost" className="h-9 rounded-lg text-slate-600 hover:bg-slate-100" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving || !form.displayName.trim()}
-            className="inline-flex h-9 min-w-28 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
-          >
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          </Button>
+          <Button className="h-9 min-w-28 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700" onClick={onSave} disabled={saving || !form.displayName.trim()}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -685,7 +688,7 @@ function ContactFormModal({
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-primary-text">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-slate-700">{label}</span>
       {children}
     </label>
   )
