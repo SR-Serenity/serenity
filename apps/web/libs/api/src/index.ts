@@ -1,4 +1,4 @@
-export { authApi, orgApi, chatApi, contactsApi, calendarApi, wikiApi } from './lib'
+export { authApi, orgApi, chatApi, contactsApi, calendarApi, wikiApi, mailApi, officeApi } from './lib'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
@@ -77,3 +77,29 @@ export type {
   RealtimeEventTarget,
   ChatRealtimeEvent,
 } from './types/chat'
+export type {
+  ForwardMailInput,
+  ListMailAccountsResponse,
+  ListMailThreadsInput,
+  ListMailThreadsResponse,
+  MailAccount,
+  MailAccountStatus,
+  MailActionResponse,
+  MailAttachment,
+  MailConnectResponse,
+  MailMessage,
+  MailMessageDirection,
+  MailThread,
+  MailThreadDetail,
+  ReplyMailInput,
+  SendMailInput,
+} from './types/mail'
+export type {
+  OfficeRoom,
+  OfficeRoomType,
+  OfficeParticipant,
+  MeetingNote,
+  GenerateLiveKitTokenResponse,
+  CreateRoomInput,
+  UpdateRoomInput,
+} from './types/office'

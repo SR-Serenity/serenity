@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: serenity
+      POSTGRES_PASSWORD: serenity
+      POSTGRES_DB: serenity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50100-50200:50100-50200/udp"
+    environment:
+      LIVEKIT_CONFIG: |
+        keys:
+          devkey: devsecret
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50100
+          port_range_end: 50200
+          use_external_ip: false
+    command: --dev
+
+volumes:
+  postgres_data:
+  redis_data:
