@@ -1,6 +1,7 @@
 export { authApi } from './auth'
 export { orgApi } from './org'
 export { chatApi } from './chat'
+export { aiApi } from './ai'
 export { contactsApi } from './contacts'
 export { calendarApi } from './calendar'
 export { wikiApi } from './wiki'
