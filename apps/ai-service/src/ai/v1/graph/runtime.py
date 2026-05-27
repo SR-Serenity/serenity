@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage
+from langgraph.types import Command
 
 from src.ai.v1.graph.builder import get_main_graph
 from src.ai.v1.memory.namespaces import make_thread_id
@@ -38,32 +39,58 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
         wiki_page_id=payload.context.wiki_page_id,
         meeting_id=payload.context.meeting_id,
     )
+    thread_config = {"configurable": {"thread_id": thread_id}}
+    run_config = {
+        "callbacks": callbacks(),
+        **thread_config,
+        "metadata": langchain_metadata(metadata),
+        "recursion_limit": 20,
+    }
+
+    graph = get_main_graph()
+    latest_user_msg = _latest_user_message(payload)
 
     with span("chat.graph", metadata):
-        latest = _latest_user_message(payload)
-        runtime_state.thread_messages.setdefault(thread_id, []).append(latest)
-        graph = get_main_graph()
-        final_state = await graph.ainvoke(
-            {
-                "org_id": payload.auth_context.org_id,
-                "user_id": payload.auth_context.user_id,
-                "session_id": payload.session_id,
-                "role": payload.auth_context.role,
-                "thread_id": thread_id,
-                "auth_token": auth_token,
-                "context": payload.context.model_dump(by_alias=True, exclude_none=True),
-                "messages": [
-                    HumanMessage(content=message.content)
-                    for message in payload.messages
-                    if message.role == "user"
-                ],
-            },
-            config={
-                "callbacks": callbacks(),
-                "configurable": {"thread_id": thread_id},
-                "metadata": langchain_metadata(metadata),
-                "recursion_limit": 20,
-            },
+        runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
+
+        # Check if this thread has a pending interrupt waiting for user input
+        current_state = await graph.aget_state(thread_config)
+        has_pending_interrupt = bool(current_state.next)
+
+        if has_pending_interrupt:
+            # Resume the interrupted graph with the user's answer
+            final_state = await graph.ainvoke(
+                Command(resume=latest_user_msg),
+                config=run_config,
+            )
+        else:
+            # Fresh graph invocation
+            final_state = await graph.ainvoke(
+                {
+                    "org_id": payload.auth_context.org_id,
+                    "user_id": payload.auth_context.user_id,
+                    "session_id": payload.session_id,
+                    "role": payload.auth_context.role,
+                    "thread_id": thread_id,
+                    "auth_token": auth_token,
+                    "context": payload.context.model_dump(by_alias=True, exclude_none=True),
+                    "messages": [
+                        HumanMessage(content=message.content)
+                        for message in payload.messages
+                        if message.role == "user"
+                    ],
+                },
+                config=run_config,
+            )
+
+    # Check if the graph is now paused waiting for more user input
+    state_after = await graph.aget_state(thread_config)
+    if state_after.next:
+        interrupt_question = _extract_interrupt_question(state_after)
+        return ChatResponse(
+            answer=interrupt_question,
+            thread_id=thread_id,
+            trace_id=trace_id,
         )
 
     return ChatResponse(
@@ -75,12 +102,24 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
     )
 
 
+def _extract_interrupt_question(state) -> str:
+    """Pull the interrupt value (clarifying question) from a paused graph state."""
+    for task in getattr(state, "tasks", []):
+        for it in getattr(task, "interrupts", []):
+            val = it.value
+            if isinstance(val, str):
+                return val
+            if isinstance(val, dict):
+                return val.get("question", str(val))
+    return "Could you provide a bit more detail so I can help?"
+
+
+def _fallback_answer() -> str:
+    return "Serenity AI is connected. Send a workspace question or attach a file to begin."
+
+
 def _latest_user_message(payload: ChatRequest) -> str:
     for message in reversed(payload.messages):
         if message.role == "user":
             return message.content.strip()
     return ""
-
-
-def _fallback_answer() -> str:
-    return "Serenity AI is connected. Send a workspace question or attach a file to begin."

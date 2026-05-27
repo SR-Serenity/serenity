@@ -1,5 +1,6 @@
 from typing import Literal
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from src.ai.v1.agents.memory_writer import memory_writer_agent
@@ -19,7 +20,26 @@ def input_guardrail_node(state: PipelineState) -> dict:
 
 
 def context_loader_node(state: PipelineState) -> dict:
-    return {"context": state.get("context", {})}
+    """Enrich context with fetched workspace content (e.g. wiki page text)."""
+    context = state.get("context", {})
+    auth_token = state.get("auth_token")
+    enriched: dict = {}
+
+    wiki_page_id = context.get("wikiPageId") or context.get("wiki_page_id")
+    if wiki_page_id and auth_token:
+        from src.services.workspace_service import get_wiki_page
+        from langchain_core.messages import SystemMessage
+
+        page = get_wiki_page(auth_token, wiki_page_id)
+        if page:
+            title = page.get("title", "")
+            content = page.get("contentMarkdown") or ""
+            system_msg = SystemMessage(
+                content=f"[Context — Wiki page: {title}]\n\n{content[:6000]}"
+            )
+            enriched["messages"] = [system_msg]
+
+    return {"context": context, **enriched}
 
 
 def memory_retriever_node(state: PipelineState) -> dict:
@@ -120,13 +140,14 @@ def create_main_graph(checkpointer=None, store=None):
     return graph.compile(**compile_kwargs)
 
 
+_memory = MemorySaver()
 _main_graph = None
 
 
 def get_main_graph(checkpointer=None, store=None):
     global _main_graph
     if _main_graph is None:
-        _main_graph = create_main_graph(checkpointer=checkpointer, store=store)
+        _main_graph = create_main_graph(checkpointer=checkpointer or _memory, store=store)
     return _main_graph
 
 

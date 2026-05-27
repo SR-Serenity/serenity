@@ -196,6 +196,8 @@ model CalendarItem {
   title               String
   descriptionMarkdown String?
   location            String?
+  roomId              String?
+  wikiPageId          String?   @unique
   startAt             DateTime?
   endAt               DateTime?
   allDay              Boolean             @default(false)
@@ -205,15 +207,18 @@ model CalendarItem {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  creator      User         @relation("CalendarItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User          @relation("CalendarItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
   attendees    CalendarAttendee[]
+  room         OfficeRoom?   @relation("CalendarItemRoom", fields: [roomId], references: [id], onDelete: SetNull)
+  wikiPage     WikiPage?     @relation("CalendarItemNotes", fields: [wikiPageId], references: [id], onDelete: SetNull)
 
   @@index([orgId, startAt])
   @@index([orgId, dueDate])
   @@index([orgId, visibility])
   @@index([createdById])
   @@index([deletedAt])
+  @@index([roomId])
 }
 
 model CalendarAttendee {
@@ -253,6 +258,7 @@ model WikiPage {
   favorites    WikiPageFavorite[]
   recents      WikiPageRecent[]
   shares       WikiPageShare[]
+  meetingNote  CalendarItem?     @relation("CalendarItemNotes")
 
   @@index([orgId, parentId])
   @@index([orgId, visibility])
@@ -596,6 +602,7 @@ model OfficeRoom {
   creator      User                     @relation("OfficeRoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
   participants OfficeRoomParticipant[]
   notes        MeetingNote[]
+  meetings     CalendarItem[]           @relation("CalendarItemRoom")
 
   @@index([orgId])
   @@index([orgId, deletedAt])

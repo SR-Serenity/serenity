@@ -14,6 +14,9 @@ type WorkspaceState = {
   orgDataErrorByOrgId: Record<string, string | null>
   chatNavSearch: string
   switchingOrgSlug: string | null
+  aiPanelOpenRequest: number
+  aiPanelOpenAfterNavigation: boolean
+  copilotDisplayMode: 'addon' | 'expanded'
 }
 
 type LoadOptions = {
@@ -30,6 +33,10 @@ type WorkspaceActions = {
   loadOrgData: (orgId: string | null | undefined, token: string | null, options?: LoadOptions) => Promise<void>
   setChatNavSearch: (search: string) => void
   setSwitchingOrgSlug: (orgSlug: string | null) => void
+  requestOpenAiPanel: () => void
+  requestOpenAiPanelAfterNavigation: () => void
+  consumeOpenAiPanelAfterNavigation: () => void
+  setCopilotDisplayMode: (mode: 'addon' | 'expanded') => void
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions
@@ -52,6 +59,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
   orgDataErrorByOrgId: {},
   chatNavSearch: '',
   switchingOrgSlug: null,
+  aiPanelOpenRequest: 0,
+  aiPanelOpenAfterNavigation: false,
+  copilotDisplayMode: 'addon',
 
   setNavigatorVisible: (visible) => {
     set({
@@ -194,4 +204,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
 
   setChatNavSearch: (chatNavSearch) => set({ chatNavSearch }),
   setSwitchingOrgSlug: (switchingOrgSlug) => set({ switchingOrgSlug }),
+  requestOpenAiPanel: () => set(state => ({ aiPanelOpenRequest: state.aiPanelOpenRequest + 1 })),
+  requestOpenAiPanelAfterNavigation: () => set({ aiPanelOpenAfterNavigation: true }),
+  consumeOpenAiPanelAfterNavigation: () => set({ aiPanelOpenAfterNavigation: false }),
+  setCopilotDisplayMode: (copilotDisplayMode) => set({ copilotDisplayMode }),
 }))

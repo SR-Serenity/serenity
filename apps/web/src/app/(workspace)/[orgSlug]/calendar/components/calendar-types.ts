@@ -22,6 +22,9 @@ export type CalendarForm = {
   title: string
   descriptionMarkdown: string
   location: string
+  roomId: string | null
+  wikiPageId: string | null
+  createMeetingNotes: boolean
   date: string
   startTime: string
   endTime: string

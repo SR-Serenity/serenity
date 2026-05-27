@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Plus,
   Share2,
+  Sparkles,
   Star,
   Trash2,
   Users,
@@ -174,6 +175,15 @@ export function WikiEditorPanel() {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => useWorkspaceStore.getState().requestOpenAiPanel()}
+            title="Ask AI about this page"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-[#9b9a97] hover:bg-[#f1f1ef]"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Ask AI</span>
+          </button>
           <button
             type="button"
             onClick={() => setSharePanelOpen(open => !open)}

@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
-import { aiApi } from '@serenity/api'
+import { aiApi, calendarApi, wikiApi } from '@serenity/api'
 import type { AiChatMessage, AiProposedAction, AiSource } from '@serenity/api'
 import {
   Bot,
@@ -21,6 +21,9 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useAiAgentStore } from '@/stores/ai-agent-store'
+import { useAiContext } from '@/hooks/use-ai-context'
+import { ProposedActionCard } from './proposed-action-card'
 
 const suggestions = [
   { label: "What's new in my workspace?", icon: Sparkles },
@@ -76,13 +79,87 @@ export function AiAgentPanelContent({
   const token = useAuthStore(state => state.token)
   const user = useAuthStore(state => state.user)
   const currentOrg = useAuthStore(state => state.currentOrg)
+  const { contextLabel, requestContext } = useAiContext()
   const sessionId = useMemo(() => `web-ai-${crypto.randomUUID()}`, [])
   const [prompt, setPrompt] = useState('')
   const [messages, setMessages] = useState<ChatEntry[]>([])
   const [showSuggestions, setShowSuggestions] = useState(true)
   const [sending, setSending] = useState(false)
 
+  async function executeAction(action: AiProposedAction): Promise<void> {
+    if (!token || !currentOrg) throw new Error('Not authenticated')
+    const p = action.payload as Record<string, unknown>
+    if (action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') {
+      await calendarApi.createItem(token, {
+        type: 'MEETING',
+        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
+        title: String(p.title ?? 'New meeting'),
+        startAt: p.startAt as string | undefined,
+        endAt: p.endAt as string | undefined,
+        location: p.location as string | undefined,
+        attendeeIds: (p.attendeeIds as string[]) ?? [],
+        roomId: p.roomId as string | undefined,
+      })
+    } else if (action.type === 'CREATE_TASK') {
+      const assigneeIds = p.assigneeId ? [p.assigneeId as string] : (p.attendeeIds as string[] | undefined) ?? []
+      await calendarApi.createItem(token, {
+        type: 'TASK',
+        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
+        title: String(p.title ?? 'New task'),
+        descriptionMarkdown: (p.description as string | undefined) ?? undefined,
+        dueDate: p.dueDate as string | undefined,
+        attendeeIds: assigneeIds,
+      })
+    } else if (action.type === 'CREATE_WIKI_PAGE') {
+      await wikiApi.createPage(token, {
+        title: String(p.title ?? 'New page'),
+        visibility: 'WORKSPACE',
+        contentMarkdown: p.contentMarkdown as string | undefined,
+      })
+    } else if (action.type === 'EDIT_WIKI_PAGE') {
+      const pageId = String(p.pageId ?? '')
+      if (!pageId) throw new Error('No page ID')
+      await wikiApi.updatePage(token, pageId, {
+        title: p.title as string | undefined,
+        contentMarkdown: p.contentMarkdown as string | undefined,
+      })
+    }
+  }
+
   const hasConversation = messages.length > 0
+
+  function supersedePending(msgs: ChatEntry[], keepMessageId: string): ChatEntry[] {
+    return msgs.map(message => {
+      if (message.id === keepMessageId || !message.proposedActions) return message
+      const hasActive = message.proposedActions.some(
+        action => action.status !== 'confirmed' && action.status !== 'rejected' && action.status !== 'superseded',
+      )
+      if (!hasActive) return message
+      return {
+        ...message,
+        proposedActions: message.proposedActions.map(action =>
+          action.status !== 'confirmed' && action.status !== 'rejected'
+            ? { ...action, status: 'superseded' as const }
+            : action,
+        ),
+      }
+    })
+  }
+
+  function persistActionStatus(
+    messageId: string,
+    actions: AiProposedAction[],
+    index: number,
+    status: 'confirmed' | 'rejected',
+    editedAction: AiProposedAction,
+  ) {
+    const updated = actions.map((action, actionIndex) => (
+      actionIndex === index ? { ...editedAction, status } : action
+    ))
+    setMessages(current => current.map(message => (
+      message.id === messageId ? { ...message, proposedActions: updated } : message
+    )))
+  }
 
   function startNewConversation() {
     setMessages([])
@@ -129,11 +206,12 @@ export function AiAgentPanelContent({
         },
         context: {
           entrypoint: compact ? 'mini_panel' : 'workspace_panel',
+          ...requestContext,
         },
       })
 
-      setMessages(current =>
-        current.map(message =>
+      setMessages(current => {
+        const withResponse = current.map(message =>
           message.id === pendingId
             ? {
                 ...message,
@@ -143,8 +221,11 @@ export function AiAgentPanelContent({
                 proposedActions: response.proposedActions,
               }
             : message,
-        ),
-      )
+        )
+        return response.proposedActions?.length
+          ? supersedePending(withResponse, pendingId)
+          : supersedePending(withResponse, '')
+      })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Serenity AI is unavailable.'
       setMessages(current =>
@@ -226,7 +307,11 @@ export function AiAgentPanelContent({
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[#20345f]">Serenity AI</p>
-            <p className="text-xs text-[#7c8bad]">Automatic</p>
+            {contextLabel ? (
+              <p className="truncate text-xs text-blue-600" title={contextLabel}>Context: {contextLabel}</p>
+            ) : (
+              <p className="text-xs text-[#7c8bad]">Automatic</p>
+            )}
           </div>
         </div>
         <button
@@ -243,38 +328,43 @@ export function AiAgentPanelContent({
           <div className="min-h-0 flex-1 overflow-y-auto py-2">
             <div className="space-y-3">
               {messages.map(message => (
-                <div
-                  key={message.id}
-                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
-                    )}
-                  >
-                    {message.role === 'assistant' ? (
-                      <AssistantContent content={message.content} pending={message.pending} />
-                    ) : (
-                      <span className="whitespace-pre-wrap">{message.content}</span>
-                    )}
-                    {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
-                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs">
-                        {message.proposedActions.map((action, index) => (
-                          <div key={`${action.type}-${index}`} className="font-medium text-blue-700">
-                            Proposed: {action.type.replaceAll('_', ' ')}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!message.pending && message.sources && message.sources.length > 0 && (
-                      <div className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500">
-                        {message.sources.length} source{message.sources.length === 1 ? '' : 's'}
-                      </div>
-                    )}
+                <div key={message.id} className="space-y-2">
+                  <div className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                    <div
+                      className={cn(
+                        'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
+                      )}
+                    >
+                      {message.role === 'assistant' ? (
+                        <AssistantContent content={message.content} pending={message.pending} />
+                      ) : (
+                        <span className="whitespace-pre-wrap">{message.content}</span>
+                      )}
+                      {!message.pending && message.sources && message.sources.length > 0 && (
+                        <div className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                          {message.sources.length} source{message.sources.length === 1 ? '' : 's'}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
+                    <div className="space-y-2">
+                      {message.proposedActions.map((action, index) => (
+                        <ProposedActionCard
+                          key={`${action.type}-${index}`}
+                          action={action}
+                          onConfirm={executeAction}
+                          onReject={() => { /* no-op; UI updates internally */ }}
+                          onStatusChange={(status, edited) =>
+                            persistActionStatus(message.id, message.proposedActions ?? [], index, status, edited)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -347,21 +437,108 @@ export function AiAgentMiniPanelContent() {
   const token = useAuthStore(state => state.token)
   const user = useAuthStore(state => state.user)
   const currentOrg = useAuthStore(state => state.currentOrg)
+  const { contextLabel, requestContext } = useAiContext()
+  const {
+    sessions,
+    activeSessionId,
+    messages,
+    prompt,
+    sending,
+    loadingSession,
+    setSessions,
+    setActiveSessionId,
+    setMessages,
+    setPrompt,
+    setSending,
+    setLoadingSession,
+    resetConversation,
+  } = useAiAgentStore()
+
+  async function executeAction(action: AiProposedAction): Promise<void> {
+    if (!token || !currentOrg) throw new Error('Not authenticated')
+    const p = action.payload as Record<string, unknown>
+    if (action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') {
+      await calendarApi.createItem(token, {
+        type: 'MEETING',
+        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
+        title: String(p.title ?? 'New meeting'),
+        startAt: p.startAt as string | undefined,
+        endAt: p.endAt as string | undefined,
+        location: p.location as string | undefined,
+        attendeeIds: (p.attendeeIds as string[]) ?? [],
+        roomId: p.roomId as string | undefined,
+      })
+    } else if (action.type === 'CREATE_TASK') {
+      const assigneeIds = p.assigneeId ? [p.assigneeId as string] : (p.attendeeIds as string[] | undefined) ?? []
+      await calendarApi.createItem(token, {
+        type: 'TASK',
+        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
+        title: String(p.title ?? 'New task'),
+        descriptionMarkdown: (p.description as string | undefined) ?? undefined,
+        dueDate: p.dueDate as string | undefined,
+        attendeeIds: assigneeIds,
+      })
+    } else if (action.type === 'CREATE_WIKI_PAGE') {
+      await wikiApi.createPage(token, {
+        title: String(p.title ?? 'New page'),
+        visibility: 'WORKSPACE',
+      })
+    } else if (action.type === 'EDIT_WIKI_PAGE') {
+      const pageId = String(p.pageId ?? '')
+      if (!pageId) throw new Error('No page ID')
+      await wikiApi.updatePage(token, pageId, {
+        title: p.title as string | undefined,
+        contentMarkdown: p.contentMarkdown as string | undefined,
+      })
+    }
+  }
+
+  function supersedePending(msgs: ChatEntry[], keepMessageId: string): ChatEntry[] {
+    return msgs.map(m => {
+      if (m.id === keepMessageId || !m.proposedActions) return m
+      const hasActive = m.proposedActions.some(
+        a => a.status !== 'confirmed' && a.status !== 'rejected' && a.status !== 'superseded',
+      )
+      if (!hasActive) return m
+      return {
+        ...m,
+        proposedActions: m.proposedActions.map(a =>
+          a.status !== 'confirmed' && a.status !== 'rejected'
+            ? { ...a, status: 'superseded' as const }
+            : a,
+        ),
+      }
+    })
+  }
+
+  function persistActionStatus(
+    messageId: string,
+    actions: AiProposedAction[],
+    index: number,
+    status: 'confirmed' | 'rejected',
+    editedAction: AiProposedAction,
+  ) {
+    const updated = actions.map((a, i) => i === index ? { ...editedAction, status } : a)
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, proposedActions: updated } : m))
+    if (activeSessionId && token) {
+      void aiApi.updateMessage(token, activeSessionId, messageId, { proposedActions: updated }).catch(() => { /* best-effort */ })
+    }
+  }
 
   type View = 'history' | 'chat'
-  const [view, setView] = useState<View>('history')
-  const [sessions, setSessions] = useState<import('@serenity/api').AiSessionSummary[]>([])
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<ChatEntry[]>([])
-  const [prompt, setPrompt] = useState('')
-  const [sending, setSending] = useState(false)
-  const [loadingSession, setLoadingSession] = useState(false)
+  const [view, setView] = useState<View>(messages.length > 0 || activeSessionId ? 'chat' : 'history')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!token) return
     void aiApi.listSessions(token).then(res => setSessions(res.sessions)).catch(() => { /* empty */ })
   }, [token])
+
+  useEffect(() => {
+    if (activeSessionId || messages.length > 0) {
+      setView('chat')
+    }
+  }, [activeSessionId, messages.length])
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -391,9 +568,7 @@ export function AiAgentMiniPanelContent() {
   }
 
   function startNewChat() {
-    setActiveSessionId(null)
-    setMessages([])
-    setPrompt('')
+    resetConversation()
     setView('chat')
   }
 
@@ -437,16 +612,19 @@ export function AiAgentMiniPanelContent() {
         sessionId,
         messages: history,
         authContext: { orgId: currentOrg.id, userId: user.id, role: currentOrg.role },
-        context: { entrypoint: 'mini_panel' },
+        context: { entrypoint: 'mini_panel', ...requestContext },
       })
 
-      setMessages(prev =>
-        prev.map(m =>
+      setMessages(prev => {
+        const withResponse = prev.map(m =>
           m.id === pendingId
             ? { ...m, content: response.answer, pending: false, sources: response.sources, proposedActions: response.proposedActions }
             : m,
-        ),
-      )
+        )
+        return response.proposedActions?.length
+          ? supersedePending(withResponse, pendingId)
+          : supersedePending(withResponse, '')
+      })
 
       void aiApi.appendMessages(token, sessionId, [
         { role: 'assistant', content: response.answer, sources: response.sources, proposedActions: response.proposedActions },
@@ -531,19 +709,20 @@ export function AiAgentMiniPanelContent() {
   // ── Chat view ───────────────────────────────────────────────────────────────
   return (
     <div className="flex h-full min-h-0 flex-col text-slate-900 [color-scheme:light]">
-      <div className="mb-3 flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setView('history')}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-          title="Back to history"
-        >
-          <CheckCircle2 className="hidden" />
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
-          {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
-        </p>
+      <div className="mb-3 flex shrink-0 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setView('history')}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+            title="Back to history"
+          >
+            <CheckCircle2 className="hidden" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
+            {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
+          </p>
         <button
           type="button"
           onClick={startNewChat}
@@ -552,6 +731,10 @@ export function AiAgentMiniPanelContent() {
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
+        </div>
+        {contextLabel && (
+          <p className="truncate text-xs text-blue-600 pl-9" title={contextLabel}>Context: {contextLabel}</p>
+        )}
       </div>
 
       {loadingSession ? (
@@ -563,33 +746,38 @@ export function AiAgentMiniPanelContent() {
           {messages.length > 0 ? (
             <div className="space-y-3 pb-2">
               {messages.map(message => (
-                <div
-                  key={message.id}
-                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
-                    )}
-                  >
-                    {message.role === 'assistant' ? (
-                      <AssistantContent content={message.content} pending={message.pending} />
-                    ) : (
-                      <span className="whitespace-pre-wrap">{message.content}</span>
-                    )}
-                    {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
-                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs">
-                        {message.proposedActions.map((action, index) => (
-                          <div key={`${action.type}-${index}`} className="font-medium text-blue-700">
-                            Proposed: {action.type.replaceAll('_', ' ')}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                <div key={message.id} className="space-y-2">
+                  <div className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                    <div
+                      className={cn(
+                        'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
+                      )}
+                    >
+                      {message.role === 'assistant' ? (
+                        <AssistantContent content={message.content} pending={message.pending} />
+                      ) : (
+                        <span className="whitespace-pre-wrap">{message.content}</span>
+                      )}
+                    </div>
                   </div>
+                  {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
+                    <div className="space-y-2">
+                      {message.proposedActions.map((action, index) => (
+                        <ProposedActionCard
+                          key={`${action.type}-${index}`}
+                          action={action}
+                          onConfirm={executeAction}
+                          onReject={() => { /* UI updates internally */ }}
+                          onStatusChange={(status, edited) =>
+                            persistActionStatus(message.id, message.proposedActions ?? [], index, status, edited)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               <div ref={bottomRef} />

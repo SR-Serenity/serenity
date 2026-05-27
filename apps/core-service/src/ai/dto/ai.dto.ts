@@ -59,3 +59,10 @@ export class AppendAiMessagesDto {
   @IsArray()
   messages: AppendAiMessageDto[];
 }
+
+export class UpdateAiMessageDto {
+  @ApiPropertyOptional({ type: [AiProposedActionDto] })
+  @IsOptional()
+  @IsArray()
+  proposedActions?: AiProposedActionDto[];
+}

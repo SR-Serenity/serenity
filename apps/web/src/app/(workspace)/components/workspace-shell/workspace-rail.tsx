@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -34,6 +35,8 @@ import {
 } from '@/app/shared/components/ui/popover'
 import { AiAgentMiniPanelContent } from './ai-agent-panel'
 import { ShellDivider, ShellIconActionButton } from './workspace-shell-primitives'
+import { useAiAgentStore } from '@/stores/ai-agent-store'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 
 export interface WorkspaceRailItem {
   id: string
@@ -66,7 +69,7 @@ const utilityActions = [
   { id: 'notifications', title: 'Notifications', icon: Bell },
   { id: 'calendar', title: 'Calendar', icon: CalendarDays },
   { id: 'messages', title: 'Messages', icon: MessageSquare },
-  { id: 'inbox', title: 'AI agent', icon: Bot },
+  { id: 'copilot', title: 'Copilot', icon: Bot },
   { id: 'notes', title: 'Notes', icon: FileText },
 ] as const
 
@@ -76,7 +79,6 @@ type AddonViewId = UtilityActionId | 'add'
 const routeAddonConflicts: Array<{ addon: UtilityActionId; segment: string }> = [
   { addon: 'calendar', segment: 'calendar' },
   { addon: 'messages', segment: 'chat' },
-  { addon: 'inbox', segment: 'inbox' },
 ]
 
 function getConflictingAddon(currentPath: string): UtilityActionId | null {
@@ -482,7 +484,7 @@ function AddonContent({
     return <div className="rounded-lg bg-surface p-3 text-sm text-muted">Recent messages will appear here.</div>
   }
 
-  if (activeView === 'inbox') {
+  if (activeView === 'copilot') {
     return <AiAgentMiniPanelContent />
   }
 
@@ -496,10 +498,12 @@ function AddonContent({
 
 function WorkspaceAddonPanel({
   activeView,
+  onExpand,
   onClose,
   onSelectView,
 }: {
   activeView: AddonViewId
+  onExpand: () => void
   onClose: () => void
   onSelectView: (view: UtilityActionId) => void
 }) {
@@ -507,7 +511,7 @@ function WorkspaceAddonPanel({
     ? { title: 'Add view', icon: Plus }
     : utilityActions.find(item => item.id === activeView) ?? utilityActions[0]
   const Icon = action.icon
-  const aiPanel = activeView === 'inbox'
+  const aiPanel = activeView === 'copilot'
 
   return (
     <aside
@@ -525,7 +529,7 @@ function WorkspaceAddonPanel({
           <h2 className="truncate text-sm font-semibold text-primary-text">{action.title}</h2>
         </div>
         <div className="flex items-center gap-1">
-          <ShellIconActionButton title="Expand panel" icon={Maximize2} />
+          <ShellIconActionButton title="Expand panel" icon={Maximize2} onClick={onExpand} />
           <ShellIconActionButton title="Panel options" icon={MoreVertical} />
           <ShellIconActionButton title="Close panel" icon={X} onClick={onClose} />
         </div>
@@ -538,10 +542,19 @@ function WorkspaceAddonPanel({
   )
 }
 
-export function WorkspaceUtilityRail({ currentPath }: { currentPath: string }) {
+export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: string; currentPath: string }) {
+  const router = useRouter()
   const [activeView, setActiveView] = useState<AddonViewId>('calendar')
   const [panelOpen, setPanelOpen] = useState(false)
+  const currentPathOnly = currentPath.split('?')[0]
+  const copilotExpanded = currentPathOnly.endsWith('/copilot')
   const conflictingAddon = useMemo(() => getConflictingAddon(currentPath), [currentPath])
+  const aiPanelOpenRequest = useWorkspaceStore(state => state.aiPanelOpenRequest)
+  const aiPanelOpenAfterNavigation = useWorkspaceStore(state => state.aiPanelOpenAfterNavigation)
+  const consumeOpenAiPanelAfterNavigation = useWorkspaceStore(state => state.consumeOpenAiPanelAfterNavigation)
+  const copilotDisplayMode = useWorkspaceStore(state => state.copilotDisplayMode)
+  const setCopilotDisplayMode = useWorkspaceStore(state => state.setCopilotDisplayMode)
+  const activeSessionId = useAiAgentStore(state => state.activeSessionId)
 
   useEffect(() => {
     if (panelOpen && activeView === conflictingAddon) {
@@ -549,10 +562,54 @@ export function WorkspaceUtilityRail({ currentPath }: { currentPath: string }) {
     }
   }, [activeView, conflictingAddon, panelOpen])
 
+  useEffect(() => {
+    if (aiPanelOpenRequest > 0 && conflictingAddon !== 'copilot') {
+      setActiveView('copilot')
+      setPanelOpen(true)
+    }
+  }, [aiPanelOpenRequest, conflictingAddon])
+
+  useEffect(() => {
+    if (!aiPanelOpenAfterNavigation || copilotExpanded) return
+    setActiveView('copilot')
+    setPanelOpen(true)
+    setCopilotDisplayMode('addon')
+    consumeOpenAiPanelAfterNavigation()
+  }, [aiPanelOpenAfterNavigation, consumeOpenAiPanelAfterNavigation, copilotExpanded, setCopilotDisplayMode])
+
   function openView(view: AddonViewId) {
     if (view === conflictingAddon) return
+    if (view === 'copilot' && copilotExpanded) {
+      const query = currentPath.includes('?') ? currentPath.split('?')[1] : ''
+      const from = new URLSearchParams(query).get('from')
+      useWorkspaceStore.getState().requestOpenAiPanelAfterNavigation()
+      setCopilotDisplayMode('addon')
+      router.push(from && from.startsWith(basePath) && !from.includes('/copilot') ? from : `${basePath}/dashboard`)
+      return
+    }
+    if (view === 'copilot' && copilotDisplayMode === 'expanded') {
+      const params = new URLSearchParams()
+      if (activeSessionId) params.set('session', activeSessionId)
+      if (!copilotExpanded) params.set('from', currentPath)
+      setPanelOpen(false)
+      router.push(`${basePath}/copilot${params.toString() ? `?${params.toString()}` : ''}`)
+      return
+    }
     setActiveView(view)
     setPanelOpen(true)
+  }
+
+  function expandPanel() {
+    if (activeView === 'copilot') {
+      const params = new URLSearchParams()
+      if (activeSessionId) params.set('session', activeSessionId)
+      if (!copilotExpanded) params.set('from', currentPath)
+      setCopilotDisplayMode('expanded')
+      setPanelOpen(false)
+      router.push(`${basePath}/copilot${params.toString() ? `?${params.toString()}` : ''}`)
+      return
+    }
+    setPanelOpen(false)
   }
 
   return (
@@ -560,6 +617,7 @@ export function WorkspaceUtilityRail({ currentPath }: { currentPath: string }) {
       {panelOpen && (
         <WorkspaceAddonPanel
           activeView={activeView}
+          onExpand={expandPanel}
           onClose={() => setPanelOpen(false)}
           onSelectView={openView}
         />
@@ -586,7 +644,7 @@ export function WorkspaceUtilityRail({ currentPath }: { currentPath: string }) {
               key={action.id}
               title={action.id === conflictingAddon ? `${action.title} is already open` : action.title}
               icon={action.icon}
-              active={panelOpen && activeView === action.id}
+              active={(panelOpen && activeView === action.id) || (action.id === 'copilot' && copilotExpanded)}
               disabled={action.id === conflictingAddon}
               onClick={() => openView(action.id)}
             />

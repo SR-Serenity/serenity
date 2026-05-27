@@ -51,7 +51,18 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
                 }
 
             if domain in {Domain.TASK_CREATOR, Domain.MEETING_SCHEDULER}:
-                proposal = agent.propose(_chat_messages(state))
+                from langgraph.types import interrupt
+                from src.api.internal.v1.schemas import ChatMessage as _ChatMessage
+                messages = _chat_messages(state)
+                clarification = (
+                    agent.needs_clarification(messages)
+                    if hasattr(agent, "needs_clarification")
+                    else None
+                )
+                if clarification:
+                    user_answer = interrupt(clarification)
+                    messages = messages + [_ChatMessage(role="user", content=str(user_answer))]
+                proposal = agent.propose(messages)
                 return {
                     "domain_agent_response": DomainAgentResponse(
                         domain=domain,

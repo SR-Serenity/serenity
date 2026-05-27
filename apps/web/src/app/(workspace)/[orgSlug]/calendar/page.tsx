@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import { Loader2 } from 'lucide-react'
-import { calendarApi } from '@serenity/api'
+import { calendarApi, wikiApi } from '@serenity/api'
 import type {
   CalendarItem,
   CalendarItemType,
@@ -43,6 +43,8 @@ import {
 } from './components/calendar-utils'
 
 export default function CalendarPage() {
+  const params = useParams<{ orgSlug: string }>()
+  const orgSlug = params.orgSlug
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -175,7 +177,18 @@ export default function CalendarPage() {
     setError(null)
 
     try {
-      const input = buildInput(form)
+      let wikiPageId = form.wikiPageId
+
+      if (!form.id && form.type === 'MEETING' && form.createMeetingNotes && !wikiPageId) {
+        const notesPage = await wikiApi.createPage(token, {
+          title: `${form.title.trim()} — Notes`,
+          visibility: 'WORKSPACE',
+        })
+        wikiPageId = notesPage.id
+        setForm(current => ({ ...current, wikiPageId: notesPage.id }))
+      }
+
+      const input = buildInput({ ...form, wikiPageId })
       if (form.id) {
         const updated = await calendarApi.updateItem(token, form.id, input as UpdateCalendarItemInput)
         setItems(current => current.map(item => item.id === updated.id ? updated : item))
@@ -273,6 +286,7 @@ export default function CalendarPage() {
             onClose={() => setPopoverOpen(false)}
             onSave={saveItem}
             onDelete={deleteItem}
+            orgSlug={orgSlug}
           />
         </>
       )}

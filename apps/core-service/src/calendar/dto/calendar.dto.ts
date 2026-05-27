@@ -23,6 +23,28 @@ export class CalendarAttendeeDto {
     email!: string;
 }
 
+export class CalendarRoomDto {
+  @ApiProperty()
+    id!: string;
+
+  @ApiProperty()
+    name!: string;
+
+  @ApiProperty()
+    type!: string;
+
+  @ApiProperty()
+    maxCapacity!: number;
+}
+
+export class CalendarWikiPageDto {
+  @ApiProperty()
+    id!: string;
+
+  @ApiProperty()
+    title!: string;
+}
+
 export class CalendarItemDto {
   @ApiProperty()
     id!: string;
@@ -41,6 +63,18 @@ export class CalendarItemDto {
 
   @ApiPropertyOptional()
     location!: string | null;
+
+  @ApiPropertyOptional()
+    roomId!: string | null;
+
+  @ApiPropertyOptional({ type: CalendarRoomDto })
+    room!: CalendarRoomDto | null;
+
+  @ApiPropertyOptional()
+    wikiPageId!: string | null;
+
+  @ApiPropertyOptional({ type: CalendarWikiPageDto })
+    wikiPage!: CalendarWikiPageDto | null;
 
   @ApiPropertyOptional({ format: 'date-time' })
     startAt!: Date | null;
@@ -155,6 +189,16 @@ export class CreateCalendarItemDto {
   @ArrayMaxSize(100)
   @IsString({ each: true })
     attendeeIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    roomId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    wikiPageId?: string | null;
 }
 
 export class UpdateCalendarItemDto {
@@ -218,4 +262,14 @@ export class UpdateCalendarItemDto {
   @ArrayMaxSize(100)
   @IsString({ each: true })
     attendeeIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    roomId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    wikiPageId?: string | null;
 }

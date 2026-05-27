@@ -94,6 +94,16 @@ class CreateCalendarItemBodyDto {
   @MaxLength(240)
     location?: string | null;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    roomId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+    wikiPageId?: string | null;
+
   @ApiPropertyOptional({ format: 'date-time' })
   @IsOptional()
   @IsDateString()

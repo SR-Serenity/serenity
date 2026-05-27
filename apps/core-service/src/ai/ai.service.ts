@@ -5,6 +5,7 @@ import {
   AppendAiMessagesDto,
   CreateAiSessionDto,
   UpdateAiSessionDto,
+  UpdateAiMessageDto,
 } from './dto/ai.dto';
 
 type AiMessage = {
@@ -128,6 +129,25 @@ export class AiService {
     }
 
     return { messages: created.map(m => this.toMessageDto(m)) };
+  }
+
+  async updateMessage(
+    orgId: string,
+    userId: string,
+    sessionId: string,
+    messageId: string,
+    input: UpdateAiMessageDto,
+  ) {
+    await this.findSession(orgId, userId, sessionId);
+    const updated = await this.prisma.aiMessage.update({
+      where: { id: messageId },
+      data: {
+        ...(input.proposedActions !== undefined && {
+          proposedActions: input.proposedActions as unknown as Prisma.InputJsonValue,
+        }),
+      },
+    });
+    return this.toMessageDto(updated);
   }
 
   private async findSession(orgId: string, userId: string, sessionId: string) {
