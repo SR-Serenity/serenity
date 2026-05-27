@@ -118,6 +118,7 @@ model Organization {
   mailAttachments    MailAttachment[]
   officeRooms        OfficeRoom[]
   meetingNotes       MeetingNote[]
+  aiSessions         AiSession[]
 }
 
 model User {
@@ -144,6 +145,7 @@ model User {
   mailAccounts         MailAccount[]
   officeRoomsCreated   OfficeRoom[]    @relation("OfficeRoomCreator")
   officeParticipations OfficeRoomParticipant[]
+  aiSessions           AiSession[]
 }
 
 model Department {
@@ -627,4 +629,38 @@ model MeetingNote {
 
   @@index([roomId, sessionStartAt])
   @@index([orgId])
+}
+
+enum AiMessageRole {
+  user
+  assistant
+}
+
+model AiSession {
+  id        String      @id @default(cuid())
+  orgId     String
+  userId    String
+  title     String      @default("New chat")
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, userId, updatedAt])
+}
+
+model AiMessage {
+  id              String        @id @default(cuid())
+  sessionId       String
+  role            AiMessageRole
+  content         String        @db.Text
+  sources         Json?
+  proposedActions Json?
+  createdAt       DateTime      @default(now())
+
+  session AiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }
