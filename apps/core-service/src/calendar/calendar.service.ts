@@ -19,7 +19,7 @@ import {
   UpdateCalendarItemDto,
 } from './dto/calendar.dto';
 
-type CalendarItemWithAttendees = Prisma.CalendarItemGetPayload<{
+type CalendarItemWithRelations = Prisma.CalendarItemGetPayload<{
   include: {
     attendees: {
       include: {
@@ -30,6 +30,20 @@ type CalendarItemWithAttendees = Prisma.CalendarItemGetPayload<{
             email: true;
           };
         };
+      };
+    };
+    room: {
+      select: {
+        id: true;
+        name: true;
+        type: true;
+        maxCapacity: true;
+      };
+    };
+    wikiPage: {
+      select: {
+        id: true;
+        title: true;
       };
     };
   };
@@ -70,7 +84,7 @@ export class CalendarService {
 
     const items = await this.prisma.calendarItem.findMany({
       where,
-      include: this.includeAttendees(),
+      include: this.includeRelations(),
       orderBy: [{ startAt: 'asc' }, { dueDate: 'asc' }, { createdAt: 'asc' }],
     });
 
@@ -91,6 +105,8 @@ export class CalendarService {
         title: input.title.trim(),
         descriptionMarkdown: this.nullableText(input.descriptionMarkdown),
         location: this.nullableText(input.location),
+        roomId: input.roomId ?? null,
+        wikiPageId: input.wikiPageId ?? null,
         startAt: this.dateOrNull(input.startAt),
         endAt: this.dateOrNull(input.endAt),
         allDay: input.allDay ?? false,
@@ -102,7 +118,7 @@ export class CalendarService {
           create: attendeeIds.map((attendeeId) => ({ userId: attendeeId })),
         },
       },
-      include: this.includeAttendees(),
+      include: this.includeRelations(),
     });
 
     return this.toDto(item);
@@ -163,6 +179,12 @@ export class CalendarService {
     if (input.location !== undefined) {
       data.location = this.nullableText(input.location);
     }
+    if (input.roomId !== undefined) {
+      data.roomId = input.roomId ?? null;
+    }
+    if (input.wikiPageId !== undefined) {
+      data.wikiPageId = input.wikiPageId ?? null;
+    }
     if (input.startAt !== undefined) {
       data.startAt = this.dateOrNull(input.startAt);
     }
@@ -202,7 +224,7 @@ export class CalendarService {
             ? { create: attendeeIds.map((attendeeId) => ({ userId: attendeeId })) }
             : undefined,
         },
-        include: this.includeAttendees(),
+        include: this.includeRelations(),
       });
     });
 
@@ -222,7 +244,7 @@ export class CalendarService {
     return { success: true };
   }
 
-  private includeAttendees() {
+  private includeRelations() {
     return {
       attendees: {
         include: {
@@ -235,6 +257,20 @@ export class CalendarService {
           },
         },
         orderBy: { createdAt: 'asc' as const },
+      },
+      room: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          maxCapacity: true,
+        },
+      },
+      wikiPage: {
+        select: {
+          id: true,
+          title: true,
+        },
       },
     };
   }
@@ -310,7 +346,7 @@ export class CalendarService {
   private async findEditableItem(orgId: string, itemId: string) {
     const item = await this.prisma.calendarItem.findFirst({
       where: { id: itemId, orgId, deletedAt: null },
-      include: this.includeAttendees(),
+      include: this.includeRelations(),
     });
 
     if (!item) {
@@ -320,7 +356,7 @@ export class CalendarService {
     return item;
   }
 
-  private assertCanEdit(item: CalendarItemWithAttendees, userId: string, role: WorkspaceRole) {
+  private assertCanEdit(item: CalendarItemWithRelations, userId: string, role: WorkspaceRole) {
     if (item.createdById === userId) {
       return;
     }
@@ -361,7 +397,7 @@ export class CalendarService {
     return trimmed.length ? trimmed : null;
   }
 
-  private toDto(item: CalendarItemWithAttendees) {
+  private toDto(item: CalendarItemWithRelations) {
     return {
       id: item.id,
       type: item.type,
@@ -369,6 +405,10 @@ export class CalendarService {
       title: item.title,
       descriptionMarkdown: item.descriptionMarkdown,
       location: item.location,
+      roomId: item.roomId,
+      room: item.room ?? null,
+      wikiPageId: item.wikiPageId,
+      wikiPage: item.wikiPage ?? null,
       startAt: item.startAt,
       endAt: item.endAt,
       allDay: item.allDay,

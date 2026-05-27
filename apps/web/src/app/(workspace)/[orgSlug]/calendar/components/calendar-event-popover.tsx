@@ -1,14 +1,20 @@
+'use client'
+
 import dynamic from 'next/dynamic'
 import type { CSSProperties, Dispatch, SetStateAction } from 'react'
-import { Clock, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BookOpen, Clock, DoorOpen, ExternalLink, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
 import type {
   CalendarItemType,
   CalendarVisibility,
   Member,
+  OfficeRoom,
 } from '@serenity/api'
+import { officeApi } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 import type { CalendarForm, PopoverPosition } from './calendar-types'
 import { typeLabels } from './calendar-utils'
 
@@ -26,6 +32,7 @@ export function CalendarEventPopover({
   onClose,
   onSave,
   onDelete,
+  orgSlug,
 }: {
   form: CalendarForm
   setForm: Dispatch<SetStateAction<CalendarForm>>
@@ -35,16 +42,30 @@ export function CalendarEventPopover({
   onClose: () => void
   onSave: () => void
   onDelete: () => void
+  orgSlug?: string
 }) {
+  const token = useAuthStore(state => state.token)
+  const [rooms, setRooms] = useState<OfficeRoom[]>([])
+
+  useEffect(() => {
+    if (!token || form.type !== 'MEETING') return
+    officeApi.listRooms(token)
+      .then(data => setRooms(Array.isArray(data) ? data : []))
+      .catch(() => setRooms([]))
+  }, [token, form.type])
+
   const showAttendees = form.type !== 'TASK'
+  const showRoomAndNotes = form.type === 'MEETING'
   const style = {
     left: position.x,
     top: position.y,
   } satisfies CSSProperties
 
+  const selectedRoom = rooms.find(r => r.id === form.roomId)
+
   return (
     <div
-      className="fixed z-30 flex max-h-[min(680px,calc(100vh-32px))] w-[min(380px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/15 animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+      className="fixed z-30 flex max-h-[min(680px,calc(100vh-32px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/15 animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
       style={style}
       onClick={event => event.stopPropagation()}
     >
@@ -63,6 +84,8 @@ export function CalendarEventPopover({
                 type,
                 allDay: type === 'TASK' ? true : current.allDay,
                 attendeeIds: type === 'TASK' ? [] : current.attendeeIds,
+                roomId: type !== 'MEETING' ? null : current.roomId,
+                createMeetingNotes: type !== 'MEETING' ? false : current.createMeetingNotes,
               }))}
             >
               {typeLabels[type]}
@@ -135,6 +158,77 @@ export function CalendarEventPopover({
               <MapPin className="size-4 shrink-0 text-slate-400" />
               <Input className="h-8 border-transparent bg-transparent px-0 text-sm text-slate-900 shadow-none focus-visible:ring-0" value={form.location} onChange={event => setForm(current => ({ ...current, location: event.target.value }))} placeholder="Location or conferencing link" />
             </div>
+          )}
+
+          {showRoomAndNotes && (
+            <>
+              <div>
+                <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase text-slate-500">
+                  <DoorOpen className="size-4 text-slate-400" />
+                  Office Room
+                </p>
+                <div className="rounded-lg border border-slate-200 bg-white">
+                  <select
+                    className="h-9 w-full rounded-lg bg-transparent px-3 text-sm text-slate-900 outline-none"
+                    value={form.roomId ?? ''}
+                    onChange={event => setForm(current => ({ ...current, roomId: event.target.value || null }))}
+                  >
+                    <option value="">No room</option>
+                    {rooms.map(room => (
+                      <option key={room.id} value={room.id}>
+                        {room.name} — up to {room.maxCapacity} people
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedRoom && form.attendeeIds.length > selectedRoom.maxCapacity && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Room capacity ({selectedRoom.maxCapacity}) is less than attendee count ({form.attendeeIds.length})
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                {form.wikiPageId ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <BookOpen className="size-4 shrink-0 text-slate-400" />
+                      <span>Meeting notes linked</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {orgSlug && (
+                        <a
+                          href={`/${orgSlug}/wiki?page=${form.wikiPageId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-7 items-center gap-1 rounded-md px-2 text-xs text-blue-600 hover:bg-blue-50"
+                        >
+                          <ExternalLink className="size-3" />
+                          Open
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        className="flex h-7 items-center gap-1 rounded-md px-2 text-xs text-slate-500 hover:bg-slate-100"
+                        onClick={() => setForm(current => ({ ...current, wikiPageId: null }))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={form.createMeetingNotes}
+                      onChange={event => setForm(current => ({ ...current, createMeetingNotes: event.target.checked }))}
+                    />
+                    <BookOpen className="size-4 shrink-0 text-slate-400" />
+                    Create meeting notes page
+                  </label>
+                )}
+              </div>
+            </>
           )}
 
           {showAttendees && (

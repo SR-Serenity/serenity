@@ -8,6 +8,18 @@ export interface CalendarAttendee {
   email: string
 }
 
+export interface CalendarRoom {
+  id: string
+  name: string
+  type: string
+  maxCapacity: number
+}
+
+export interface CalendarWikiPage {
+  id: string
+  title: string
+}
+
 export interface CalendarItem {
   id: string
   type: CalendarItemType
@@ -15,6 +27,10 @@ export interface CalendarItem {
   title: string
   descriptionMarkdown: string | null
   location: string | null
+  roomId: string | null
+  room: CalendarRoom | null
+  wikiPageId: string | null
+  wikiPage: CalendarWikiPage | null
   startAt: string | null
   endAt: string | null
   allDay: boolean
@@ -43,6 +59,8 @@ export interface CreateCalendarItemInput {
   title: string
   descriptionMarkdown?: string | null
   location?: string | null
+  roomId?: string | null
+  wikiPageId?: string | null
   startAt?: string | null
   endAt?: string | null
   allDay?: boolean
