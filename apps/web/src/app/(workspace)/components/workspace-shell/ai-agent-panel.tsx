@@ -1,6 +1,11 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
+import { aiApi } from '@serenity/api'
+import type { AiChatMessage, AiProposedAction, AiSource } from '@serenity/api'
 import {
   Bot,
   CheckCircle2,
@@ -8,12 +13,14 @@ import {
   MessageSquare,
   Mic,
   Paperclip,
+  Plus,
   Send,
   Settings2,
   Sparkles,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 const suggestions = [
   { label: "What's new in my workspace?", icon: Sparkles },
@@ -26,14 +33,38 @@ type ChatEntry = {
   id: string
   role: 'user' | 'assistant'
   content: string
+  pending?: boolean
+  sources?: AiSource[]
+  proposedActions?: AiProposedAction[]
 }
 
-function createAssistantReply(prompt: string): ChatEntry {
-  return {
-    id: `assistant-${Date.now()}`,
-    role: 'assistant',
-    content: `I can help with "${prompt}". Backend AI streaming is not connected yet, so this is a local draft response.`,
+function AssistantContent({ content, pending }: { content: string; pending?: boolean }) {
+  if (pending) {
+    return (
+      <span className="flex items-center gap-1 text-slate-400">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+      </span>
+    )
   }
+  return (
+    <div className="prose prose-sm prose-slate max-w-none [&_p:last-child]:mb-0 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_ul]:my-1 [&_ol]:my-1">
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</ReactMarkdown>
+    </div>
+  )
+}
+
+function buildHistory(messages: ChatEntry[], userContent: string): AiChatMessage[] {
+  return [
+    ...messages
+      .filter(message => !message.pending)
+      .map(message => ({
+        role: message.role,
+        content: message.content,
+      }) satisfies AiChatMessage),
+    { role: 'user', content: userContent },
+  ]
 }
 
 export function AiAgentPanelContent({
@@ -42,9 +73,14 @@ export function AiAgentPanelContent({
   basePath?: string
   compact?: boolean
 }) {
+  const token = useAuthStore(state => state.token)
+  const user = useAuthStore(state => state.user)
+  const currentOrg = useAuthStore(state => state.currentOrg)
+  const sessionId = useMemo(() => `web-ai-${crypto.randomUUID()}`, [])
   const [prompt, setPrompt] = useState('')
   const [messages, setMessages] = useState<ChatEntry[]>([])
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [sending, setSending] = useState(false)
 
   const hasConversation = messages.length > 0
 
@@ -54,20 +90,82 @@ export function AiAgentPanelContent({
     setShowSuggestions(true)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const value = prompt.trim()
-    if (!value) return
+  async function sendPrompt(value: string) {
+    const content = value.trim()
+    if (!content || sending) return
 
+    const authReady = token && user && currentOrg
     const userMessage: ChatEntry = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: value,
+      content,
     }
+    const pendingId = `assistant-${Date.now()}`
 
-    setMessages(current => [...current, userMessage, createAssistantReply(value)])
+    setMessages(current => [
+      ...current,
+      userMessage,
+      {
+        id: pendingId,
+        role: 'assistant',
+        content: authReady ? 'Thinking...' : 'Sign in to use Serenity AI.',
+        pending: Boolean(authReady),
+      },
+    ])
     setPrompt('')
     setShowSuggestions(false)
+
+    if (!authReady) return
+
+    setSending(true)
+    try {
+      const response = await aiApi.chat(token, {
+        sessionId,
+        messages: buildHistory(messages, content),
+        authContext: {
+          orgId: currentOrg.id,
+          userId: user.id,
+          role: currentOrg.role,
+        },
+        context: {
+          entrypoint: compact ? 'mini_panel' : 'workspace_panel',
+        },
+      })
+
+      setMessages(current =>
+        current.map(message =>
+          message.id === pendingId
+            ? {
+                ...message,
+                content: response.answer,
+                pending: false,
+                sources: response.sources,
+                proposedActions: response.proposedActions,
+              }
+            : message,
+        ),
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Serenity AI is unavailable.'
+      setMessages(current =>
+        current.map(entry =>
+          entry.id === pendingId
+            ? {
+                ...entry,
+                content: message,
+                pending: false,
+              }
+            : entry,
+        ),
+      )
+    } finally {
+      setSending(false)
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    void sendPrompt(prompt)
   }
 
   const composer = (
@@ -108,7 +206,7 @@ export function AiAgentPanelContent({
           </button>
           <button
             type="submit"
-            disabled={!prompt.trim()}
+            disabled={!prompt.trim() || sending}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:bg-slate-100 disabled:text-slate-300"
             title="Send"
           >
@@ -157,7 +255,25 @@ export function AiAgentPanelContent({
                         : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
                     )}
                   >
-                    {message.content}
+                    {message.role === 'assistant' ? (
+                      <AssistantContent content={message.content} pending={message.pending} />
+                    ) : (
+                      <span className="whitespace-pre-wrap">{message.content}</span>
+                    )}
+                    {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
+                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs">
+                        {message.proposedActions.map((action, index) => (
+                          <div key={`${action.type}-${index}`} className="font-medium text-blue-700">
+                            Proposed: {action.type.replaceAll('_', ' ')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!message.pending && message.sources && message.sources.length > 0 && (
+                      <div className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                        {message.sources.length} source{message.sources.length === 1 ? '' : 's'}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -228,109 +344,302 @@ export function AiAgentPanelContent({
 }
 
 export function AiAgentMiniPanelContent() {
-  const [prompt, setPrompt] = useState('')
+  const token = useAuthStore(state => state.token)
+  const user = useAuthStore(state => state.user)
+  const currentOrg = useAuthStore(state => state.currentOrg)
+
+  type View = 'history' | 'chat'
+  const [view, setView] = useState<View>('history')
+  const [sessions, setSessions] = useState<import('@serenity/api').AiSessionSummary[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatEntry[]>([])
+  const [prompt, setPrompt] = useState('')
+  const [sending, setSending] = useState(false)
+  const [loadingSession, setLoadingSession] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-  function sendPrompt(value: string) {
+  useEffect(() => {
+    if (!token) return
+    void aiApi.listSessions(token).then(res => setSessions(res.sessions)).catch(() => { /* empty */ })
+  }, [token])
+
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
+  async function openSession(sessionId: string) {
+    if (!token) return
+    setLoadingSession(true)
+    try {
+      const session = await aiApi.getSession(token, sessionId)
+      setActiveSessionId(session.id)
+      setMessages(
+        session.messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          sources: m.sources ?? undefined,
+          proposedActions: m.proposedActions as AiProposedAction[] | undefined,
+        })),
+      )
+      setView('chat')
+    } finally {
+      setLoadingSession(false)
+    }
+  }
+
+  function startNewChat() {
+    setActiveSessionId(null)
+    setMessages([])
+    setPrompt('')
+    setView('chat')
+  }
+
+  async function sendPrompt(value: string) {
     const content = value.trim()
-    if (!content) return
+    if (!content || sending || !token || !user || !currentOrg) return
 
-    const userMessage: ChatEntry = {
-      id: `mini-user-${Date.now()}`,
-      role: 'user',
-      content,
+    const pendingId = `mini-assistant-${Date.now()}`
+    setMessages(prev => [
+      ...prev,
+      { id: `mini-user-${Date.now()}`, role: 'user', content },
+      { id: pendingId, role: 'assistant', content: '', pending: true },
+    ])
+    setPrompt('')
+    setSending(true)
+
+    let sessionId = activeSessionId
+    if (!sessionId) {
+      try {
+        const session = await aiApi.createSession(token, 'New chat')
+        sessionId = session.id
+        setActiveSessionId(session.id)
+        setSessions(prev => [
+          { id: session.id, title: session.title, orgId: session.orgId, userId: session.userId, preview: null, createdAt: session.createdAt, updatedAt: session.updatedAt },
+          ...prev,
+        ])
+      } catch {
+        setMessages(prev => prev.map(m => m.id === pendingId ? { ...m, content: 'Failed to create session.', pending: false } : m))
+        setSending(false)
+        return
+      }
     }
 
-    setMessages(current => [...current, userMessage, createAssistantReply(content)])
-    setPrompt('')
+    void aiApi.appendMessages(token, sessionId, [{ role: 'user', content }]).catch(() => { /* empty */ })
+
+    try {
+      const history = messages.filter(m => !m.pending).map(m => ({ role: m.role, content: m.content }))
+      history.push({ role: 'user', content })
+
+      const response = await aiApi.chat(token, {
+        sessionId,
+        messages: history,
+        authContext: { orgId: currentOrg.id, userId: user.id, role: currentOrg.role },
+        context: { entrypoint: 'mini_panel' },
+      })
+
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === pendingId
+            ? { ...m, content: response.answer, pending: false, sources: response.sources, proposedActions: response.proposedActions }
+            : m,
+        ),
+      )
+
+      void aiApi.appendMessages(token, sessionId, [
+        { role: 'assistant', content: response.answer, sources: response.sources, proposedActions: response.proposedActions },
+      ])
+        .then(() => aiApi.listSessions(token).then(res => setSessions(res.sessions)))
+        .catch(() => { /* empty */ })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Serenity AI is unavailable.'
+      setMessages(prev => prev.map(m => m.id === pendingId ? { ...m, content: msg, pending: false } : m))
+    } finally {
+      setSending(false)
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    sendPrompt(prompt)
+    void sendPrompt(prompt)
   }
 
+  // ── History view ────────────────────────────────────────────────────────────
+  if (view === 'history') {
+    return (
+      <div className="flex h-full min-h-0 flex-col text-slate-900 [color-scheme:light]">
+        <div className="mb-3 flex shrink-0 items-center justify-between">
+          <p className="text-sm font-semibold text-slate-700">Conversations</p>
+          <button
+            type="button"
+            onClick={startNewChat}
+            className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs text-blue-600 hover:bg-blue-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New chat
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {sessions.length === 0 ? (
+            <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">Serenity AI</p>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">
+                    Start a conversation and your history will appear here.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {sessions.map(session => (
+                <button
+                  key={session.id}
+                  type="button"
+                  onClick={() => void openSession(session.id)}
+                  className="flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="min-w-0 flex-1 truncate">{session.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 shrink-0">
+          <button
+            type="button"
+            onClick={startNewChat}
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+          >
+            <Plus className="h-4 w-4" />
+            Start new chat
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Chat view ───────────────────────────────────────────────────────────────
   return (
     <div className="flex h-full min-h-0 flex-col text-slate-900 [color-scheme:light]">
-      <div className="shrink-0 space-y-2">
+      <div className="mb-3 flex shrink-0 items-center gap-2">
         <button
           type="button"
-          onClick={() => sendPrompt('Summarize this page')}
-          className="flex h-10 w-full items-center gap-3 rounded-full border border-slate-200 bg-white px-3 text-left text-sm text-slate-600 shadow-sm transition-colors hover:border-blue-200 hover:text-slate-900"
+          onClick={() => setView('history')}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+          title="Back to history"
         >
-          <MessageSquare className="h-4 w-4 text-slate-500" />
-          <span className="truncate">Summarize this page</span>
+          <CheckCircle2 className="hidden" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
+          {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
+        </p>
         <button
           type="button"
-          onClick={() => sendPrompt('Suggest questions about this page')}
-          className="flex h-10 w-full items-center gap-3 rounded-full border border-slate-200 bg-white px-3 text-left text-sm text-slate-600 shadow-sm transition-colors hover:border-blue-200 hover:text-slate-900"
+          onClick={startNewChat}
+          className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs text-blue-600 hover:bg-blue-50"
+          title="New chat"
         >
-          <MessageSquare className="h-4 w-4 text-slate-500" />
-          <span className="truncate">Suggest questions...</span>
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto py-4">
-        {messages.length > 0 ? (
-          <div className="space-y-3">
-            {messages.map(message => (
-              <div
-                key={message.id}
-                className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-              >
+      {loadingSession ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {messages.length > 0 ? (
+            <div className="space-y-3 pb-2">
+              {messages.map(message => (
                 <div
-                  className={cn(
-                    'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
-                  )}
+                  key={message.id}
+                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
-                  {message.content}
+                  <div
+                    className={cn(
+                      'max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-5',
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-slate-700 shadow-sm ring-1 ring-blue-100',
+                    )}
+                  >
+                    {message.role === 'assistant' ? (
+                      <AssistantContent content={message.content} pending={message.pending} />
+                    ) : (
+                      <span className="whitespace-pre-wrap">{message.content}</span>
+                    )}
+                    {!message.pending && message.proposedActions && message.proposedActions.length > 0 && (
+                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs">
+                        {message.proposedActions.map((action, index) => (
+                          <div key={`${action.type}-${index}`} className="font-medium text-blue-700">
+                            Proposed: {action.type.replaceAll('_', ' ')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">Serenity AI</p>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">
+                    Ask anything about your workspace.
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                <Sparkles className="h-4 w-4" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900">Page helper</p>
-                <p className="mt-1 text-sm leading-5 text-slate-600">
-                  Ask a quick question or use a shortcut without leaving your current work.
-                </p>
-              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
-        className="shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-400"
+        className="mt-3 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-400"
       >
         <textarea
           value={prompt}
           onChange={event => setPrompt(event.target.value)}
-          placeholder="Ask about this page"
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              void sendPrompt(prompt)
+            }
+          }}
+          placeholder="Ask Serenity AI..."
           className="h-20 w-full resize-none bg-transparent px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
         />
         <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2">
           <div className="flex items-center gap-1">
-            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-900" title="Attach file">
+            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50" title="Attach file">
               <Paperclip className="h-4 w-4" />
             </button>
-            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-900" title="Voice input">
+            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50" title="Voice input">
               <Mic className="h-4 w-4" />
             </button>
           </div>
           <button
             type="submit"
-            disabled={!prompt.trim()}
+            disabled={!prompt.trim() || sending}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:bg-slate-100 disabled:text-slate-300"
             title="Send"
           >

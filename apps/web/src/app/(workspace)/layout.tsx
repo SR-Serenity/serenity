@@ -1,11 +1,12 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { type MouseEvent, useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { ChatConversation } from '@serenity/api'
+import { aiApi } from '@serenity/api'
 import {
   Bot,
   Building2,
@@ -23,7 +24,6 @@ import {
   MessageSquare,
   Plus,
   Search,
-  Settings2,
   UserSquare,
   Users,
   type LucideIcon,
@@ -390,56 +390,125 @@ function PlannerSubnavLink({
 
 function AiHistorySubnav({
   basePath,
+  currentPath,
 }: {
   basePath: string
+  currentPath: string
 }) {
+  const token = useAuthStore(state => state.token)
+  const router = useRouter()
+  const [sessions, setSessions] = useState<import('@serenity/api').AiSessionSummary[]>([])
+
+  const activeSessionId = useMemo(() => {
+    const query = currentPath.includes('?') ? currentPath.split('?')[1] : ''
+    return new URLSearchParams(query).get('session')
+  }, [currentPath])
+
+  useEffect(() => {
+    if (!token) return
+    void aiApi.listSessions(token).then(res => setSessions(res.sessions)).catch(() => { /* empty */ })
+  }, [token])
+
+  // Re-fetch when the user navigates back to inbox (e.g. after sending a message)
+  useEffect(() => {
+    if (!token || !currentPath.includes('/inbox')) return
+    void aiApi.listSessions(token).then(res => setSessions(res.sessions)).catch(() => { /* empty */ })
+  }, [token, currentPath])
+
+  async function handleDelete(e: MouseEvent<HTMLButtonElement>, sessionId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!token) return
+    await aiApi.deleteSession(token, sessionId)
+    setSessions(prev => prev.filter(s => s.id !== sessionId))
+    if (activeSessionId === sessionId) {
+      router.push(`${basePath}/inbox`)
+    }
+  }
+
+  function groupSessions(list: import('@serenity/api').AiSessionSummary[]) {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+    const groups: { label: string; items: typeof list }[] = [
+      { label: 'Today', items: [] },
+      { label: 'Yesterday', items: [] },
+      { label: 'Earlier', items: [] },
+    ]
+    for (const s of list) {
+      const d = new Date(s.updatedAt); d.setHours(0, 0, 0, 0)
+      if (d >= today) groups[0].items.push(s)
+      else if (d >= yesterday) groups[1].items.push(s)
+      else groups[2].items.push(s)
+    }
+    return groups.filter(g => g.items.length > 0)
+  }
+
+  const groups = groupSessions(sessions)
+
   return (
     <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col bg-nav">
       <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
         <div className="flex h-14 shrink-0 items-center justify-between px-5">
           <h2 className="text-base font-medium text-primary-text">Chat history</h2>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              title="Pin history"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
-            >
-              <Settings2 className="h-4 w-4" />
-            </button>
-            <Link
-              href={`${basePath}/inbox`}
-              title="New AI chat"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
-            >
-              <Plus className="h-4 w-4" />
-            </Link>
-          </div>
+          <Link
+            href={`${basePath}/inbox`}
+            title="New AI chat"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ui hover:text-caption"
+          >
+            <Plus className="h-4 w-4" />
+          </Link>
         </div>
         <ShellDivider />
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 no-scrollbar">
-          <p className="px-2 text-xs text-muted">Serenity AI</p>
-          <div className="mt-3 flex gap-5 px-2">
-            <Link href={`${basePath}/inbox`} className="space-y-2 text-center">
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-divider bg-panel text-primary-text shadow-sm">
-                <Bot className="h-6 w-6" />
-              </span>
-              <span className="block text-xs text-muted">AI agent</span>
-            </Link>
-            <Link href={`${basePath}/contact`} className="space-y-2 text-center">
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-divider bg-panel text-muted transition-colors hover:border-focus hover:text-caption">
-                <Plus className="h-5 w-5" />
-              </span>
-              <span className="block text-xs text-muted">New agent</span>
-            </Link>
-          </div>
-
-          <div className="mt-7">
-            <p className="px-2 text-xs text-muted">Today</p>
-            <div className="mt-2 rounded-lg px-2 py-3 text-sm text-muted">
-              No chats yet.
-            </div>
-          </div>
+          {sessions.length === 0 ? (
+            <>
+              <p className="px-2 text-xs text-muted">Serenity AI</p>
+              <div className="mt-3 flex gap-5 px-2">
+                <Link href={`${basePath}/inbox`} className="space-y-2 text-center">
+                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-divider bg-panel text-primary-text shadow-sm">
+                    <Bot className="h-6 w-6" />
+                  </span>
+                  <span className="block text-xs text-muted">AI agent</span>
+                </Link>
+              </div>
+              <div className="mt-7">
+                <p className="px-2 text-xs text-muted">No chats yet</p>
+              </div>
+            </>
+          ) : (
+            groups.map(group => (
+              <div key={group.label} className="mb-4">
+                <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-tertiary-text">{group.label}</p>
+                {group.items.map(session => {
+                  const isActive = session.id === activeSessionId
+                  return (
+                    <Link
+                      key={session.id}
+                      href={`${basePath}/inbox?session=${session.id}`}
+                      className={cn(
+                        'group mx-1 mb-0.5 flex h-8 items-center gap-2 rounded-lg px-2 text-sm',
+                        isActive
+                          ? 'bg-primary/10 font-medium text-primary-text'
+                          : 'text-content hover:bg-ui hover:text-caption',
+                      )}
+                    >
+                      <MessageSquare className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-accent-txt' : 'text-muted')} />
+                      <span className="min-w-0 flex-1 truncate">{session.title}</span>
+                      <button
+                        type="button"
+                        onClick={e => void handleDelete(e, session.id)}
+                        className="hidden h-5 w-5 shrink-0 items-center justify-center rounded text-muted hover:text-danger group-hover:flex"
+                        title="Delete"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </Link>
+                  )
+                })}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -921,7 +990,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
           className={cn(
             'group/nav relative h-full min-h-0 shrink-0 overflow-visible',
             'transition-[width] duration-200 ease-out',
-            navigatorVisible && sections.length > 0 ? 'w-[348px]' : 'w-17',
+            navigatorVisible && sections.length > 0 ? 'w-87' : 'w-17',
           )}
         >
           <div className="flex h-full min-h-0 overflow-hidden rounded-xl border border-nav-divider bg-nav">
@@ -962,6 +1031,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                 ) : activeApp?.id === 'inbox' ? (
                   <AiHistorySubnav
                     basePath={basePath}
+                    currentPath={currentPath}
                   />
                 ) : activeApp?.id === 'planner' ? (
                   <PlannerSubnav
