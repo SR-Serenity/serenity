@@ -35,6 +35,9 @@ const AVATAR_COLORS = [
   'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500',
   'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-indigo-500',
 ]
+
+const EMPTY_MEMBERS = []
+
 function avatarColor(userId: string) {
   let hash = 0
   for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) | 0
@@ -63,7 +66,7 @@ export function WikiSharePanel({
   const orgId = currentOrg?.id
   const { members, loadMembers } = useWorkspaceStore(
     useShallow(state => ({
-      members: orgId ? state.membersByOrgId[orgId] ?? [] : [],
+      members: orgId ? state.membersByOrgId[orgId] ?? EMPTY_MEMBERS : EMPTY_MEMBERS,
       loadMembers: state.loadMembers,
     })),
   )
