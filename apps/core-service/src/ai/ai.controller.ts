@@ -7,6 +7,7 @@ import {
   AppendAiMessagesDto,
   CreateAiSessionDto,
   UpdateAiSessionDto,
+  UpdateAiMessageDto,
 } from './dto/ai.dto';
 import { AiService } from './ai.service';
 
@@ -59,5 +60,16 @@ export class AiController {
     @Body() body: AppendAiMessagesDto,
   ) {
     return this.aiService.appendMessages(user.orgId, user.userId, id, body);
+  }
+
+  @Patch(':id/messages/:messageId')
+  @ApiOperation({ summary: 'Update a specific message in an AI chat session' })
+  updateMessage(
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() body: UpdateAiMessageDto,
+  ) {
+    return this.aiService.updateMessage(user.orgId, user.userId, id, messageId, body);
   }
 }

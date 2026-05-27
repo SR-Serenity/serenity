@@ -98,4 +98,19 @@ export class AiController {
       req.headers.authorization,
     );
   }
+
+  @Patch('sessions/:id/messages/:messageId')
+  @ApiOperation({ summary: 'Update a specific message in an AI chat session' })
+  updateMessage(
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPatchRequest(
+      `ai/sessions/${id}/messages/${messageId}`,
+      body,
+      req.headers.authorization,
+    );
+  }
 }

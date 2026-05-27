@@ -32,12 +32,15 @@ export type AiProposedActionType =
   | 'CREATE_MEETING'
   | 'BOOK_ROOM'
   | 'CREATE_WIKI_PAGE'
+  | 'EDIT_WIKI_PAGE'
 
 export type AiProposedAction = {
   type: AiProposedActionType
   payload: Record<string, unknown>
   confidence: number
   requiresConfirmation: boolean
+  status?: 'confirmed' | 'rejected' | 'superseded'
+  isRefinement?: boolean
 }
 
 export type AiChatRequest = {

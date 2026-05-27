@@ -51,4 +51,13 @@ export const aiApi = {
   ): Promise<{ messages: AiSessionMessage[] }> => {
     return api.post(`ai/sessions/${sessionId}/messages`, { token, body: { messages } })
   },
+
+  updateMessage: async (
+    token: string,
+    sessionId: string,
+    messageId: string,
+    patch: { proposedActions?: unknown },
+  ): Promise<AiSessionMessage> => {
+    return api.patch(`ai/sessions/${sessionId}/messages/${messageId}`, { token, body: patch })
+  },
 }
