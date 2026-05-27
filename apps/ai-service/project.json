@@ -1,0 +1,48 @@
+{
+  "name": "ai-service",
+  "projectType": "application",
+  "sourceRoot": "apps/ai-service/src",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "poetry run uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "poetry run pytest"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "poetry run ruff check ."
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "poetry run ruff format ."
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "poetry run mypy src tests"
+      }
+    }
+  },
+  "tags": ["type:app", "scope:ai"]
+}
