@@ -108,7 +108,13 @@ export class CalendarService {
     return this.toDto(item);
   }
 
-  async updateItem(orgId: string, userId: string, role: WorkspaceRole, itemId: string, input: UpdateCalendarItemDto) {
+  async updateItem(
+    orgId: string,
+    userId: string,
+    role: WorkspaceRole,
+    itemId: string,
+    input: UpdateCalendarItemDto,
+  ) {
     await this.ensureOrgAccess(orgId, userId);
     const existing = await this.findEditableItem(orgId, itemId);
     this.assertCanEdit(existing, userId, role);
@@ -117,33 +123,66 @@ export class CalendarService {
       type: input.type ?? existing.type,
       visibility: input.visibility ?? existing.visibility,
       title: input.title ?? existing.title,
-      descriptionMarkdown: input.descriptionMarkdown !== undefined
-        ? input.descriptionMarkdown
-        : existing.descriptionMarkdown,
+      descriptionMarkdown:
+        input.descriptionMarkdown !== undefined
+          ? input.descriptionMarkdown
+          : existing.descriptionMarkdown,
       location: input.location !== undefined ? input.location : existing.location,
-      startAt: input.startAt !== undefined ? input.startAt : existing.startAt?.toISOString() ?? null,
-      endAt: input.endAt !== undefined ? input.endAt : existing.endAt?.toISOString() ?? null,
+      startAt:
+        input.startAt !== undefined
+          ? input.startAt
+          : existing.startAt?.toISOString() ?? null,
+      endAt:
+        input.endAt !== undefined
+          ? input.endAt
+          : existing.endAt?.toISOString() ?? null,
       allDay: input.allDay ?? existing.allDay,
-      taskStatus: input.taskStatus !== undefined ? input.taskStatus : existing.taskStatus,
-      dueDate: input.dueDate !== undefined ? input.dueDate : existing.dueDate?.toISOString() ?? null,
+      taskStatus:
+        input.taskStatus !== undefined ? input.taskStatus : existing.taskStatus,
+      dueDate:
+        input.dueDate !== undefined
+          ? input.dueDate
+          : existing.dueDate?.toISOString() ?? null,
       attendeeIds: input.attendeeIds,
     };
     this.validateItem(merged);
 
     const data: Prisma.CalendarItemUpdateInput = {};
-    if (input.type !== undefined) data.type = input.type;
-    if (input.visibility !== undefined) data.visibility = input.visibility;
-    if (input.title !== undefined) data.title = input.title.trim();
-    if (input.descriptionMarkdown !== undefined) data.descriptionMarkdown = this.nullableText(input.descriptionMarkdown);
-    if (input.location !== undefined) data.location = this.nullableText(input.location);
-    if (input.startAt !== undefined) data.startAt = this.dateOrNull(input.startAt);
-    if (input.endAt !== undefined) data.endAt = this.dateOrNull(input.endAt);
-    if (input.allDay !== undefined) data.allDay = input.allDay;
-    if (input.dueDate !== undefined) data.dueDate = merged.type === CalendarItemType.TASK ? this.dateOrNull(input.dueDate) : null;
+    if (input.type !== undefined) {
+      data.type = input.type;
+    }
+    if (input.visibility !== undefined) {
+      data.visibility = input.visibility;
+    }
+    if (input.title !== undefined) {
+      data.title = input.title.trim();
+    }
+    if (input.descriptionMarkdown !== undefined) {
+      data.descriptionMarkdown = this.nullableText(input.descriptionMarkdown);
+    }
+    if (input.location !== undefined) {
+      data.location = this.nullableText(input.location);
+    }
+    if (input.startAt !== undefined) {
+      data.startAt = this.dateOrNull(input.startAt);
+    }
+    if (input.endAt !== undefined) {
+      data.endAt = this.dateOrNull(input.endAt);
+    }
+    if (input.allDay !== undefined) {
+      data.allDay = input.allDay;
+    }
+    if (input.dueDate !== undefined) {
+      data.dueDate =
+        merged.type === CalendarItemType.TASK
+          ? this.dateOrNull(input.dueDate)
+          : null;
+    }
     if (input.taskStatus !== undefined || input.type !== undefined) {
-      data.taskStatus = merged.type === CalendarItemType.TASK
-        ? input.taskStatus ?? existing.taskStatus ?? CalendarTaskStatus.TODO
-        : null;
+      data.taskStatus =
+        merged.type === CalendarItemType.TASK
+          ? input.taskStatus ?? existing.taskStatus ?? CalendarTaskStatus.TODO
+          : null;
     }
 
     const attendeeIds = input.attendeeIds
