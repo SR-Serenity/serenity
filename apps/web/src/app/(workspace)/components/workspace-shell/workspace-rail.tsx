@@ -33,7 +33,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/app/shared/components/ui/popover'
-import { AiAgentMiniPanelContent } from './ai-agent-panel'
+import { AiChatPanel } from './ai-agent-panel'
 import { ShellDivider, ShellIconActionButton } from './workspace-shell-primitives'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -104,7 +104,7 @@ function HomeButton({ orgSlug, currentPath }: { orgSlug: string; currentPath: st
           : 'border-transparent bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
       )}
     >
-      <Home className="h-[18px] w-[18px]" />
+      <Home className="h-4.5 w-4.5" />
     </Link>
   )
 }
@@ -148,7 +148,7 @@ function AppButton({
             : 'text-nav-icon group-hover:text-caption',
         )}
       >
-        <Icon className="h-[18px] w-[18px]" />
+        <Icon className="h-4.5 w-[18px]" />
       </span>
 
       {item.notify && (
@@ -485,7 +485,7 @@ function AddonContent({
   }
 
   if (activeView === 'copilot') {
-    return <AiAgentMiniPanelContent />
+    return <AiChatPanel compact={true} />
   }
 
   return (
@@ -516,7 +516,7 @@ function WorkspaceAddonPanel({
   return (
     <aside
       className={cn(
-        'flex h-full w-[360px] shrink-0 flex-col overflow-hidden rounded-xl border',
+        'flex h-full w-90 shrink-0 flex-col overflow-hidden rounded-xl border',
         aiPanel ? 'border-blue-100 bg-[#f7f9ff]' : 'border-nav-divider bg-panel',
       )}
       aria-label={`${action.title} panel`}
@@ -544,10 +544,44 @@ function WorkspaceAddonPanel({
 
 export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: string; currentPath: string }) {
   const router = useRouter()
-  const [activeView, setActiveView] = useState<AddonViewId>('calendar')
-  const [panelOpen, setPanelOpen] = useState(false)
+
+  // Initialize state from localStorage
+  const getSavedState = () => {
+    if (typeof window === 'undefined') return { activeView: 'calendar' as AddonViewId, panelOpen: false }
+    const saved = localStorage.getItem('workspace-panel-state')
+    if (saved) {
+      try {
+        const state = JSON.parse(saved)
+        return { activeView: state.activeView ?? 'calendar', panelOpen: state.panelOpen ?? false }
+      } catch {
+        return { activeView: 'calendar' as AddonViewId, panelOpen: false }
+      }
+    }
+    return { activeView: 'calendar' as AddonViewId, panelOpen: false }
+  }
+
+  const initialState = getSavedState()
+  const [activeView, setActiveView] = useState<AddonViewId>(initialState.activeView)
+  const [panelOpen, setPanelOpen] = useState(initialState.panelOpen)
+
   const currentPathOnly = currentPath.split('?')[0]
   const copilotExpanded = currentPathOnly.endsWith('/copilot')
+
+  // Restore panel state on mount (only if copilot is not expanded to full page)
+  useEffect(() => {
+    if (!copilotExpanded && initialState.panelOpen) {
+      setPanelOpen(true)
+      setActiveView(initialState.activeView)
+    }
+  }, [])
+
+  // Persist panel state whenever it changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const state = { activeView, panelOpen }
+    localStorage.setItem('workspace-panel-state', JSON.stringify(state))
+  }, [activeView, panelOpen])
+
   const conflictingAddon = useMemo(() => getConflictingAddon(currentPath), [currentPath])
   const aiPanelOpenRequest = useWorkspaceStore(state => state.aiPanelOpenRequest)
   const aiPanelOpenAfterNavigation = useWorkspaceStore(state => state.aiPanelOpenAfterNavigation)
@@ -636,7 +670,7 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
             title={panelOpen ? 'Close side panel' : 'Open side panel'}
             icon={PanelRight}
             active={panelOpen}
-            onClick={() => setPanelOpen(open => !open)}
+            onClick={() => setPanelOpen((open: boolean) => !open)}
           />
           <ShellDivider className="my-2 w-8" />
           {utilityActions.map(action => (
