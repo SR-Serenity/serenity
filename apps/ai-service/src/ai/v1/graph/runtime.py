@@ -2,9 +2,10 @@
 
 from dataclasses import dataclass, field
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.types import Command
 
+from src.ai.v1.contexts.message_manager import ConversationContextManager
 from src.ai.v1.graph.builder import get_main_graph
 from src.ai.v1.memory.namespaces import make_thread_id
 from src.api.internal.v1.schemas import ChatRequest, ChatResponse
@@ -16,6 +17,9 @@ class RuntimeState:
     thread_messages: dict[str, list[str]] = field(default_factory=dict)
     user_memories: dict[tuple[str, str], list[str]] = field(default_factory=dict)
     workspace_facts: dict[str, list[str]] = field(default_factory=dict)
+    context_manager: ConversationContextManager = field(
+        default_factory=lambda: ConversationContextManager(max_tokens=8000, message_window=20)
+    )
 
 
 runtime_state = RuntimeState()
@@ -49,9 +53,38 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
 
     graph = get_main_graph()
     latest_user_msg = _latest_user_message(payload)
+    user_key = (payload.auth_context.org_id, payload.auth_context.user_id)
 
     with span("chat.graph", metadata):
         runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
+
+        # Convert messages to proper types
+        converted_messages = [
+            HumanMessage(content=message.content)
+            if message.role == "user"
+            else AIMessage(content=message.content)
+            for message in payload.messages
+        ]
+
+        # Get current user memories
+        user_memories = runtime_state.user_memories.get(user_key, [])
+
+        # Trim context window and extract new memories
+        trimmed_messages, updated_memories = runtime_state.context_manager.trim_messages(
+            converted_messages,
+            org_id=payload.auth_context.org_id,
+            user_id=payload.auth_context.user_id,
+            memories=user_memories,
+        )
+
+        # Update stored memories if they changed
+        if updated_memories:
+            runtime_state.user_memories[user_key] = updated_memories
+
+        # Build final messages with memory context
+        final_messages = runtime_state.context_manager.build_context_with_memories(
+            trimmed_messages, memories=updated_memories
+        )
 
         # Check if this thread has a pending interrupt waiting for user input
         current_state = await graph.aget_state(thread_config)
@@ -74,11 +107,7 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
                     "thread_id": thread_id,
                     "auth_token": auth_token,
                     "context": payload.context.model_dump(by_alias=True, exclude_none=True),
-                    "messages": [
-                        HumanMessage(content=message.content)
-                        for message in payload.messages
-                        if message.role == "user"
-                    ],
+                    "messages": final_messages,
                 },
                 config=run_config,
             )
