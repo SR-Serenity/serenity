@@ -8,8 +8,7 @@ def test_agent_registry_has_folder_per_initial_sub_agent() -> None:
     # registry — not in AGENTS, which only tracks standalone/utility agents.
     assert set(AGENTS) == {
         "DocumentUnderstandingAgent",
-        "TaskCreatorAgent",
-        "MeetingSchedulerAgent",
+        "ScheduleAgent",
         "MemoryWriterAgent",
     }
     assert all(item["status"] == "ready" for item in agent_health())
@@ -20,12 +19,38 @@ def test_action_agents_can_run_standalone_proposals() -> None:
         [
             ChatMessage(
                 role="user",
-                content="Create a task and schedule a meeting with a room for 8 people",
+                content="Create a task to review the Q4 docs",
             )
         ]
     )
 
-    assert [action.type for action in actions] == ["CREATE_TASK", "BOOK_ROOM"]
+    assert [action.type for action in actions] == ["CREATE_TASK"]
+
+
+def test_schedule_agent_creates_events_separately_from_tasks_and_meetings() -> None:
+    actions = propose_actions(
+        [
+            ChatMessage(
+                role="user",
+                content="Schedule an event for the product launch tomorrow at 2pm",
+            )
+        ]
+    )
+
+    assert [action.type for action in actions] == ["CREATE_EVENT"]
+
+
+def test_schedule_agent_creates_meetings_and_room_bookings() -> None:
+    actions = propose_actions(
+        [
+            ChatMessage(
+                role="user",
+                content="Schedule a meeting with a room for 8 people",
+            )
+        ]
+    )
+
+    assert [action.type for action in actions] == ["BOOK_ROOM"]
 
 
 def test_main_graph_is_langgraph_compiled_graph() -> None:
@@ -33,5 +58,5 @@ def test_main_graph_is_langgraph_compiled_graph() -> None:
 
     assert hasattr(graph, "ainvoke")
     assert "intent_classification" in graph.get_graph().nodes
-    assert "task_creator" in graph.get_graph().nodes
-    assert "meeting_scheduler" in graph.get_graph().nodes
+    assert "schedule_agent" in graph.get_graph().nodes
+    assert "meeting_scheduler" not in graph.get_graph().nodes

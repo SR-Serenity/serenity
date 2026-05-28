@@ -74,6 +74,24 @@ def test_meeting_proposal_does_not_execute_mutation() -> None:
     assert data["proposedActions"][0]["requiresConfirmation"] is True
 
 
+def test_event_proposal_does_not_become_task_or_meeting() -> None:
+    response = client.post(
+        "/api/internal/v1/ai/chat",
+        headers=INTERNAL_HEADERS,
+        json={
+            "sessionId": "session-event",
+            "messages": [{"role": "user", "content": "Schedule an event for product launch tomorrow at 2pm"}],
+            "authContext": _auth_context(),
+            "context": {"entrypoint": "calendar"},
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["proposedActions"][0]["type"] == "CREATE_EVENT"
+    assert data["proposedActions"][0]["requiresConfirmation"] is True
+
+
 def test_document_agent_returns_file_and_page_citations() -> None:
     index_response = client.post(
         "/api/internal/v1/ai/files/index",

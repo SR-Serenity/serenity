@@ -47,7 +47,7 @@ class Source(CamelModel):
     snippet: str | None = None
 
 
-ProposedActionType = Literal["CREATE_TASK", "CREATE_MEETING", "BOOK_ROOM", "CREATE_WIKI_PAGE"]
+ProposedActionType = Literal["CREATE_TASK", "CREATE_EVENT", "CREATE_MEETING", "BOOK_ROOM", "CREATE_WIKI_PAGE"]
 
 
 class ProposedAction(CamelModel):
