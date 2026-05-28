@@ -2,45 +2,42 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  BookOpen, Calendar, CalendarPlus, Check, CheckCircle2, Clock,
+  BookOpen, Calendar, CalendarCheck, CalendarPlus, Check, CheckCircle2, Clock,
   FileEdit, FileText, Loader2, MapPin, Plus, Users, X,
 } from 'lucide-react'
 import { officeApi, orgApi } from '@serenity/api'
 import type { AiProposedAction, AiProposedActionType, Member, OfficeRoom } from '@serenity/api'
 import { useAuthStore } from '@/stores/auth-store'
+import { browserTimezone, localToUnix, toUnix, unixToLocalDate, unixToLocalTime } from '@/lib/time'
 
 const ACTION_LABELS: Record<AiProposedActionType, string> = {
   CREATE_TASK: 'Create Task',
+  CREATE_EVENT: 'Create Event',
   CREATE_MEETING: 'Schedule Meeting',
   BOOK_ROOM: 'Book Room',
+  UPDATE_CALENDAR_ITEM: 'Update Event',
   CREATE_WIKI_PAGE: 'Create Wiki Page',
   EDIT_WIKI_PAGE: 'Edit Wiki Page',
 }
 
 const ACTION_ICONS: Record<AiProposedActionType, React.ElementType> = {
   CREATE_TASK: CheckCircle2,
+  CREATE_EVENT: Calendar,
   CREATE_MEETING: CalendarPlus,
   BOOK_ROOM: BookOpen,
+  UPDATE_CALENDAR_ITEM: CalendarCheck,
   CREATE_WIKI_PAGE: FileText,
   EDIT_WIKI_PAGE: FileEdit,
 }
 
-function isoToLocal(iso: string | undefined | null): { date: string; time: string } {
-  if (!iso) return { date: '', time: '' }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return { date: iso, time: '' }
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return { date: '', time: '' }
-  const pad = (n: number) => String(n).padStart(2, '0')
+/** Normalise a raw action payload so date/time fields are stored as Unix ms. */
+function normalisePayload(raw: Record<string, unknown>): Record<string, unknown> {
+  const tz = browserTimezone()
   return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    ...raw,
+    startAt: toUnix(raw.startAt as string | number | null | undefined, tz) ?? undefined,
+    endAt: toUnix(raw.endAt as string | number | null | undefined, tz) ?? undefined,
   }
-}
-
-function localToIso(date: string, time: string): string | undefined {
-  if (!date) return undefined
-  const d = new Date(time ? `${date}T${time}:00` : `${date}T00:00:00`)
-  return isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
 function MemberPicker({
@@ -154,15 +151,20 @@ function MeetingForm({
   payload,
   members,
   rooms,
+  tz,
   onChange,
 }: {
   payload: Record<string, unknown>
   members: Member[]
   rooms: OfficeRoom[]
+  tz: string
   onChange: (p: Record<string, unknown>) => void
 }) {
-  const start = isoToLocal(payload.startAt as string | undefined)
-  const end = isoToLocal(payload.endAt as string | undefined)
+  const startUnix = payload.startAt as number | undefined
+  const endUnix = payload.endAt as number | undefined
+  const startDate = unixToLocalDate(startUnix, tz)
+  const startTime = unixToLocalTime(startUnix, tz)
+  const endTime = unixToLocalTime(endUnix, tz)
   const attendeeIds = (payload.attendeeIds as string[] | undefined) ?? []
   const roomId = (payload.roomId as string | undefined) ?? ''
   const selectedRoom = rooms.find(room => room.id === roomId)
@@ -187,13 +189,13 @@ function MeetingForm({
           <input
             type="date"
             className={inputCls()}
-            value={start.date}
+            value={startDate}
             onChange={e => {
-              const newStart = localToIso(e.target.value, start.time || '09:00')
-              const newEnd = end.time
-                ? localToIso(e.target.value, end.time)
-                : newStart
-                  ? new Date(new Date(newStart).getTime() + 3_600_000).toISOString()
+              const newStart = localToUnix(e.target.value, startTime || '09:00', tz)
+              const newEnd = endTime
+                ? localToUnix(e.target.value, endTime, tz)
+                : newStart != null
+                  ? newStart + 3_600_000
                   : undefined
               onChange({ ...payload, startAt: newStart, endAt: newEnd })
             }}
@@ -207,8 +209,8 @@ function MeetingForm({
           <input
             type="time"
             className={inputCls()}
-            value={start.time}
-            onChange={e => onChange({ ...payload, startAt: localToIso(start.date, e.target.value) })}
+            value={startTime}
+            onChange={e => onChange({ ...payload, startAt: localToUnix(startDate, e.target.value, tz) })}
           />
         </div>
       </div>
@@ -223,8 +225,8 @@ function MeetingForm({
           <input
             type="time"
             className={inputCls()}
-            value={end.time}
-            onChange={e => onChange({ ...payload, endAt: localToIso(start.date, e.target.value) })}
+            value={endTime}
+            onChange={e => onChange({ ...payload, endAt: localToUnix(startDate, e.target.value, tz) })}
           />
         </div>
       </div>
@@ -291,6 +293,115 @@ function MeetingForm({
   )
 }
 
+function EventForm({
+  payload,
+  members,
+  tz,
+  onChange,
+}: {
+  payload: Record<string, unknown>
+  members: Member[]
+  tz: string
+  onChange: (p: Record<string, unknown>) => void
+}) {
+  const startUnix = payload.startAt as number | undefined
+  const endUnix = payload.endAt as number | undefined
+  const startDate = unixToLocalDate(startUnix, tz)
+  const startTime = unixToLocalTime(startUnix, tz)
+  const endTime = unixToLocalTime(endUnix, tz)
+  const attendeeIds = (payload.attendeeIds as string[] | undefined) ?? []
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg bg-slate-50 px-2.5 py-2.5">
+      <div>
+        <label className={labelCls()}>Title</label>
+        <input
+          className={inputCls()}
+          value={String(payload.title ?? '')}
+          onChange={e => onChange({ ...payload, title: e.target.value })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={labelCls()}>
+            <Calendar className="mb-0.5 mr-0.5 inline size-3 text-slate-400" />
+            Date
+          </label>
+          <input
+            type="date"
+            className={inputCls()}
+            value={startDate}
+            onChange={e => {
+              const newStart = localToUnix(e.target.value, startTime || '09:00', tz)
+              const newEnd = endTime
+                ? localToUnix(e.target.value, endTime, tz)
+                : newStart != null
+                  ? newStart + 3_600_000
+                  : undefined
+              onChange({ ...payload, startAt: newStart, endAt: newEnd })
+            }}
+          />
+        </div>
+        <div>
+          <label className={labelCls()}>
+            <Clock className="mb-0.5 mr-0.5 inline size-3 text-slate-400" />
+            Start time
+          </label>
+          <input
+            type="time"
+            className={inputCls()}
+            value={startTime}
+            onChange={e => onChange({ ...payload, startAt: localToUnix(startDate, e.target.value, tz) })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={labelCls()}>
+            <MapPin className="mb-0.5 mr-0.5 inline size-3 text-slate-400" />
+            Location
+            <span className="ml-1 font-normal text-slate-400">(optional)</span>
+          </label>
+          <input
+            className={inputCls()}
+            value={String(payload.location ?? '')}
+            onChange={e => onChange({ ...payload, location: e.target.value || null })}
+          />
+        </div>
+        <div>
+          <label className={labelCls()}>
+            <Clock className="mb-0.5 mr-0.5 inline size-3 text-slate-400" />
+            End time
+          </label>
+          <input
+            type="time"
+            className={inputCls()}
+            value={endTime}
+            onChange={e => onChange({ ...payload, endAt: localToUnix(startDate, e.target.value, tz) })}
+          />
+        </div>
+      </div>
+
+      {members.length > 0 && (
+        <div>
+          <label className={labelCls()}>
+            <Users className="mb-0.5 mr-0.5 inline size-3 text-slate-400" />
+            Attendees
+            <span className="ml-1 font-normal text-slate-400">(optional)</span>
+          </label>
+          <MemberPicker
+            selected={attendeeIds}
+            members={members}
+            onChange={ids => onChange({ ...payload, attendeeIds: ids })}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TaskForm({
   payload,
   members,
@@ -300,7 +411,8 @@ function TaskForm({
   members: Member[]
   onChange: (p: Record<string, unknown>) => void
 }) {
-  const due = isoToLocal(payload.dueDate as string | undefined)
+  const dueUnix = payload.dueDate as number | string | null | undefined
+  const dueDate = typeof dueUnix === 'string' ? dueUnix : unixToLocalDate(dueUnix as number | null)
   const assigneeId = (payload.assigneeId as string | undefined) ?? ''
 
   return (
@@ -336,7 +448,7 @@ function TaskForm({
         <input
           type="date"
           className={inputCls()}
-          value={due.date}
+          value={dueDate}
           onChange={e => onChange({ ...payload, dueDate: e.target.value || null })}
         />
       </div>
@@ -400,6 +512,7 @@ export function ProposedActionCard({
 }) {
   const token = useAuthStore(s => s.token)
   const currentOrg = useAuthStore(s => s.currentOrg)
+  const [tz] = useState(browserTimezone)
 
   const [cardState, setCardState] = useState<CardState>(
     action.status === 'confirmed' ? 'done'
@@ -409,17 +522,21 @@ export function ProposedActionCard({
   )
   const [members, setMembers] = useState<Member[]>([])
   const [rooms, setRooms] = useState<OfficeRoom[]>([])
-  const [payload, setPayload] = useState<Record<string, unknown>>({ ...action.payload })
+  const [payload, setPayload] = useState<Record<string, unknown>>(() =>
+    normalisePayload({ ...action.payload }),
+  )
 
   useEffect(() => {
     if (action.status === 'confirmed') setCardState('done')
     else if (action.status === 'rejected') setCardState('rejected')
     else if (action.status === 'superseded') setCardState('superseded')
     else setCardState('idle')
-  }, [action.status])
+    setPayload(normalisePayload({ ...action.payload }))
+  }, [action])
 
   const Icon = ACTION_ICONS[action.type]
   const needsMembers =
+    action.type === 'CREATE_EVENT' ||
     action.type === 'CREATE_MEETING' ||
     action.type === 'BOOK_ROOM' ||
     action.type === 'CREATE_TASK'
@@ -528,7 +645,10 @@ export function ProposedActionCard({
       </div>
 
       {(action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') && (
-        <MeetingForm payload={payload} members={members} rooms={rooms} onChange={setPayload} />
+        <MeetingForm payload={payload} members={members} rooms={rooms} tz={tz} onChange={setPayload} />
+      )}
+      {action.type === 'CREATE_EVENT' && (
+        <EventForm payload={payload} members={members} tz={tz} onChange={setPayload} />
       )}
       {action.type === 'CREATE_TASK' && (
         <TaskForm payload={payload} members={members} onChange={setPayload} />

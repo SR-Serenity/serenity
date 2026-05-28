@@ -7,6 +7,10 @@ export type AiAuthContext = {
   orgId: string
   userId: string
   role?: string | null
+  displayName?: string | null
+  email?: string | null
+  orgName?: string | null
+  orgSlug?: string | null
 }
 
 export type AiRequestContext = {
@@ -16,6 +20,7 @@ export type AiRequestContext = {
   fileIds?: string[]
   selectedText?: string
   entrypoint?: string
+  timeZone?: string
 }
 
 export type AiSource = {
@@ -29,8 +34,10 @@ export type AiSource = {
 
 export type AiProposedActionType =
   | 'CREATE_TASK'
+  | 'CREATE_EVENT'
   | 'CREATE_MEETING'
   | 'BOOK_ROOM'
+  | 'UPDATE_CALENDAR_ITEM'
   | 'CREATE_WIKI_PAGE'
   | 'EDIT_WIKI_PAGE'
 

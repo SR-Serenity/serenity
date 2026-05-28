@@ -50,19 +50,23 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
                     )
                 }
 
-            if domain in {Domain.TASK_CREATOR, Domain.MEETING_SCHEDULER}:
+            if domain == Domain.SCHEDULE_AGENT:
                 from langgraph.types import interrupt
                 from src.api.internal.v1.schemas import ChatMessage as _ChatMessage
                 messages = _chat_messages(state)
+                context = {
+                    **state.get("context", {}),
+                    "auth_token": state.get("auth_token") or "",
+                }
                 clarification = (
-                    agent.needs_clarification(messages)
+                    agent.needs_clarification(messages, context=context)
                     if hasattr(agent, "needs_clarification")
                     else None
                 )
                 if clarification:
                     user_answer = interrupt(clarification)
                     messages = messages + [_ChatMessage(role="user", content=str(user_answer))]
-                proposal = agent.propose(messages)
+                proposal = agent.propose(messages, context=context)
                 return {
                     "domain_agent_response": DomainAgentResponse(
                         domain=domain,
@@ -94,6 +98,7 @@ def _run_workspace_qa(agent, state: PipelineState, run_config: RunnableConfig | 
         "org_id": state["org_id"],
         "user_id": state["user_id"],
         "auth_token": state.get("auth_token") or "",
+        "user_context": state.get("context", {}).get("userContext", {}),
     }
     result = agent.invoke(
         {"messages": state["messages"]},
@@ -141,8 +146,9 @@ def _chat_messages(state: PipelineState):
 
     messages = []
     for message in state["messages"]:
-        role: Literal["user", "assistant"] = (
-            "user" if getattr(message, "type", None) == "human" else "assistant"
+        message_type = getattr(message, "type", None)
+        role: Literal["system", "user", "assistant"] = (
+            "user" if message_type == "human" else "system" if message_type == "system" else "assistant"
         )
         messages.append(ChatMessage(role=role, content=str(message.content)))
     return messages

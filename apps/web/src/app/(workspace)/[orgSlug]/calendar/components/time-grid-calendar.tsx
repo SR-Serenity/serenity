@@ -38,7 +38,9 @@ export function TimeGridCalendar({
   const now = new Date()
   const showNow = days.some(day => sameCalendarDay(day, now)) && now.getHours() >= hourRows[0] && now.getHours() <= hourRows[hourRows.length - 1]
   const nowTop = ((now.getHours() + now.getMinutes() / 60) - hourRows[0]) * hourHeight
-  const template = `64px repeat(${days.length}, minmax(150px, 1fr))`
+  const template = days.length === 1
+    ? '64px minmax(220px, 1fr)'
+    : `64px repeat(${days.length}, minmax(0, 1fr))`
 
   function slotFromPointer(hour: number, event: ReactMouseEvent<HTMLElement>) {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -66,6 +68,12 @@ export function TimeGridCalendar({
     setSelection(null)
   }
 
+  function formatHourLabel(hour: number) {
+    if (hour === 0) return '12 AM'
+    if (hour === 12) return '12 PM'
+    return hour > 12 ? `${hour - 12} PM` : `${hour} AM`
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="grid shrink-0 border-b border-slate-200 bg-white" style={{ gridTemplateColumns: template }}>
@@ -76,15 +84,15 @@ export function TimeGridCalendar({
             <button
               key={day.toISOString()}
               className={cn(
-                'border-r border-slate-200 px-3 py-3 text-left transition-colors last:border-r-0 hover:bg-slate-50',
+                'min-w-0 border-r border-slate-200 px-2 py-3 text-left transition-colors last:border-r-0 hover:bg-slate-50 sm:px-3',
                 selected && 'bg-blue-50/60 hover:bg-blue-50',
               )}
               onClick={(event) => onCreate('EVENT', day, event)}
             >
               <p className={cn('text-xs font-medium uppercase', selected ? 'text-blue-700' : 'text-slate-500')}>{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
                 <span className={datePillClassName({ selected, current, size: 'md' })}>{day.getDate()}</span>
-                <span className={cn('text-xs', selected ? 'text-blue-600' : 'text-slate-400')}>{day.toLocaleDateString('en-US', { month: 'short' })}</span>
+                <span className={cn('min-w-0 truncate text-xs', selected ? 'text-blue-600' : 'text-slate-400')}>{day.toLocaleDateString('en-US', { month: 'short' })}</span>
               </div>
             </button>
           )
@@ -102,7 +110,7 @@ export function TimeGridCalendar({
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div
           className="relative grid"
           style={{ gridTemplateColumns: template, height: hourRows.length * hourHeight }}
@@ -110,7 +118,7 @@ export function TimeGridCalendar({
         >
           {hourRows.map((hour, index) => (
             <div key={`time-${hour}`} className="contents">
-              <div className="border-r border-slate-200 pr-2 pt-1 text-right text-xs font-medium text-slate-400" style={{ gridColumn: 1, gridRow: index + 1 }}>{hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}</div>
+              <div className="border-r border-slate-200 pr-2 pt-1 text-right text-xs font-medium text-slate-400" style={{ gridColumn: 1, gridRow: index + 1 }}>{formatHourLabel(hour)}</div>
               {days.map((day, dayIndex) => (
                 <div
                   role="button"

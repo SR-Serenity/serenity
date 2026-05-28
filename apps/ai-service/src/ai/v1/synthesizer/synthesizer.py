@@ -56,19 +56,49 @@ def synthesizer_node(state: PipelineState) -> dict:
 def _summarize_proposals(proposed_actions, language: str) -> str:
     import json
     payloads = json.dumps([{"type": a.type, "payload": a.payload} for a in proposed_actions], default=str)
+    if all(a.type == "UPDATE_CALENDAR_ITEM" for a in proposed_actions):
+        return _localize(_summarize_updates(proposed_actions), language)
     try:
         if not settings.OPENAI_API_KEY:
             return _proposal_fallback(language)
         llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0)
         result = llm.invoke(
-            f"You are Serenity AI. Summarize what you are about to create for the user, based on the proposed action(s) below. "
+            f"You are Serenity AI. Summarize what you are about to create or update for the user, based on the proposed action(s) below. "
             f"Be clear and specific (mention title, date/time, attendees, etc.). "
+            f"If the proposal is an update or reschedule, say that it is updating an existing item, not creating a new one. "
             f"End with a short line asking them to confirm or decline. "
             f"Write in {language}. Be concise (2-4 sentences).\n\nProposed actions: {payloads}"
         )
         return str(result.content).strip()
     except Exception:
         return _proposal_fallback(language)
+
+
+def _summarize_updates(proposed_actions) -> str:
+    action = proposed_actions[0]
+    payload = action.payload or {}
+    title = str(payload.get("title") or "meeting")
+    start_at = _pretty_time(payload.get("startAt"))
+    end_at = _pretty_time(payload.get("endAt"))
+    if start_at and end_at:
+        return f"I’m about to update the {title} to {start_at} - {end_at}. Please confirm or decline."
+    if start_at:
+        return f"I’m about to update the {title} to start at {start_at}. Please confirm or decline."
+    return f"I’m about to update the {title}. Please confirm or decline."
+
+
+def _pretty_time(value) -> str | None:
+    if not value:
+        return None
+    text = str(value)
+    if "T" not in text:
+        return text
+    try:
+        from datetime import datetime as _dt
+        dt = _dt.fromisoformat(text)
+        return dt.strftime("%-I:%M %p")  # e.g. "8:00 AM"
+    except (ValueError, AttributeError):
+        return text.split("T")[1][:5]  # fallback: "08:00"
 
 
 def _proposal_fallback(language: str) -> str:

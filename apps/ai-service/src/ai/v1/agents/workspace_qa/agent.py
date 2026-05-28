@@ -1,13 +1,18 @@
 """Workspace QA agent — tool-equipped react agent covering all workspace data sources."""
 
+from typing import TypedDict
+
 from langchain.agents import AgentState, create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
 from src.ai.v1.agents.workspace_qa.prompts import build_workspace_qa_prompt
 from src.ai.v1.agents.workspace_qa.tools.calendar_tools import (
+    create_calendar_item_tool,
+    delete_calendar_item_tool,
     list_calendar_events_tool,
     search_calendar_events_tool,
+    update_calendar_item_tool,
 )
 from src.ai.v1.agents.workspace_qa.tools.chat_tools import (
     list_conversations_tool,
@@ -23,6 +28,7 @@ from src.ai.v1.agents.workspace_qa.tools.mail_tools import (
     list_mail_accounts_tool,
     list_mail_threads_tool,
     search_mail_threads_tool,
+    send_email_tool,
 )
 from src.ai.v1.agents.workspace_qa.tools.wiki_tools import (
     get_wiki_page_tool,
@@ -46,14 +52,25 @@ _WORKSPACE_QA_TOOLS = [
     # Calendar
     list_calendar_events_tool,
     search_calendar_events_tool,
+    create_calendar_item_tool,
+    update_calendar_item_tool,
+    delete_calendar_item_tool,
     # Mail
     list_mail_accounts_tool,
     list_mail_threads_tool,
     search_mail_threads_tool,
     get_mail_thread_tool,
+    send_email_tool,
 ]
 
 _agent = None
+
+
+class WorkspaceQaContext(TypedDict, total=False):
+    org_id: str
+    user_id: str
+    auth_token: str
+    user_context: dict
 
 
 def create_workspace_qa_agent():
@@ -72,6 +89,7 @@ def create_workspace_qa_agent():
         tools=_WORKSPACE_QA_TOOLS,
         middleware=[build_workspace_qa_prompt],
         state_schema=AgentState,
+        context_schema=WorkspaceQaContext,
         checkpointer=checkpointer,
     )
     return _agent

@@ -5,7 +5,12 @@ from typing import Annotated
 from langchain.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
 
-from src.services.workspace_service import get_mail_thread, list_mail_accounts, list_mail_threads
+from src.services.workspace_service import (
+    get_mail_thread,
+    list_mail_accounts,
+    list_mail_threads,
+    send_mail,
+)
 
 
 @tool(
@@ -142,3 +147,50 @@ def get_mail_thread_tool(
         return "\n".join(lines)
     except Exception as e:
         return f"Error reading mail thread {thread_id}: {e}"
+
+
+@tool(
+    description=(
+        "Send a new email from the user's connected mail account. "
+        "Use only when the user explicitly asks to send an email and has provided "
+        "the recipients, subject, and body."
+    )
+)
+def send_email_tool(
+    runtime: ToolRuntime,
+    to: Annotated[list[str], "Recipient email addresses"],
+    subject: Annotated[str, "Email subject"],
+    body: Annotated[str, "Plain text email body"],
+    cc: Annotated[list[str] | None, "Optional CC email addresses"] = None,
+    bcc: Annotated[list[str] | None, "Optional BCC email addresses"] = None,
+    account_id: Annotated[str | None, "Optional connected mail account ID to send from"] = None,
+) -> str:
+    auth_token: str = runtime.context.get("auth_token", "")
+    if not auth_token:
+        return "No auth token available."
+    if not to:
+        return "Cannot send email without at least one recipient."
+    if not subject.strip():
+        return "Cannot send email without a subject."
+    if not body.strip():
+        return "Cannot send email without a body."
+
+    payload: dict = {
+        "to": to,
+        "subject": subject,
+        "body": body,
+    }
+    if cc:
+        payload["cc"] = cc
+    if bcc:
+        payload["bcc"] = bcc
+    if account_id:
+        payload["accountId"] = account_id
+
+    try:
+        result = send_mail(auth_token, payload)
+        if result.get("success"):
+            return f"Email sent to {', '.join(to)} with subject '{subject}'."
+        return f"Email send request completed: {result}"
+    except Exception as e:
+        return f"Error sending email: {e}"

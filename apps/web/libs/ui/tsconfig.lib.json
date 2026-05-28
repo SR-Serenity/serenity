@@ -2,8 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../../dist/out-tsc",
+    "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
+    "sourceMap": true,
     "inlineSources": true,
     "types": []
   },

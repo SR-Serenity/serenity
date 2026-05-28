@@ -16,7 +16,11 @@ from src.ai.v1.synthesizer.synthesizer import synthesizer_node
 
 def input_guardrail_node(state: PipelineState) -> dict:
     user_input = _latest_user_text(state)
-    return {"input_guardrail": validate_input(user_input)}
+    return {
+        "input_guardrail": validate_input(user_input),
+        "domain_agent_response": [],
+        "proposed_actions": [],
+    }
 
 
 def context_loader_node(state: PipelineState) -> dict:
@@ -65,13 +69,40 @@ def action_planner_node(state: PipelineState) -> dict:
 
 def memory_writer_node(state: PipelineState) -> dict:
     from src.ai.v1.graph.runtime import runtime_state
+    from langchain_core.messages import HumanMessage, AIMessage
 
-    memory = memory_writer_agent.extract(_latest_user_text(state))
-    if memory is None:
-        return {}
-    memories = runtime_state.user_memories.setdefault((state["org_id"], state["user_id"]), [])
-    if memory not in memories:
-        memories.append(memory)
+    user_key = (state["org_id"], state["user_id"])
+    memories = runtime_state.user_memories.setdefault(user_key, [])
+
+    # Extract explicit user memories
+    user_text = _latest_user_text(state)
+    explicit_memory = memory_writer_agent.extract(user_text)
+    if explicit_memory and explicit_memory not in memories:
+        memories.append(explicit_memory)
+
+    # Also try to extract implicit context from latest exchange
+    messages = state.get("messages", [])
+    if len(messages) >= 2:
+        # Find latest user and assistant message
+        user_msg = None
+        assistant_msg = None
+        for msg in reversed(messages):
+            if isinstance(msg, HumanMessage) and not user_msg:
+                user_msg = msg.content
+            elif isinstance(msg, AIMessage) and not assistant_msg:
+                assistant_msg = msg.content
+            if user_msg and assistant_msg:
+                break
+
+        if user_msg and assistant_msg:
+            implicit_memory = memory_writer_agent.extract_from_exchange(user_msg, assistant_msg)
+            if implicit_memory and implicit_memory not in memories:
+                memories.append(implicit_memory)
+
+    # Keep memories to recent 15 items to avoid bloat
+    if len(memories) > 15:
+        runtime_state.user_memories[user_key] = memories[-15:]
+
     return {}
 
 

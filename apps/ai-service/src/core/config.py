@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     LANGFUSE_SECRET_KEY: str | None = None
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
 
+    GATEWAY_URL: str = "http://localhost:2991"
+    WORKSPACE_API_BASE_URL: str | None = None
     CORE_SERVICE_BASE_URL: str = "http://localhost:2993/api"
     REALTIME_SERVICE_BASE_URL: str = "http://localhost:3002"
     INTERNAL_API_TOKEN: str | None = None

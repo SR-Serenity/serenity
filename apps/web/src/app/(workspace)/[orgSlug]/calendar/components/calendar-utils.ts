@@ -21,7 +21,7 @@ export const typeStyles: Record<CalendarItemType, string> = {
 }
 
 export const EMPTY_MEMBERS: Member[] = []
-export const hourRows = Array.from({ length: 15 }, (_, index) => index + 6)
+export const hourRows = Array.from({ length: 24 }, (_, index) => index)
 export const hourHeight = 72
 export const firstSlot = hourRows[0] * 2
 export const lastSlot = (hourRows[hourRows.length - 1] + 1) * 2
