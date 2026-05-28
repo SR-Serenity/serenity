@@ -38,11 +38,6 @@ import {
   WorkspaceUtilityRail,
   type WorkspaceRailItem,
 } from '@/app/(workspace)/components/workspace-shell/workspace-rail'
-import {
-  calendarDateTone,
-  datePillClassName,
-  toDateKey,
-} from '@/app/(workspace)/components/calendar-date-helpers'
 
 type WorkspaceLayoutProps = { children: ReactNode }
 
@@ -89,18 +84,6 @@ function initials(name: string) {
     .map(part => part[0])
     .join('')
     .toUpperCase() || 'U'
-}
-
-function plannerMonthDays(anchor = new Date()) {
-  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
-  const gridStart = new Date(monthStart)
-  gridStart.setDate(monthStart.getDate() - monthStart.getDay())
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const day = new Date(gridStart)
-    day.setDate(gridStart.getDate() + index)
-    return day
-  })
 }
 
 function buildSections(
@@ -249,15 +232,6 @@ function PlannerSubnav({
   basePath: string
   currentPath: string
 }) {
-  const today = new Date()
-  const todayParam = toDateKey(today)
-  const currentQuery = currentPath.includes('?') ? currentPath.split('?')[1] : ''
-  const activeParams = new URLSearchParams(currentQuery)
-  const activeDate = activeParams.get('date') ?? todayParam
-  const parsedSelectedDate = new Date(`${activeDate}T00:00`)
-  const selectedDate = Number.isNaN(parsedSelectedDate.getTime()) ? today : parsedSelectedDate
-  const days = plannerMonthDays(selectedDate)
-
   return (
     <div className="relative flex h-full w-70 min-w-50 max-w-90 flex-col bg-nav">
       <div className="flex h-full w-full min-w-0 min-h-0 flex-col">
@@ -274,47 +248,7 @@ function PlannerSubnav({
         <ShellDivider />
 
         <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-3 py-3">
-          <div className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-sm font-semibold text-primary-text">
-                {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </span>
-              <Link
-                href={`${basePath}/calendar?date=${todayParam}`}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-ui hover:text-caption"
-              >
-                Today
-              </Link>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-tertiary-text">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                <span key={`${day}-${index}`}>{day}</span>
-              ))}
-            </div>
-            <div className="mt-1 grid grid-cols-7 gap-1">
-              {days.map(day => {
-                const dateParam = toDateKey(day)
-                const inMonth = day.getMonth() === selectedDate.getMonth()
-                const { selected, current } = calendarDateTone({ date: day, selectedDate, today })
-                return (
-                  <Link
-                    key={dateParam}
-                    href={`${basePath}/calendar?date=${dateParam}`}
-                    className={cn(
-                      'flex h-8 items-center justify-center rounded-lg transition-colors hover:bg-slate-100',
-                      !inMonth && 'opacity-60',
-                    )}
-                  >
-                    <span className={datePillClassName({ selected, current, inMonth, size: 'sm' })}>
-                      {day.getDate()}
-                    </span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-5">
+          <div className="space-y-5">
             <div>
               <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-tertiary-text">Create</div>
               <PlannerSubnavLink currentPath={currentPath} href={`${basePath}/calendar?create=meeting`} icon={Plus} label="New meeting" />
