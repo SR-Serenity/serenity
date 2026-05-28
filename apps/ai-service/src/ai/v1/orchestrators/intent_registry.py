@@ -2,8 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from src.ai.v1.agents.document_understanding import document_agent
-from src.ai.v1.agents.meeting_scheduler import meeting_scheduler_agent
-from src.ai.v1.agents.task_creator import task_creator_agent
+from src.ai.v1.agents.schedule_agent import schedule_agent
 from src.ai.v1.agents.workspace_qa import create_workspace_qa_agent
 from src.ai.v1.contexts.schemas.enums import Domain
 
@@ -29,17 +28,11 @@ INTENT_REGISTRY: dict[Domain, IntentConfig] = {
         description="Uploaded file and document understanding with citations.",
         examples=["Summarize this file.", "What does the PDF say about expenses?"],
     ),
-    Domain.TASK_CREATOR: IntentConfig(
-        domain=Domain.TASK_CREATOR,
-        agent_factory=lambda: task_creator_agent,
-        description="Extract proposal-first task creation payloads.",
-        examples=["Create a task for Linh due Friday."],
-    ),
-    Domain.MEETING_SCHEDULER: IntentConfig(
-        domain=Domain.MEETING_SCHEDULER,
-        agent_factory=lambda: meeting_scheduler_agent,
-        description="Extract proposal-first meeting and room booking payloads.",
-        examples=["Schedule a meeting with a room for 8 people."],
+    Domain.SCHEDULE_AGENT: IntentConfig(
+        domain=Domain.SCHEDULE_AGENT,
+        agent_factory=lambda: schedule_agent,
+        description="Extract proposal-first task, event, meeting, and room booking payloads.",
+        examples=["Create a task for Linh due Friday.", "Schedule an event tomorrow at 2 PM.", "Schedule a meeting with a room for 8 people."],
     ),
 }
 

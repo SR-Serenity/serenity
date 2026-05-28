@@ -50,7 +50,7 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
                     )
                 }
 
-            if domain in {Domain.TASK_CREATOR, Domain.MEETING_SCHEDULER}:
+            if domain == Domain.SCHEDULE_AGENT:
                 from langgraph.types import interrupt
                 from src.api.internal.v1.schemas import ChatMessage as _ChatMessage
                 messages = _chat_messages(state)

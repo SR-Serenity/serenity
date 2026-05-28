@@ -16,7 +16,11 @@ from src.ai.v1.synthesizer.synthesizer import synthesizer_node
 
 def input_guardrail_node(state: PipelineState) -> dict:
     user_input = _latest_user_text(state)
-    return {"input_guardrail": validate_input(user_input)}
+    return {
+        "input_guardrail": validate_input(user_input),
+        "domain_agent_response": [],
+        "proposed_actions": [],
+    }
 
 
 def context_loader_node(state: PipelineState) -> dict:
