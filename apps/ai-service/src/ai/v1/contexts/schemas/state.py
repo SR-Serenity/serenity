@@ -58,7 +58,11 @@ def _merge_actions(
     existing: list[ProposedAction] | None,
     new: list[ProposedAction] | None,
 ) -> list[ProposedAction]:
-    return list(existing or []) + list(new or [])
+    if new is None:
+        return list(existing or [])
+    if not new:
+        return []
+    return list(existing or []) + new
 
 
 class PipelineState(TypedDict):
