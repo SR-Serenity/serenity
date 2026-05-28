@@ -1,7 +1,6 @@
 """Serenity AI graph runtime adapter."""
 
 from dataclasses import dataclass, field
-
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.types import Command
 
@@ -54,6 +53,7 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
     graph = get_main_graph()
     latest_user_msg = _latest_user_message(payload)
     user_key = (payload.auth_context.org_id, payload.auth_context.user_id)
+    user_context = _build_user_context(payload, auth_token=auth_token)
 
     with span("chat.graph", metadata):
         runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
@@ -85,7 +85,6 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
         final_messages = runtime_state.context_manager.build_context_with_memories(
             trimmed_messages, memories=updated_memories
         )
-
         # Check if this thread has a pending interrupt waiting for user input
         current_state = await graph.aget_state(thread_config)
         has_pending_interrupt = bool(current_state.next)
@@ -106,7 +105,10 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
                     "role": payload.auth_context.role,
                     "thread_id": thread_id,
                     "auth_token": auth_token,
-                    "context": payload.context.model_dump(by_alias=True, exclude_none=True),
+                    "context": {
+                        **payload.context.model_dump(by_alias=True, exclude_none=True),
+                        "userContext": user_context,
+                    },
                     "messages": final_messages,
                 },
                 config=run_config,
@@ -152,3 +154,32 @@ def _latest_user_message(payload: ChatRequest) -> str:
         if message.role == "user":
             return message.content.strip()
     return ""
+
+
+def _build_user_context(payload: ChatRequest, *, auth_token: str | None) -> dict:
+    member = None
+    if auth_token:
+        from src.services.workspace_service import get_current_member
+
+        member = get_current_member(
+            auth_token,
+            payload.auth_context.org_id,
+            payload.auth_context.user_id,
+        )
+
+    return {
+        "user": {
+            "id": payload.auth_context.user_id,
+            "displayName": (member or {}).get("displayName") or payload.auth_context.display_name,
+            "email": (member or {}).get("email") or payload.auth_context.email,
+            "role": (member or {}).get("role") or payload.auth_context.role,
+            "departmentId": (member or {}).get("departmentId"),
+            "departmentName": (member or {}).get("departmentName"),
+        },
+        "organization": {
+            "id": payload.auth_context.org_id,
+            "name": payload.auth_context.org_name,
+            "slug": payload.auth_context.org_slug,
+        },
+        "timeZone": payload.context.time_zone or "UTC",
+    }

@@ -6,6 +6,7 @@ import { aiApi, calendarApi, wikiApi } from '@serenity/api'
 import type { AiProposedAction, AiSessionMessage } from '@serenity/api'
 import {
   Bot,
+  CalendarClock,
   CheckCircle2,
   FileText,
   MessageSquare,
@@ -18,7 +19,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useAiContext } from '@/hooks/use-ai-context'
-import { unixToIso } from '@/lib/time'
+import { browserTimezone, unixToIso } from '@/lib/time'
 import { ChatComposer } from './chat-composer'
 import { ChatMessageList } from './chat-message-list'
 import { ChatSessionList, type ChatSession } from './chat-session-list'
@@ -226,7 +227,26 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
   async function executeAction(action: AiProposedAction): Promise<void> {
     if (!token || !currentOrg) throw new Error('Not authenticated')
     const p = action.payload as Record<string, unknown>
-    if (action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') {
+    if (action.type === 'UPDATE_CALENDAR_ITEM') {
+      const itemId = String(p.itemId ?? '')
+      if (!itemId) throw new Error('No calendar item ID')
+      await calendarApi.updateItem(token, itemId, {
+        type: (p.itemType as 'EVENT' | 'MEETING' | 'TASK' | undefined) ?? undefined,
+        visibility: (p.visibility as 'COMPANY' | 'PERSONAL' | undefined) ?? undefined,
+        title: p.title as string | undefined,
+        descriptionMarkdown: (p.descriptionMarkdown as string | undefined)
+          ?? (p.description as string | undefined),
+        location: p.location as string | undefined,
+        startAt: unixToIso(p.startAt as number | null | undefined),
+        endAt: unixToIso(p.endAt as number | null | undefined),
+        dueDate: p.dueDate as string | undefined,
+        attendeeIds: (p.attendeeIds as string[] | undefined) ?? undefined,
+        roomId: p.roomId as string | undefined,
+        wikiPageId: p.wikiPageId as string | undefined,
+        allDay: p.allDay as boolean | undefined,
+        taskStatus: p.taskStatus as 'TODO' | 'DONE' | undefined,
+      })
+    } else if (action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') {
       await calendarApi.createItem(token, {
         type: 'MEETING',
         visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
@@ -310,8 +330,20 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
       const response = await aiApi.chat(token, {
         sessionId,
         messages: history,
-        authContext: { orgId: currentOrg.id, userId: user.id, role: currentOrg.role },
-        context: { entrypoint: compact ? 'mini_panel' : 'workspace_panel', ...requestContext },
+        authContext: {
+          orgId: currentOrg.id,
+          userId: user.id,
+          role: currentOrg.role,
+          displayName: user.displayName,
+          email: user.email,
+          orgName: currentOrg.name,
+          orgSlug: currentOrg.slug,
+        },
+        context: {
+          entrypoint: compact ? 'mini_panel' : 'workspace_panel',
+          timeZone: browserTimezone(),
+          ...requestContext,
+        },
       })
 
       setMessages(prev => {

@@ -1,5 +1,6 @@
 import { useWikiStore } from '@/stores/wiki-store'
 import type { AiRequestContext } from '@serenity/api'
+import { browserTimezone } from '@/lib/time'
 
 export type AiContextResult = {
   contextLabel: string | null
@@ -12,9 +13,9 @@ export function useAiContext(): AiContextResult {
   if (selectedPage) {
     return {
       contextLabel: selectedPage.title || 'Untitled page',
-      requestContext: { wikiPageId: selectedPage.id },
+      requestContext: { wikiPageId: selectedPage.id, timeZone: browserTimezone() },
     }
   }
 
-  return { contextLabel: null, requestContext: {} }
+  return { contextLabel: null, requestContext: { timeZone: browserTimezone() } }
 }

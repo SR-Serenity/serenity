@@ -5,7 +5,12 @@ from typing import Annotated
 from langchain.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
 
-from src.services.workspace_service import list_calendar_items
+from src.services.workspace_service import (
+    create_calendar_item,
+    delete_calendar_item,
+    list_calendar_items,
+    update_calendar_item,
+)
 
 
 @tool(
@@ -110,3 +115,151 @@ def search_calendar_events_tool(
         return "\n".join(lines)
     except Exception as e:
         return f"Error searching calendar items: {e}"
+
+
+def _calendar_item_summary(item: dict) -> str:
+    title = item.get("title", "Untitled")
+    item_id = item.get("id", "")
+    itype = item.get("type", "")
+    start = item.get("startAt") or item.get("dueDate") or "—"
+    end = item.get("endAt") or ""
+    return f"[{item_id}] {title} ({itype}) Start: {start} End: {end}"
+
+
+def _remove_none_values(payload: dict) -> dict:
+    return {key: value for key, value in payload.items() if value is not None}
+
+
+@tool(
+    description=(
+        "Create a calendar event, meeting, or task. "
+        "Use only when the user explicitly asks to add something to the calendar. "
+        "EVENT and MEETING require start_at and end_at. TASK can use due_date."
+    )
+)
+def create_calendar_item_tool(
+    runtime: ToolRuntime,
+    title: Annotated[str, "Calendar item title"],
+    type: Annotated[str, "Calendar item type: EVENT, MEETING, or TASK"],
+    visibility: Annotated[str, "Calendar visibility: PERSONAL or COMPANY"] = "PERSONAL",
+    description_markdown: Annotated[str | None, "Optional description or notes"] = None,
+    location: Annotated[str | None, "Optional location"] = None,
+    start_at: Annotated[str | None, "Start time in ISO 8601 format"] = None,
+    end_at: Annotated[str | None, "End time in ISO 8601 format"] = None,
+    all_day: Annotated[bool | None, "Whether this is an all-day item"] = None,
+    task_status: Annotated[str | None, "Task status: TODO or DONE"] = None,
+    due_date: Annotated[str | None, "Task due date in ISO 8601 format"] = None,
+    attendee_ids: Annotated[list[str] | None, "Optional workspace user IDs to invite"] = None,
+    room_id: Annotated[str | None, "Optional office room ID"] = None,
+    wiki_page_id: Annotated[str | None, "Optional wiki page ID for notes"] = None,
+) -> str:
+    auth_token: str = runtime.context.get("auth_token", "")
+    if not auth_token:
+        return "No auth token available."
+    if not title.strip():
+        return "Cannot create a calendar item without a title."
+
+    payload = _remove_none_values(
+        {
+            "type": type.upper(),
+            "visibility": visibility.upper(),
+            "title": title,
+            "descriptionMarkdown": description_markdown,
+            "location": location,
+            "startAt": start_at,
+            "endAt": end_at,
+            "allDay": all_day,
+            "taskStatus": task_status.upper() if task_status else None,
+            "dueDate": due_date,
+            "attendeeIds": attendee_ids,
+            "roomId": room_id,
+            "wikiPageId": wiki_page_id,
+        }
+    )
+
+    try:
+        item = create_calendar_item(auth_token, payload)
+        return f"Calendar item created: {_calendar_item_summary(item)}"
+    except Exception as e:
+        return f"Error creating calendar item: {e}"
+
+
+@tool(
+    description=(
+        "Update an existing calendar item by ID. "
+        "Use list_calendar_events_tool or search_calendar_events_tool first if the item ID is unknown."
+    )
+)
+def update_calendar_item_tool(
+    runtime: ToolRuntime,
+    item_id: Annotated[str, "Calendar item ID to update"],
+    title: Annotated[str | None, "New title"] = None,
+    type: Annotated[str | None, "New item type: EVENT, MEETING, or TASK"] = None,
+    visibility: Annotated[str | None, "New visibility: PERSONAL or COMPANY"] = None,
+    description_markdown: Annotated[str | None, "New description or notes"] = None,
+    location: Annotated[str | None, "New location"] = None,
+    start_at: Annotated[str | None, "New start time in ISO 8601 format"] = None,
+    end_at: Annotated[str | None, "New end time in ISO 8601 format"] = None,
+    all_day: Annotated[bool | None, "Whether this is an all-day item"] = None,
+    task_status: Annotated[str | None, "New task status: TODO or DONE"] = None,
+    due_date: Annotated[str | None, "New task due date in ISO 8601 format"] = None,
+    attendee_ids: Annotated[list[str] | None, "Replacement workspace user IDs to invite"] = None,
+    room_id: Annotated[str | None, "New office room ID"] = None,
+    wiki_page_id: Annotated[str | None, "New wiki page ID"] = None,
+) -> str:
+    auth_token: str = runtime.context.get("auth_token", "")
+    if not auth_token:
+        return "No auth token available."
+    if not item_id.strip():
+        return "Cannot update a calendar item without an item ID."
+
+    payload = _remove_none_values(
+        {
+            "type": type.upper() if type else None,
+            "visibility": visibility.upper() if visibility else None,
+            "title": title,
+            "descriptionMarkdown": description_markdown,
+            "location": location,
+            "startAt": start_at,
+            "endAt": end_at,
+            "allDay": all_day,
+            "taskStatus": task_status.upper() if task_status else None,
+            "dueDate": due_date,
+            "attendeeIds": attendee_ids,
+            "roomId": room_id or None,
+            "wikiPageId": wiki_page_id or None,
+        }
+    )
+    if not payload:
+        return "No calendar changes were provided."
+
+    try:
+        item = update_calendar_item(auth_token, item_id, payload)
+        return f"Calendar item updated: {_calendar_item_summary(item)}"
+    except Exception as e:
+        return f"Error updating calendar item {item_id}: {e}"
+
+
+@tool(
+    description=(
+        "Delete an existing calendar item by ID. "
+        "Use only when the user explicitly asks to delete or remove a calendar item."
+    )
+)
+def delete_calendar_item_tool(
+    runtime: ToolRuntime,
+    item_id: Annotated[str, "Calendar item ID to delete"],
+) -> str:
+    auth_token: str = runtime.context.get("auth_token", "")
+    if not auth_token:
+        return "No auth token available."
+    if not item_id.strip():
+        return "Cannot delete a calendar item without an item ID."
+
+    try:
+        result = delete_calendar_item(auth_token, item_id)
+        if result.get("success"):
+            return f"Calendar item {item_id} deleted."
+        return f"Calendar delete request completed: {result}"
+    except Exception as e:
+        return f"Error deleting calendar item {item_id}: {e}"

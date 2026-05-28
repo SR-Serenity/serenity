@@ -27,6 +27,10 @@ class AuthContext(CamelModel):
     org_id: str
     user_id: str
     role: str | None = None
+    display_name: str | None = None
+    email: str | None = None
+    org_name: str | None = None
+    org_slug: str | None = None
 
 
 class RequestContext(CamelModel):
@@ -36,6 +40,7 @@ class RequestContext(CamelModel):
     file_ids: list[str] = Field(default_factory=list)
     selected_text: str | None = None
     entrypoint: str | None = None
+    time_zone: str | None = None
 
 
 class Source(CamelModel):
@@ -47,7 +52,14 @@ class Source(CamelModel):
     snippet: str | None = None
 
 
-ProposedActionType = Literal["CREATE_TASK", "CREATE_EVENT", "CREATE_MEETING", "BOOK_ROOM", "CREATE_WIKI_PAGE"]
+ProposedActionType = Literal[
+    "CREATE_TASK",
+    "CREATE_EVENT",
+    "CREATE_MEETING",
+    "BOOK_ROOM",
+    "UPDATE_CALENDAR_ITEM",
+    "CREATE_WIKI_PAGE",
+]
 
 
 class ProposedAction(CamelModel):

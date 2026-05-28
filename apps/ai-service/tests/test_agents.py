@@ -1,4 +1,5 @@
 from src.ai.v1.agents.registry import AGENTS, agent_health, propose_actions
+from src.ai.v1.agents.workspace_qa.agent import _WORKSPACE_QA_TOOLS
 from src.ai.v1.graph.builder import get_main_graph
 from src.api.internal.v1.schemas import ChatMessage
 
@@ -60,3 +61,14 @@ def test_main_graph_is_langgraph_compiled_graph() -> None:
     assert "intent_classification" in graph.get_graph().nodes
     assert "schedule_agent" in graph.get_graph().nodes
     assert "meeting_scheduler" not in graph.get_graph().nodes
+
+
+def test_workspace_qa_agent_has_mail_and_calendar_write_tools() -> None:
+    tool_names = {tool.name for tool in _WORKSPACE_QA_TOOLS}
+
+    assert {
+        "send_email_tool",
+        "create_calendar_item_tool",
+        "update_calendar_item_tool",
+        "delete_calendar_item_tool",
+    } <= tool_names

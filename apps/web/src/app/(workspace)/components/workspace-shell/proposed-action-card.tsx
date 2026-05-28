@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  BookOpen, Calendar, CalendarPlus, Check, CheckCircle2, Clock,
+  BookOpen, Calendar, CalendarCheck, CalendarPlus, Check, CheckCircle2, Clock,
   FileEdit, FileText, Loader2, MapPin, Plus, Users, X,
 } from 'lucide-react'
 import { officeApi, orgApi } from '@serenity/api'
@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<AiProposedActionType, string> = {
   CREATE_EVENT: 'Create Event',
   CREATE_MEETING: 'Schedule Meeting',
   BOOK_ROOM: 'Book Room',
+  UPDATE_CALENDAR_ITEM: 'Update Event',
   CREATE_WIKI_PAGE: 'Create Wiki Page',
   EDIT_WIKI_PAGE: 'Edit Wiki Page',
 }
@@ -24,6 +25,7 @@ const ACTION_ICONS: Record<AiProposedActionType, React.ElementType> = {
   CREATE_EVENT: Calendar,
   CREATE_MEETING: CalendarPlus,
   BOOK_ROOM: BookOpen,
+  UPDATE_CALENDAR_ITEM: CalendarCheck,
   CREATE_WIKI_PAGE: FileText,
   EDIT_WIKI_PAGE: FileEdit,
 }
