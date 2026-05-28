@@ -426,7 +426,6 @@ body {
   font-style: normal;
   color: var(--theme-content-color);
   background-color: var(--theme-back-color);
-  user-select: none;
 }
 
 ::-webkit-scrollbar { width: 6px; }

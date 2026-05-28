@@ -19,7 +19,9 @@
     "customConditions": ["@org/source"],
     "paths": {
       "@org/auth": ["./libs/shared/auth/src/index.ts"],
-      "@org/auth/*": ["./libs/shared/auth/src/*"]
+      "@org/auth/*": ["./libs/shared/auth/src/*"],
+      "@org/ui": ["./apps/web/libs/ui/src/index.ts"],
+      "@org/ui/*": ["./apps/web/libs/ui/src/*"]
     }
   }
 }

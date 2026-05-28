@@ -29,6 +29,7 @@ export type AiSource = {
 
 export type AiProposedActionType =
   | 'CREATE_TASK'
+  | 'CREATE_EVENT'
   | 'CREATE_MEETING'
   | 'BOOK_ROOM'
   | 'CREATE_WIKI_PAGE'
