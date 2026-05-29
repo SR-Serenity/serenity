@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from deepeval import evaluate
-from deepeval.evaluate.configs import DisplayConfig
+from deepeval.evaluate.configs import CacheConfig, DisplayConfig
 from deepeval.test_case import LLMTestCase
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -99,6 +99,7 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
                     test_cases=[tc],
                     metrics=m,
                     display_config=DisplayConfig(print_results=False, show_indicator=False),
+                    cache_config=CacheConfig(write_cache=False, use_cache=False),
                 ),
             )
             metric_data_list = eval_result.test_results[0].metrics_data if eval_result.test_results else []

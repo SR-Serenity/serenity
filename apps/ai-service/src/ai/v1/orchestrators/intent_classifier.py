@@ -16,14 +16,16 @@ Classify the user's latest message and respond with ONLY valid JSON:
 }}
 
 Available intents (pick ALL that apply, or just one):
-- WORKSPACE_QA     : general questions, search, summaries, "what is...", "find...", "who..."
-- SCHEDULE_AGENT   : creating tasks, to-dos, events, meetings, calls, appointments, or room bookings in any language
-- GREETING         : greetings, small talk, "hi", "hello", "how are you", chitchat
+- WORKSPACE_QA     : Any action that reads, searches, or interacts with existing workspace data — \
+including questions, lookups, summaries, chat history, contacts, wiki pages, calendar queries, \
+and all email/mail operations (reading, searching, sending, replying, forwarding).
+- SCHEDULE_AGENT   : Creating or scheduling new calendar items — tasks, events, meetings, or room bookings.
+- GREETING         : Greetings, small talk, or chitchat with no workspace action required.
 
 Rules:
-- Detect intent from meaning, NOT English keywords — work for any language.
-- A message can have multiple intents (e.g. SCHEDULE_AGENT + WORKSPACE_QA).
-- When unsure between WORKSPACE_QA and another intent, include both.
+- Work for any language — detect intent from meaning, not keywords.
+- A message can have multiple intents; include all that apply.
+- When unsure, include WORKSPACE_QA.
 - Respond ONLY with the JSON object, no markdown, no explanation.
 
 Latest user message: {message}
@@ -71,16 +73,12 @@ def classify_intent(state: PipelineState) -> IntentClassification:
     return IntentClassification(intent=intents, language=language)
 
 
-def _heuristic_classification(text: str) -> IntentClassification:
-    lowered = text.lower()
-    intents: list[IntentDomain] = []
-    if any(keyword in lowered for keyword in ["task", "todo", "to-do", "event", "appointment", "time block", "calendar block", "meeting", "call", "sync", "standup", "interview", "book a room", "room", "schedule"]):
-        intents.append(IntentDomain(domain=Domain.SCHEDULE_AGENT, confidence=0.9))
-    if any(keyword in lowered for keyword in ["what", "who", "find", "search", "know"]):
-        intents.append(IntentDomain(domain=Domain.WORKSPACE_QA, confidence=0.9))
-    if not intents:
-        return IntentClassification(intent=None, language="English")
-    return IntentClassification(intent=intents, language="English")
+def _heuristic_classification(_text: str) -> IntentClassification:
+    # No LLM available — default to WORKSPACE_QA so the agent can decide what to do.
+    return IntentClassification(
+        intent=[IntentDomain(domain=Domain.WORKSPACE_QA, confidence=0.9)],
+        language="English",
+    )
 
 
 def _latest_user_text(state: PipelineState) -> str:

@@ -362,152 +362,714 @@ export async function seedOrganizationData(
       icon: 'sparkles',
       contentMarkdown: `# Welcome to Serenity Workspace!
 
-This is your central hub for collaboration. Serenity brings together:
-- **Chat:** Talk to your team in channels or direct messages.
-- **Wiki:** Document your processes and notes.
-- **Calendar:** Schedule events and sync with Google Calendar.
-- **Office:** Jump into a virtual room for audio/video huddles.
+Serenity is your team's central hub for collaboration. Everything you need is in one place:
 
-### Try out the Serenity AI Assistant ✨
+- **Chat** — Real-time messaging in channels or direct messages.
+- **Wiki** — Shared knowledge base for documentation and processes.
+- **Calendar** — Schedule meetings, book rooms, and manage tasks.
+- **Office** — Virtual rooms for audio and video huddles.
 
-Type \`/\` in any chat box or right here in the wiki editor to summon your AI assistant.
-It can read the context of what you're working on and suggest edits, translations, or next steps!
+## Getting Around
+
+| Section | What it's for |
+|---|---|
+| Chat | Day-to-day team communication |
+| Wiki | Policies, guides, and documentation |
+| Calendar | Meetings, room bookings, task tracking |
+| Office | Live audio/video collaboration |
+
+## AI Assistant ✨
+
+Type \`/\` in any chat box or wiki editor to invoke the Serenity AI assistant.
+It can search the workspace, draft messages, edit wiki pages, schedule meetings, and create tasks — all from natural language.
 `,
     },
     {
       title: 'Code Styling and Linting Guidelines',
       icon: 'code',
-      contentMarkdown: `# Code Styling Guidelines
-This page is last updated by David.
-We use eslint and prettier configurations for ensuring clean styling formatting across our repositories.
-Rules:
-- 2 spaces indentation.
-- Double quotes.
+      contentMarkdown: `# Code Styling and Linting Guidelines
+
+> Last updated by David.
+
+## Tooling
+
+We use **ESLint** and **Prettier** across all repositories to enforce consistent code formatting.
+
+## Formatting Rules
+
+- **Indentation:** 2 spaces (no tabs).
+- **Quotes:** Double quotes for strings.
+- **Semicolons:** Required at end of statements.
+- **Trailing commas:** Required in multi-line objects and arrays.
+- **Line length:** Max 100 characters.
+
+## Running the Linter
+
+\`\`\`bash
+pnpm lint          # check for issues
+pnpm lint:fix      # auto-fix where possible
+\`\`\`
+
+## Pre-commit Hook
+
+Husky runs ESLint and Prettier automatically before every commit. Do not bypass hooks with \`--no-verify\`.
 `,
     },
     {
       title: 'Workspace Security Policy and Best Practices',
       icon: 'shield',
       contentMarkdown: `# Workspace Security Policy and Best Practices
-Under Guidelines category.
-Keep passwords secure. Ensure that the server is updated with the latest security patches.
+
+> Under Guidelines category.
+
+## Password Policy
+
+- Use a strong, unique password for your workspace account.
+- Never share credentials with teammates — use role-based access instead.
+- Enable two-factor authentication (2FA) where available.
+
+## Server & Infrastructure
+
+- Ensure all servers are updated with the latest security patches on a monthly schedule.
+- Rotate API keys and service tokens every 90 days.
+- Never commit secrets, API keys, or tokens to version control.
+
+## Access Control
+
+- Follow the principle of least privilege — request only the permissions you need.
+- Revoke access for team members who leave the organisation within 24 hours.
+
+## Reporting
+
+Report suspected security incidents to the workspace admin immediately via a direct message.
 `,
     },
     {
       title: 'Remote Working Guidelines',
       icon: 'home',
-      contentMarkdown: `# Guidelines
-Remote work allows flexible scheduling. Standups occur daily at 10 AM. Timesheets are due weekly.
+      contentMarkdown: `# Remote Working Guidelines
+
+Remote work is fully supported. Follow these guidelines to stay connected and productive.
+
+## Daily Routine
+
+- **Daily standup:** 10:00 AM via the Office virtual room — attendance is expected.
+- Keep your status updated in the workspace so teammates know your availability.
+
+## Communication
+
+- Respond to direct messages within 2 hours during working hours.
+- Use the **general** channel for team-wide announcements.
+- Prefer async updates in the wiki or chat over unnecessary meetings.
+
+## Time Tracking
+
+- Timesheets are due every Friday by 5:00 PM.
+- Log time against the relevant project or task in the Calendar.
+
+## Equipment & Security
+
+- Use a secure, private network when accessing workspace systems.
+- Lock your screen when away from your workstation.
 `,
     },
     {
       title: 'Team Standards',
       icon: 'users',
-      contentMarkdown: `# Standards
-We strive for excellence.
-Guidelines:
-- Be respectful.
-- Document your code.
-- Communicate changes early.
+      contentMarkdown: `# Team Standards
+
+These standards apply to everyone on the Serenity team.
+
+## Communication
+
+- Be respectful and constructive in all feedback.
+- Communicate blockers and changes early — don't wait for the standup.
+- Keep discussions in public channels so the whole team has visibility.
+
+## Code Quality
+
+- Document your code — aim for self-explanatory naming before adding comments.
+- Write tests for new features and bug fixes.
+- No PR is too small to review; no PR is too large to split.
+
+## Meetings
+
+- Come prepared with an agenda or update.
+- Start and end on time.
+- Record key decisions and action items in the wiki or a task.
+
+## Knowledge Sharing
+
+- When you learn something useful, document it in the wiki.
+- Onboard new teammates — pair with them in the first week.
 `,
     },
     {
       title: 'Changelog',
       icon: 'list',
-      contentMarkdown: `v1.2.0 is out. added evaluation metrics and fixed some DB memory leaks.`,
+      contentMarkdown: `# Changelog
+
+## v1.2.0 — 2026-05-20
+
+### New Features
+- Added evaluation metrics dashboard for AI feature monitoring.
+- Introduced G-Eval integration for LLM response quality scoring.
+
+### Bug Fixes
+- Resolved database connection pool leaks under high load.
+- Fixed a race condition in the real-time notification delivery pipeline.
+
+### Improvements
+- Reduced AI response latency by 30% through prompt caching.
+- Improved wiki search indexing to include page content snippets.
+
+---
+
+## v1.1.0 — 2026-04-10
+
+### New Features
+- Wiki editor AI assistant: rewrite, translate, and summarise pages with a single prompt.
+- Room booking via the AI calendar agent.
+
+### Bug Fixes
+- Fixed auth token expiry not being handled gracefully on the frontend.
+`,
     },
     {
       title: 'Setup Guide',
       icon: 'book',
-      contentMarkdown: `# Setup Instructions
-Run \`npm install\` to get started.
+      contentMarkdown: `# Setup Guide
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- Docker and Docker Compose
+
+## Installation
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-org/serenity.git
+cd serenity
+
+# Install all dependencies from the monorepo root
+pnpm install
+\`\`\`
+
+## Environment Variables
+
+Copy the example env files and fill in your values:
+
+\`\`\`bash
+cp apps/core-service/.env.example apps/core-service/.env
+cp apps/auth-service/.env.example apps/auth-service/.env
+\`\`\`
+
+## Running the Dev Environment
+
+\`\`\`bash
+# Start infrastructure (Postgres, Redis)
+docker compose up -d postgres redis
+
+# Run all services in development mode
+pnpm nx run-many --target=dev --all
+\`\`\`
+
+The web app is available at **http://localhost:9999**.
 `,
     },
     {
       title: 'Onboarding',
       icon: 'user-plus',
-      contentMarkdown: `This is the onboarding guide. Complete the checklist below to begin working.`,
+      contentMarkdown: `# Onboarding Guide
+
+Welcome to the team! Complete the steps below to get up and running in your first week.
+
+## Day 1
+
+- [ ] Accept your workspace invitation and set up your profile.
+- [ ] Read the Team Standards and Remote Working Guidelines wiki pages.
+- [ ] Join the **#general** and **#random** channels.
+- [ ] Introduce yourself in **#general**.
+
+## First Week
+
+- [ ] Follow the Setup Guide to get the dev environment running locally.
+- [ ] Pair with a team member to walk through the codebase.
+- [ ] Complete your first task — your onboarding buddy will assign one.
+- [ ] Attend the weekly standup on Monday at 9:00 AM.
+
+## Access & Accounts
+
+Contact the workspace admin to request access to:
+- GitHub organisation
+- Cloud infrastructure dashboards
+- Any project-specific credentials
+
+## Questions?
+
+Ask in **#general** or DM your onboarding buddy directly.
+`,
     },
     {
       title: 'Goals Draft',
       icon: 'target',
-      contentMarkdown: `Goals: Goal 1, Goal 2.`,
+      contentMarkdown: `# Q3 2026 Goals — Draft
+
+> Status: In progress. Owners to review and confirm by June 15.
+
+## Engineering
+
+- Ship evaluation service v1.0 with full G-Eval coverage.
+- Achieve 95% uptime across all production services.
+
+## Product
+
+- Onboard 3 new pilot organisations to the Serenity platform.
+- Launch the mobile-optimised web experience.
+
+## Team
+
+- Complete onboarding documentation for all core workflows.
+- Run at least one internal demo day per month.
+`,
     },
     {
       title: 'Developer Manual',
       icon: 'file-text',
-      contentMarkdown: `# Dev Manual
-this manual covers prerequisites and introduction.
+      contentMarkdown: `# Developer Manual
+
+## Prerequisites
+
+Before contributing, ensure you have read:
+- Setup Guide
+- Code Styling and Linting Guidelines
+- Code Review Policy
+
+## Project Structure
+
+Serenity is an Nx monorepo. Key apps:
+
+| App | Description |
+|---|---|
+| \`apps/web\` | Next.js 16 frontend (port 9999) |
+| \`apps/core-service\` | Main REST API (NestJS) |
+| \`apps/auth-service\` | Authentication and organisation setup |
+| \`apps/realtime-service\` | WebSocket event bus |
+| \`apps/evaluation-service\` | AI evaluation pipeline (Python) |
+
+## Common Commands
+
+\`\`\`bash
+pnpm nx dev @org/web          # Start the frontend
+pnpm nx build core-service    # Build a specific service
+pnpm nx test core-service     # Run tests
+pnpm nx lint auth-service     # Lint a service
+\`\`\`
+
+## Branch Strategy
+
+- \`main\` — production-ready code, protected branch.
+- \`feat/<name>\` — feature branches; open a PR to merge into main.
 `,
     },
     {
       title: 'Release Procedures',
       icon: 'rocket',
-      contentMarkdown: `Hey, we gotta get this deploy list done by Friday, ok guys?`,
+      contentMarkdown: `# Release Procedures
+
+Follow these steps for every production release.
+
+## Pre-release Checklist
+
+- [ ] All feature PRs merged and CI passing on \`main\`.
+- [ ] Version bumped in \`package.json\` following semver.
+- [ ] Changelog updated with new features and bug fixes.
+- [ ] QA sign-off obtained from Mary.
+
+## Release Steps
+
+1. Create a release branch: \`git checkout -b release/vX.Y.Z\`
+2. Run the full test suite: \`pnpm nx run-many --target=test --all\`
+3. Build all production artefacts: \`pnpm nx run-many --target=build --all\`
+4. Push the Docker images to the registry.
+5. Deploy via: \`docker stack deploy --compose-file docker-compose.prod.yml serenity\`
+6. Smoke-test the production environment.
+7. Merge the release branch into \`main\` and tag the commit.
+
+## Rollback
+
+If a critical issue is found post-deploy, redeploy the previous Docker image tag immediately and open a post-mortem task.
+`,
     },
     {
       title: 'API Guidelines',
       icon: 'cpu',
-      contentMarkdown: `# API Specs
-We use REST APIs.
+      contentMarkdown: `# API Guidelines
+
+## Design Principles
+
+- All APIs are RESTful and return JSON.
+- Use consistent HTTP verbs: \`GET\` (read), \`POST\` (create), \`PATCH\` (partial update), \`DELETE\` (remove).
+- All endpoints are versioned under \`/api/v1/\`.
+
+## Authentication
+
+Internal service-to-service calls use the \`x-internal-api-token\` header.
+Client-facing endpoints require a JWT Bearer token in the \`Authorization\` header.
+
+## Response Format
+
+\`\`\`json
+{
+  "data": { ... },
+  "error": null
+}
+\`\`\`
+
+Errors return a non-2xx status with \`"error": { "code": "...", "message": "..." }\`.
+
+## Rate Limiting
+
+Public endpoints are rate-limited to **100 requests per minute** per user.
+Internal endpoints have no rate limit but must pass the internal API token.
 `,
     },
     {
       title: 'Maintenance Draft',
       icon: 'wrench',
-      contentMarkdown: `we need to secure that server is update with the latest security patch.`,
+      contentMarkdown: `# Maintenance Notes — Draft
+
+> These are rough notes. To be formalised into a proper maintenance runbook.
+
+## Pending Actions
+
+- We need to ensure all servers are updated with the latest security patches (overdue since April).
+- Rotate the Redis auth token — current one has been active for 6 months.
+- Clean up stale Docker volumes on the staging server.
+- Archive evaluation run data older than 90 days from the database.
+
+## Recurring Tasks (monthly)
+
+- Review and rotate API keys.
+- Verify database backup integrity.
+- Check SSL certificate expiry dates.
+`,
     },
     {
       title: 'Deployment Instructions',
       icon: 'server',
-      contentMarkdown: `First compile files, then compile docker assets, push it to docker registry and run docker stack deploy restart.`,
+      contentMarkdown: `# Deployment Instructions
+
+## Build
+
+\`\`\`bash
+# Build all services
+pnpm nx run-many --target=build --all
+
+# Build a single service
+pnpm nx build core-service
+\`\`\`
+
+## Docker
+
+\`\`\`bash
+# Build Docker images
+docker compose -f docker-compose.prod.yml build
+
+# Push images to registry
+docker compose -f docker-compose.prod.yml push
+\`\`\`
+
+## Deploy
+
+\`\`\`bash
+# Deploy the full stack
+docker stack deploy --compose-file docker-compose.prod.yml serenity
+
+# Restart a single service
+docker service update --force serenity_core-service
+\`\`\`
+
+## Verify
+
+After deployment, confirm all services are healthy:
+
+\`\`\`bash
+docker service ls
+curl https://your-domain.com/api/health
+\`\`\`
+`,
     },
     {
       title: 'Code Review Policy',
       icon: 'clipboard-list',
-      contentMarkdown: `# Code Review`,
+      contentMarkdown: `# Code Review Policy
+
+Every code change must be reviewed by at least one other team member before merging.
+
+## Review Checklist
+
+- [ ] Code compiles and all tests pass.
+- [ ] Logic is correct and edge cases are handled.
+- [ ] No hardcoded secrets, credentials, or environment-specific values.
+- [ ] Follows the Code Styling and Linting Guidelines.
+- [ ] New functionality is covered by tests.
+- [ ] Documentation or wiki updated if the change affects behaviour.
+
+## Reviewer Responsibilities
+
+- Aim to review PRs within one business day.
+- Leave constructive comments — suggest improvements, don't just point out problems.
+- Approve only when you are confident the change is safe to ship.
+
+## Author Responsibilities
+
+- Keep PRs small and focused on a single concern.
+- Write a clear PR description explaining the what and why.
+- Respond to all reviewer comments before requesting re-review.
+`,
     },
     {
       title: 'Security Guidelines',
       icon: 'lock',
-      contentMarkdown: `# Security
-Keep passwords secure.
+      contentMarkdown: `# Security Guidelines
+
+## Credentials
+
+- Never commit raw API keys, passwords, or tokens to version control.
+- Use environment variables or a secrets manager for all sensitive values.
+- Keep passwords secure and unique per service — never reuse credentials.
+
+## Dependencies
+
+- Run \`pnpm audit\` regularly and resolve high-severity vulnerabilities promptly.
+- Pin dependency versions in production to avoid unexpected upgrades.
+
+## Network
+
+- All external traffic must use HTTPS.
+- Internal service-to-service communication must use the internal API token header.
+- Restrict inbound firewall rules to only required ports.
+
+## Incident Response
+
+If a security incident is suspected:
+1. Immediately rotate the affected credentials.
+2. Notify the workspace admin.
+3. Document the incident and remediation steps in the wiki.
 `,
     },
     {
       title: 'Milestones',
       icon: 'calendar',
-      contentMarkdown: `Kickoff is June 1st owned by Huy, Demo is July 15th owned by David.`,
+      contentMarkdown: `# Project Milestones
+
+| Milestone | Due Date | Owner | Status |
+|---|---|---|---|
+| Kickoff | June 1, 2026 | Huy | ✅ Completed |
+| Alpha release | June 20, 2026 | Alex Vance | In progress |
+| Demo Day | July 15, 2026 | David | Upcoming |
+| Beta launch | August 1, 2026 | Alex Vance | Planned |
+
+## Notes
+
+- **Kickoff (June 1):** Initial scope locked, team onboarded, infrastructure provisioned.
+- **Alpha release (June 20):** Core features stable, internal team testing.
+- **Demo Day (July 15):** Showcase to stakeholders and pilot organisations. David leads the demo.
+- **Beta launch (August 1):** External pilot organisations onboarded.
+`,
     },
     {
       title: 'Getting Started',
       icon: 'play',
-      contentMarkdown: `Run npm run dev, then open browser on localhost.`,
+      contentMarkdown: `# Getting Started
+
+## Step 1: Start the Dev Server
+
+\`\`\`bash
+pnpm nx dev @org/web
+\`\`\`
+
+The app will be available at **http://localhost:9999**.
+
+## Step 2: Log In
+
+Use any seeded account to log in during development:
+- Email: \`david.miller@workspace.com\` / Password: \`password123\`
+- Email: \`sarah.connor@workspace.com\` / Password: \`password123\`
+
+## Step 3: Explore the Workspace
+
+- Browse channels in **Chat**.
+- Search and edit pages in **Wiki**.
+- View your calendar and book rooms in **Calendar**.
+- Try the AI assistant by typing \`/\` in any input.
+
+## Need Help?
+
+See the Developer Manual for architecture details, or ask in the **#general** channel.
+`,
     },
     {
       title: 'Troubleshooting Guide',
       icon: 'alert-triangle',
-      contentMarkdown: `First check logs, then double check DB passwords, then restart redis cache.`,
+      contentMarkdown: `# Troubleshooting Guide
+
+Use this guide when diagnosing issues in development or production.
+
+## Step 1: Check the Logs
+
+\`\`\`bash
+# Docker service logs
+docker service logs serenity_core-service --tail 100
+
+# Local dev logs
+pnpm nx dev core-service
+\`\`\`
+
+Look for \`ERROR\` or \`WARN\` entries near the time the issue occurred.
+
+## Step 2: Verify Database Credentials
+
+Ensure the \`DATABASE_URL\` in your \`.env\` file is correct and the database is reachable:
+
+\`\`\`bash
+psql "$DATABASE_URL" -c "SELECT 1"
+\`\`\`
+
+## Step 3: Restart the Redis Instance
+
+Many caching and real-time issues resolve after a Redis restart:
+
+\`\`\`bash
+docker compose restart redis
+\`\`\`
+
+## Step 4: Rebuild and Redeploy
+
+If the above steps don't resolve the issue, do a clean rebuild:
+
+\`\`\`bash
+pnpm nx reset
+pnpm nx build core-service
+\`\`\`
+`,
     },
     {
       title: 'Notification Engine',
       icon: 'bell',
-      contentMarkdown: `The notification system is designed to provide immediate notifications to clients. It triggers mail sending processes as well as real-time messaging updates.`,
+      contentMarkdown: `# Notification Engine
+
+The notification engine delivers real-time alerts to users via multiple channels.
+
+## Delivery Channels
+
+- **In-app:** Instant badge and toast notifications via WebSocket.
+- **Email:** Transactional emails via the configured SMTP provider.
+
+## How It Works
+
+1. A trigger event is emitted (e.g. a new message, task assigned, meeting reminder).
+2. The event is published to the Redis pub/sub channel.
+3. The realtime-service subscribes and pushes the notification to connected clients.
+4. For offline users, the event is queued and delivered as an email.
+
+## Configuration
+
+Notification preferences are set per user in Workspace Settings → Notifications.
+Admins can configure the global SMTP settings in the organisation admin panel.
+`,
     },
     {
       title: 'Architecture Overview',
       icon: 'layers',
-      contentMarkdown: `# Architecture`,
+      contentMarkdown: `# Architecture Overview
+
+Serenity is a microservices platform built on an Nx monorepo.
+
+## Services
+
+| Service | Tech | Responsibility |
+|---|---|---|
+| \`web\` | Next.js 16, React 19 | Frontend application |
+| \`gateway\` | NestJS | API gateway, request routing |
+| \`auth-service\` | NestJS | Authentication, JWT, organisation setup |
+| \`core-service\` | NestJS | Chat, wiki, calendar, contacts, tasks |
+| \`realtime-service\` | NestJS + WebSocket | Real-time event delivery |
+| \`evaluation-service\` | Python, FastAPI | AI feature evaluation pipeline |
+
+## Data Flow
+
+\`\`\`
+Browser → gateway → core-service / auth-service
+                 ↘ realtime-service (WebSocket)
+                 ↘ AI service (internal HTTP)
+\`\`\`
+
+## Infrastructure
+
+- **Database:** PostgreSQL (via Prisma ORM)
+- **Cache & Pub/Sub:** Redis
+- **AI:** Claude (Anthropic) with tool use for agentic features
+- **Search:** Vector embeddings stored in PostgreSQL (pgvector)
+`,
     },
     {
       title: 'Webhook Processing',
       icon: 'activity',
-      contentMarkdown: `Basically, our system does some pretty cool magic processing on webhooks using a fast Redis queue.`,
+      contentMarkdown: `# Webhook Processing
+
+Serenity processes incoming webhooks asynchronously using a Redis-backed message queue.
+
+## Flow
+
+1. An external service sends a \`POST\` request to \`/api/v1/webhooks/:provider\`.
+2. The gateway validates the request signature and enqueues the payload in Redis.
+3. A background worker dequeues and processes each event.
+4. The result is persisted to the database and, where applicable, triggers a real-time notification.
+
+## Supported Providers
+
+- **Google Calendar** — sync external calendar events.
+- **Email webhooks** — inbound email processing.
+
+## Error Handling
+
+Failed webhook events are retried up to 3 times with exponential backoff. After 3 failures, the event is moved to a dead-letter queue for manual inspection.
+`,
     },
     {
       title: 'Guidelines Summary',
       icon: 'check-square',
-      contentMarkdown: `standup are daily and you must attend. make pull request. write docs.`,
+      contentMarkdown: `# Guidelines Summary
+
+A quick reference for the key team guidelines. See individual pages for full details.
+
+## Daily Expectations
+
+- Attend the **daily standup at 10:00 AM** — this is mandatory.
+- Keep your status and tasks up to date in the Calendar.
+
+## Development
+
+- Open a pull request for every change — no direct commits to \`main\`.
+- Get at least one approval before merging.
+- Write tests for new features and bug fixes.
+
+## Documentation
+
+- Write docs when you change behaviour — update the relevant wiki page.
+- If a process isn't documented anywhere, document it now.
+
+## Communication
+
+- Default to public channels over DMs for work discussions.
+- Communicate blockers early — don't wait until the standup.
+
+> For the complete guidelines, see: Team Standards, Code Styling Guidelines, Remote Working Guidelines, Security Guidelines.
+`,
     },
   ];
 

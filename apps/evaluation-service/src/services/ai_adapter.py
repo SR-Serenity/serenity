@@ -92,11 +92,9 @@ async def call_ai_chat(
     data = resp.json()
 
     if feature == "wiki_editor":
-        # Combine explanation (answer) and updated markdown for verification
-        answer = data.get("answer", "")
+        # Evaluate the updated content directly; fall back to answer if no content was returned
         updated_md = data.get("updatedContentMarkdown")
-        if updated_md:
-            answer = f"{answer}\n\n[UPDATED CONTENT]:\n{updated_md}"
+        answer = updated_md if updated_md else data.get("answer", "")
     elif feature == "chat_assistant":
         answer = data.get("suggestedContent", "")
     else:

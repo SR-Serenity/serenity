@@ -93,8 +93,8 @@
       "retrieval_context": []
     },
     {
-      "input": "Schedule a 15-minute quick call with Tom today at 5pm",
-      "expected_output": "I'll schedule a 15-minute call with Tom, today at 5:00 PM. Shall I confirm?",
+      "input": "Schedule a 15-minute quick call with Alex today at 5pm",
+      "expected_output": "I'll schedule a 15-minute call with Alex, today at 5:00 PM. Shall I confirm?",
       "retrieval_context": []
     },
     {

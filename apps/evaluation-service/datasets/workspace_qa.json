@@ -67,16 +67,16 @@
     },
     {
       "input": "Show me all team members in the Engineering department",
-      "expected_output": "Here are the members of the Engineering team: Huy (Lead), David (Senior Dev), and Mary (QA).",
+      "expected_output": "Here are the members of the Engineering department: Bob (Software Engineer), David (Senior Dev), Mary (QA), Alex Vance (Project Lead), and John.",
       "retrieval_context": [
-        "The departments directory lists Engineering team members: Huy, David, Mary."
+        "The departments directory lists Engineering team members: Bob (Software Engineer), David (Senior Dev), Mary (QA), Alex Vance (Project Lead), John."
       ]
     },
     {
-      "input": "Are there any emails from client-abc?",
-      "expected_output": "Yes, you received an email from support@client-abc.com yesterday regarding API access.",
+      "input": "Show me the recent DM conversation I have with Alice",
+      "expected_output": "Here is your recent conversation with Alice: Alice asked if you had a chance to look at the new marketing copy for the landing page.",
       "retrieval_context": [
-        "Email from support@client-abc.com: Requesting API token and credential setups."
+        "Direct message from Alice (Marketing): 'Hey! Did you have a chance to look at the new marketing copy for the landing page?'"
       ]
     },
     {
@@ -95,9 +95,9 @@
     },
     {
       "input": "What tasks are assigned to me?",
-      "expected_output": "You have 3 active tasks assigned to you: Implement G-Eval, Fix CORS issues, and Create seed data.",
+      "expected_output": "You have multiple active tasks including: Implement G-Eval, Fix CORS issues, Create seed data, Review Q3 report, Code review for new feature, and more.",
       "retrieval_context": [
-        "Tasks list database contains items assigned to current user, filtering out completed tasks."
+        "Tasks list for current user includes: Implement G-Eval, Fix CORS issues, Create seed data, Review Q3 report, Code review for new feature, Send status report to manager, Update API documentation, and others."
       ]
     },
     {
@@ -108,10 +108,10 @@
       ]
     },
     {
-      "input": "Who sent the email about API design?",
-      "expected_output": "The email about API design was sent by Alex Vance.",
+      "input": "What is Sarah Connor's email address?",
+      "expected_output": "Sarah Connor's email address is sarah.connor@workspace.com.",
       "retrieval_context": [
-        "Email subject: 'Refined API Design Proposals', sender: Alex Vance."
+        "The workspace contacts directory lists Sarah Connor with email sarah.connor@workspace.com, Head of Marketing."
       ]
     },
     {
@@ -137,9 +137,9 @@
     },
     {
       "input": "Give me a summary of tasks due this Friday",
-      "expected_output": "Here is the summary of tasks due this Friday: 1. Deploy Auth service. 2. Finish evaluation report.",
+      "expected_output": "Here are the tasks due this Friday: Implement G-Eval, Fix CORS issues, Create seed data, Review Q3 report, Code review for new feature, and Send status report to manager.",
       "retrieval_context": [
-        "Task database query filtering for tasks with due date matching upcoming Friday."
+        "Task database query for Friday due date returns: Implement G-Eval, Fix CORS issues, Create seed data, Review Q3 report, Code review for new feature, Send status report to manager."
       ]
     }
   ]
