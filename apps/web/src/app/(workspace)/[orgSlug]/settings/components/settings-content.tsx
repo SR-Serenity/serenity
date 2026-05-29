@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuthStore } from '@/stores/auth-store'
 import { MembersTab } from './members-tab'
@@ -149,10 +149,20 @@ function AccountSettings({ user }: { user: User | null }) {
 function EmailSettings() {
   const { token } = useAuthStore(useShallow((s) => ({ token: s.token })))
   const { orgSlug } = useParams<{ orgSlug: string }>()
+  const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState<MailAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'email_mismatch') {
+      setError('You can only connect a Google account matching your Serenity email.')
+    } else if (errorParam === 'connection_failed') {
+      setError('Failed to connect Google account. Please try again.')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (!token) return
