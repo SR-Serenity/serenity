@@ -59,6 +59,20 @@ export class MailService {
     if (!exchanged.email) {
       throw new BadRequestException('Google profile did not return an email address');
     }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: parsed.userId },
+      select: { email: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (exchanged.email.toLowerCase() !== user.email.toLowerCase()) {
+      throw new BadRequestException(
+        `You can only connect a Google account matching your Serenity email (${user.email})`
+      );
+    }
+
     const encryptedRefreshToken = this.tokenService.encrypt(exchanged.refreshToken);
     const account = await this.prisma.mailAccount.upsert({
       where: {
