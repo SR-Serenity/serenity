@@ -285,9 +285,9 @@ export function MessageInput({
                 onClick={() => setAiBarOpen(true)}
                 disabled={disabled || isSending}
                 title="Ask AI (or type /)"
-                className="copilot-sparkle-btn animate-magical-glow"
+                className="copilot-sparkle-btn"
               >
-                <Sparkles className="h-4 w-4 text-violet-600 animate-magical-rotate" />
+                <Sparkles className="h-4 w-4 text-violet-600" />
               </Button>
             </div>
 
