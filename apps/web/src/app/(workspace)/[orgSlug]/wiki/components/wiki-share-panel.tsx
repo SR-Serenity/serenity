@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Globe, Lock, Search, Users, X } from 'lucide-react'
-import type { WikiPage, WikiPageVisibility, WikiSharePermission } from '@serenity/api'
+import type { Member, WikiPage, WikiPageVisibility, WikiSharePermission } from '@serenity/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -36,7 +36,7 @@ const AVATAR_COLORS = [
   'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-indigo-500',
 ]
 
-const EMPTY_MEMBERS = []
+const EMPTY_MEMBERS: Member[] = []
 
 function avatarColor(userId: string) {
   let hash = 0

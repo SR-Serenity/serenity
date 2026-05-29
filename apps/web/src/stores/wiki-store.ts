@@ -119,6 +119,15 @@ type WikiActions = {
     parentId?: string | null,
   ) => Promise<void>
 
+  createSubPage: (
+    token: string,
+    orgSlug: string,
+    visibility: WikiPageVisibility,
+    departmentId: string | null,
+    departmentName: string | null,
+    parentId: string,
+  ) => Promise<WikiPage | null>
+
   toggleFavorite: (token: string) => Promise<void>
 
   deleteSelectedPage: (
@@ -180,26 +189,36 @@ export const useWikiStore = create<WikiState & WikiActions>((set, get) => ({
     if (!selectedPage || !dirty || !selectedPage.canEdit) return
     if (isOptimisticPageId(selectedPage.id)) return
 
+    const pageId = selectedPage.id
+    const draftSnapshot = toWikiPageUpdate(get().draft)
+
     cancelSave()
     const version = _saveVersion + 1
     set({ _saveVersion: version })
 
     const timer = setTimeout(async () => {
-      set({ saving: true, error: null })
+      const shouldUpdateSelected = get().selectedPage?.id === pageId
+      if (shouldUpdateSelected) {
+        set({ saving: true, error: null })
+      }
       try {
-        const currentDraft = get().draft
-        const updated = await wikiApi.updatePage(token, selectedPage.id, toWikiPageUpdate(currentDraft))
+        const updated = await wikiApi.updatePage(token, pageId, draftSnapshot)
         if (get()._saveVersion === version) {
           set(state => ({
-            selectedPage: updated,
             pages: state.pages.map(page => page.id === updated.id ? updated : page),
-            dirty: false,
+            ...(state.selectedPage?.id === updated.id
+              ? { selectedPage: updated, dirty: false }
+              : {}),
           }))
         }
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to save wiki page' })
+        if (get().selectedPage?.id === pageId) {
+          set({ error: err instanceof Error ? err.message : 'Failed to save wiki page' })
+        }
       } finally {
-        if (get()._saveVersion === version) set({ saving: false })
+        if (get()._saveVersion === version && get().selectedPage?.id === pageId) {
+          set({ saving: false })
+        }
       }
     }, AUTOSAVE_DEBOUNCE_MS)
 
@@ -376,6 +395,66 @@ export const useWikiStore = create<WikiState & WikiActions>((set, get) => ({
         const next = pages[0] ?? null
         onNavigate(next ? `/${orgSlug}/wiki/${encodeURIComponent(next.id)}` : `/${orgSlug}/wiki`)
       }
+    } finally {
+      set({ saving: false })
+    }
+  },
+
+  createSubPage: async (token, orgSlug, visibility, departmentId, departmentName, parentId) => {
+    const now = new Date().toISOString()
+    const tempId = `${OPTIMISTIC_PAGE_PREFIX}${crypto.randomUUID()}`
+    const resolvedDeptId = visibility === 'DEPARTMENT' ? departmentId : null
+
+    const optimisticPage: WikiPage = {
+      id: tempId,
+      parentId,
+      createdById: '',
+      title: 'Untitled',
+      icon: null,
+      coverColor: null,
+      contentMarkdown: starterContent,
+      contentJson: fallbackBlocks(starterContent),
+      visibility,
+      departmentId: resolvedDeptId,
+      departmentName: visibility === 'DEPARTMENT' ? departmentName : null,
+      favorite: false,
+      canEdit: true,
+      shares: [],
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    set(state => ({
+      _pageStateVersion: state._pageStateVersion + 1,
+      pages: [optimisticPage, ...state.pages],
+      error: null,
+      saving: true,
+    }))
+
+    try {
+      const page = await wikiApi.createPage(token, {
+        title: 'Untitled',
+        icon: null,
+        contentMarkdown: starterContent,
+        contentJson: fallbackBlocks(starterContent),
+        parentId,
+        visibility,
+        departmentId: resolvedDeptId,
+      })
+
+      set(state => ({
+        _pageStateVersion: state._pageStateVersion + 1,
+        pages: state.pages.map(candidate => candidate.id === tempId ? page : candidate),
+      }))
+
+      return page
+    } catch (err) {
+      set(state => ({
+        _pageStateVersion: state._pageStateVersion + 1,
+        pages: state.pages.filter(page => page.id !== tempId),
+        error: err instanceof Error ? err.message : 'Failed to create wiki page',
+      }))
+      return null
     } finally {
       set({ saving: false })
     }

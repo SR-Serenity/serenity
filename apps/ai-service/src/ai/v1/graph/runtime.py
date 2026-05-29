@@ -37,9 +37,7 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
         session_id=payload.session_id,
         thread_id=thread_id,
         entrypoint=payload.context.entrypoint,
-        file_ids=payload.context.file_ids,
         conversation_id=payload.context.conversation_id,
-        wiki_page_id=payload.context.wiki_page_id,
         meeting_id=payload.context.meeting_id,
     )
     thread_config = {"configurable": {"thread_id": thread_id}}
@@ -127,7 +125,6 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
     return ChatResponse(
         answer=final_state.get("answer", _fallback_answer()),
         thread_id=thread_id,
-        sources=final_state.get("sources", []),
         proposed_actions=final_state.get("proposed_actions", []),
         trace_id=trace_id,
     )
@@ -146,7 +143,7 @@ def _extract_interrupt_question(state) -> str:
 
 
 def _fallback_answer() -> str:
-    return "Serenity AI is connected. Send a workspace question or attach a file to begin."
+    return "Serenity AI is connected. Send a workspace question to begin."
 
 
 def _latest_user_message(payload: ChatRequest) -> str:

@@ -6,9 +6,7 @@ import { aiApi, calendarApi, wikiApi } from '@serenity/api'
 import type { AiProposedAction, AiSessionMessage } from '@serenity/api'
 import {
   Bot,
-  CalendarClock,
   CheckCircle2,
-  FileText,
   MessageSquare,
   PanelRightClose,
   Plus,
@@ -28,7 +26,6 @@ import { DeleteConversationDialog } from './delete-conversation-dialog'
 const suggestions = [
   { label: "What's new in my workspace?", icon: Sparkles },
   { label: 'Write meeting agenda', icon: MessageSquare },
-  { label: 'Analyze PDFs or images', icon: FileText },
   { label: 'Create a task tracker', icon: CheckCircle2 },
 ]
 

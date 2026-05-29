@@ -19,7 +19,6 @@ Available intents (pick ALL that apply, or just one):
 - WORKSPACE_QA     : general questions, search, summaries, "what is...", "find...", "who..."
 - SCHEDULE_AGENT   : creating tasks, to-dos, events, meetings, calls, appointments, or room bookings in any language
 - GREETING         : greetings, small talk, "hi", "hello", "how are you", chitchat
-- DOCUMENT_UNDERSTANDING: questions about an attached file or document
 
 Rules:
 - Detect intent from meaning, NOT English keywords — work for any language.
@@ -33,14 +32,6 @@ Latest user message: {message}
 
 def classify_intent(state: PipelineState) -> IntentClassification:
     text = _latest_user_text(state)
-    context = state.get("context", {})
-
-    # Files always trigger document understanding
-    if context.get("fileIds") or context.get("file_ids"):
-        return IntentClassification(
-            intent=[IntentDomain(domain=Domain.DOCUMENT_UNDERSTANDING, confidence=0.95)],
-            language="English",
-        )
 
     if not settings.OPENAI_API_KEY:
         return _heuristic_classification(text)
@@ -64,7 +55,6 @@ def classify_intent(state: PipelineState) -> IntentClassification:
         "SCHEDULE_AGENT": Domain.SCHEDULE_AGENT,
         "TASK_CREATOR": Domain.SCHEDULE_AGENT,
         "MEETING_SCHEDULER": Domain.SCHEDULE_AGENT,
-        "DOCUMENT_UNDERSTANDING": Domain.DOCUMENT_UNDERSTANDING,
         "GREETING": None,  # handled in synthesizer directly
     }
 

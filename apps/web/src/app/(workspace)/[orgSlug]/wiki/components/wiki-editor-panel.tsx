@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Plus,
   Share2,
-  Sparkles,
   Star,
   Trash2,
   Users,
@@ -64,10 +63,12 @@ export function WikiEditorPanel() {
     saving,
     dirty,
     error,
+    pages,
     updateDraft,
     toggleFavorite,
     deleteSelectedPage,
     createPage,
+    createSubPage,
     scheduleSave,
   } = useWikiStore(
     useShallow(state => ({
@@ -77,10 +78,12 @@ export function WikiEditorPanel() {
       saving: state.saving,
       dirty: state.dirty,
       error: state.error,
+      pages: state.pages,
       updateDraft: state.updateDraft,
       toggleFavorite: state.toggleFavorite,
       deleteSelectedPage: state.deleteSelectedPage,
       createPage: state.createPage,
+      createSubPage: state.createSubPage,
       scheduleSave: state.scheduleSave,
     })),
   )
@@ -106,6 +109,33 @@ export function WikiEditorPanel() {
     const dept = departments[0]
     createPage(token, params.orgSlug, visibility, dept?.id ?? null, dept?.name ?? null, path => router.push(path))
   }
+
+  const handleCreateSubPage = useCallback(async () => {
+    if (!token || !selectedPage) return null
+    const visibility = selectedPage.visibility
+    const deptId = visibility === 'DEPARTMENT'
+      ? selectedPage.departmentId ?? departments[0]?.id ?? null
+      : null
+    const deptName = visibility === 'DEPARTMENT'
+      ? selectedPage.departmentName ?? departments[0]?.name ?? null
+      : null
+
+    const page = await createSubPage(
+      token,
+      params.orgSlug,
+      visibility,
+      deptId,
+      deptName,
+      selectedPage.id,
+    )
+    if (!page) return null
+
+    return {
+      id: page.id,
+      title: page.title || 'Untitled',
+      url: `/${params.orgSlug}/wiki/${encodeURIComponent(page.id)}`,
+    }
+  }, [token, selectedPage, departments, createSubPage, params.orgSlug])
 
   const coverColor = selectedPage?.coverColor ?? null
 
@@ -175,15 +205,6 @@ export function WikiEditorPanel() {
           )}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => useWorkspaceStore.getState().requestOpenAiPanel()}
-            title="Ask AI about this page"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-[#9b9a97] hover:bg-[#f1f1ef]"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Ask AI</span>
-          </button>
           <button
             type="button"
             onClick={() => setSharePanelOpen(open => !open)}
@@ -329,7 +350,12 @@ export function WikiEditorPanel() {
             markdownFallback={draft.contentMarkdown}
             editable={selectedPage.canEdit}
             onChange={(contentJson, contentMarkdown) => updateDraft({ contentJson, contentMarkdown })}
+            onCreateSubPage={handleCreateSubPage}
+            pages={pages
+              .filter(p => p.id !== selectedPage.id)
+              .map(p => ({ id: p.id, title: p.title, url: `/${params.orgSlug}/wiki/${encodeURIComponent(p.id)}` }))}
           />
+
         </article>
       </div>
 

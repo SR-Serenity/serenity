@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import NotRequired, Required
 
 from src.ai.v1.contexts.schemas.enums import Domain
-from src.api.internal.v1.schemas import ProposedAction, Source
+from src.api.internal.v1.schemas import ProposedAction
 
 
 class InputGuardrail(BaseModel):
@@ -32,7 +32,6 @@ class IntentClassification(BaseModel):
 class DomainAgentResponse(BaseModel):
     domain: Domain
     text: str | None = None
-    sources: list[Source] = Field(default_factory=list)
     proposed_actions: list[ProposedAction] = Field(default_factory=list)
     error: str | None = None
 
@@ -48,10 +47,6 @@ def _merge_domain_responses(
             return []
         return list(existing or []) + new
     return list(existing or []) + [new]
-
-
-def _merge_sources(existing: list[Source] | None, new: list[Source] | None) -> list[Source]:
-    return list(existing or []) + list(new or [])
 
 
 def _merge_actions(
@@ -84,7 +79,6 @@ class PipelineState(TypedDict):
     memories: NotRequired[list[str]]
     answer: NotRequired[str]
 
-    sources: NotRequired[Annotated[list[Source], _merge_sources]]
     proposed_actions: NotRequired[Annotated[list[ProposedAction], _merge_actions]]
     domain_agent_response: NotRequired[
         Annotated[list[DomainAgentResponse], _merge_domain_responses]

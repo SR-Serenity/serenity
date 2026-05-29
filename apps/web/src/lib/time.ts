@@ -32,7 +32,7 @@ export function toUnix(
   const parts = normalised.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/)
   if (!parts) return null
 
-  const [, Y, M, D, h, m, s = '0'] = parts
+  const [, Y, M, D, h, m] = parts
   return localToUnix(
     `${Y}-${M}-${D}`,
     `${h}:${m}`,

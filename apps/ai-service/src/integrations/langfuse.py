@@ -53,9 +53,7 @@ def trace_metadata(
     thread_id: str | None,
     entrypoint: str | None,
     agent: str | None = None,
-    file_ids: list[str] | None = None,
     conversation_id: str | None = None,
-    wiki_page_id: str | None = None,
     meeting_id: str | None = None,
 ) -> dict[str, Any]:
     return {
@@ -65,9 +63,7 @@ def trace_metadata(
         "threadId": thread_id,
         "entrypoint": entrypoint,
         "agent": agent,
-        "fileIds": file_ids or [],
         "conversationId": conversation_id,
-        "wikiPageId": wiki_page_id,
         "meetingId": meeting_id,
     }
 

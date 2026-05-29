@@ -1,13 +1,11 @@
 """Sub-agent registry for graph orchestration and standalone access."""
 
-from src.ai.v1.agents.document_understanding import document_agent
 from src.ai.v1.agents.memory_writer import memory_writer_agent
 from src.ai.v1.agents.schedule_agent import schedule_agent
 from src.ai.v1.agents.types import StandaloneAgent
 from src.api.internal.v1.schemas import ChatMessage, ProposedAction
 
 AGENTS: dict[str, StandaloneAgent] = {
-    document_agent.name: document_agent,
     schedule_agent.name: schedule_agent,
     memory_writer_agent.name: memory_writer_agent,
 }

@@ -24,26 +24,7 @@ def input_guardrail_node(state: PipelineState) -> dict:
 
 
 def context_loader_node(state: PipelineState) -> dict:
-    """Enrich context with fetched workspace content (e.g. wiki page text)."""
-    context = state.get("context", {})
-    auth_token = state.get("auth_token")
-    enriched: dict = {}
-
-    wiki_page_id = context.get("wikiPageId") or context.get("wiki_page_id")
-    if wiki_page_id and auth_token:
-        from src.services.workspace_service import get_wiki_page
-        from langchain_core.messages import SystemMessage
-
-        page = get_wiki_page(auth_token, wiki_page_id)
-        if page:
-            title = page.get("title", "")
-            content = page.get("contentMarkdown") or ""
-            system_msg = SystemMessage(
-                content=f"[Context — Wiki page: {title}]\n\n{content[:6000]}"
-            )
-            enriched["messages"] = [system_msg]
-
-    return {"context": context, **enriched}
+    return {"context": state.get("context", {})}
 
 
 def memory_retriever_node(state: PipelineState) -> dict:
