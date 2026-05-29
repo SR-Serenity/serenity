@@ -1,4 +1,4 @@
-import { ChatConversationType, WorkspaceRole, OfficeRoomType, WikiPageVisibility, Prisma } from '@prisma/client';
+import { ChatConversationType, WorkspaceRole, WikiPageVisibility, Prisma } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 export async function seedOrganizationData(
@@ -159,17 +159,66 @@ This is your central hub for collaboration. Serenity brings together:
 Type \`/\` in any chat box or right here in the wiki editor to summon your AI assistant.
 It can read the context of what you're working on and suggest edits, translations, or next steps!
 `,
-    },
-  });
-
-  // 8. Create Office Room
-  await tx.officeRoom.create({
-    data: {
-      orgId,
-      createdById: creatorUser.id,
-      name: 'Watercooler',
-      type: OfficeRoomType.SOCIAL,
-      icon: 'coffee',
+      contentJson: [
+        {
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Welcome to Serenity Workspace!', styles: {} }]
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'This is your central hub for collaboration. Serenity brings together:', styles: {} }]
+        },
+        {
+          type: 'bulletListItem',
+          content: [
+            { type: 'text', text: 'Chat: ', styles: { bold: true } },
+            { type: 'text', text: 'Talk to your team in channels or direct messages.', styles: {} }
+          ]
+        },
+        {
+          type: 'bulletListItem',
+          content: [
+            { type: 'text', text: 'Wiki: ', styles: { bold: true } },
+            { type: 'text', text: 'Document your processes and notes.', styles: {} }
+          ]
+        },
+        {
+          type: 'bulletListItem',
+          content: [
+            { type: 'text', text: 'Calendar: ', styles: { bold: true } },
+            { type: 'text', text: 'Schedule events and sync with Google Calendar.', styles: {} }
+          ]
+        },
+        {
+          type: 'bulletListItem',
+          content: [
+            { type: 'text', text: 'Office: ', styles: { bold: true } },
+            { type: 'text', text: 'Jump into a virtual room for audio/video huddles.', styles: {} }
+          ]
+        },
+        {
+          type: 'paragraph',
+          content: []
+        },
+        {
+          type: 'heading',
+          props: { level: 3 },
+          content: [{ type: 'text', text: 'Try out the Serenity AI Assistant ✨', styles: {} }]
+        },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Type ', styles: {} },
+            { type: 'text', text: '/', styles: { code: true } },
+            { type: 'text', text: ' in any chat box or right here in the wiki editor to summon your AI assistant.', styles: {} }
+          ]
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: "It can read the context of what you're working on and suggest edits, translations, or next steps!", styles: {} }]
+        }
+      ] as Prisma.InputJsonValue,
     },
   });
 }

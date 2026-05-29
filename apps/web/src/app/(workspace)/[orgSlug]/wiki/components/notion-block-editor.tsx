@@ -78,6 +78,14 @@ export function fallbackBlocks(markdown: string): WikiBlockContent {
     const t = line.trim()
     if (t.startsWith('- [x]') || t.startsWith('- [ ]'))
       return { type: 'checkListItem', props: { checked: t.startsWith('- [x]') }, content: t.replace(/^- \[[ x]\]\s*/, '') }
+    if (t.startsWith('- ') || t.startsWith('* ')) {
+      const cleanContent = t.replace(/^[-*]\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1')
+      return { type: 'bulletListItem', content: cleanContent }
+    }
+    if (t.startsWith('### '))
+      return { type: 'heading', props: { level: 3 }, content: t.replace(/^###\s*/, '') }
+    if (t.startsWith('## '))
+      return { type: 'heading', props: { level: 2 }, content: t.replace(/^##\s*/, '') }
     if (t.startsWith('# '))
       return { type: 'heading', props: { level: 1 }, content: t.replace(/^#\s*/, '') }
     if (t.startsWith('> '))
