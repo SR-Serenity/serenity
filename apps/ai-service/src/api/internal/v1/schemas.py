@@ -81,3 +81,73 @@ class ExecuteActionRequest(CamelModel):
 class ExecuteActionResponse(CamelModel):
     status: Literal["not_implemented"] = "not_implemented"
     message: str
+
+
+class FileIndexFile(CamelModel):
+    file_id: str
+    title: str
+
+
+class FileIndexRequest(CamelModel):
+    auth_context: AuthContext
+    file: FileIndexFile
+    pages: list[str]
+
+
+class FileIndexResponse(CamelModel):
+    chunks_indexed: int
+
+
+class FileAskRequest(CamelModel):
+    auth_context: AuthContext
+    file_ids: list[str]
+    question: str
+
+
+class FileSource(CamelModel):
+    file_id: str
+    page: int
+    snippet: str
+    score: float
+
+
+class FileAskResponse(CamelModel):
+    answer: str
+    sources: list[FileSource]
+
+
+class WikiIndexRequest(CamelModel):
+    org_id: str
+    page_id: str
+    title: str
+    content_markdown: str | None = None
+    content_json: list[dict] | None = None
+    metadata: dict | None = None
+
+
+class WikiIndexResponse(CamelModel):
+    chunks_indexed: int
+
+
+class WikiDeleteRequest(CamelModel):
+    org_id: str
+    page_id: str
+
+
+class WikiSearchRequest(CamelModel):
+    org_id: str
+    query: str
+    limit: int = 5
+
+
+class WikiSearchResult(CamelModel):
+    page_id: str
+    chunk_id: str
+    title: str | None = None
+    heading_path: list[str] | None = None
+    snippet: str
+    score: float
+
+
+class WikiSearchResponse(CamelModel):
+    results: list[WikiSearchResult]
