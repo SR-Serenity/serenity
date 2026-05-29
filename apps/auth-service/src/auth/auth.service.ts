@@ -9,6 +9,7 @@ import { WorkspaceRole } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtPayload, type SignOptions, sign, verify } from 'jsonwebtoken';
 import { PrismaService } from '../database/prisma.service';
+import { seedOrganizationData } from './auth.seed';
 
 type RegisterInput = {
   email: string;
@@ -85,6 +86,8 @@ export class AuthService {
           role: WorkspaceRole.OWNER,
         },
       });
+
+      await seedOrganizationData(tx, organization.id, organization.slug, user);
 
       return { user, organization };
     });
@@ -229,23 +232,31 @@ export class AuthService {
       throw new BadRequestException('Organization slug is already in use');
     }
 
-    const organization = await this.prisma.organization.create({
-      data: {
-        name: input.name.trim(),
-        slug: input.slug.toLowerCase(),
-      },
+    const created = await this.prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name: input.name.trim(),
+          slug: input.slug.toLowerCase(),
+        },
+      });
+
+      const member = await tx.workspaceMember.create({
+        data: {
+          orgId: organization.id,
+          userId,
+          role: WorkspaceRole.OWNER,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      await seedOrganizationData(tx, organization.id, organization.slug, member.user);
+
+      return { organization, member };
     });
 
-    const member = await this.prisma.workspaceMember.create({
-      data: {
-        orgId: organization.id,
-        userId,
-        role: WorkspaceRole.OWNER,
-      },
-      include: {
-        user: true,
-      },
-    });
+    const { organization, member } = created;
 
     return this.authResponse(
       member.user.id,

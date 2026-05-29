@@ -171,3 +171,20 @@ class WikiEditorResponse(CamelModel):
     answer: str
     updated_content_markdown: str
     proposed_action: ProposedAction | None = None
+# ── Chat Assistant (inline AI in messages) ─────────────────────────────────
+
+class ChatAssistMessage(CamelModel):
+    role: str
+    content: str
+
+
+class ChatAssistRequest(CamelModel):
+    """Request for the /ai/chat/assist endpoint."""
+    auth_context: AuthContext
+    conversation_context: list[ChatAssistMessage]
+    prompt: str
+
+
+class ChatAssistResponse(CamelModel):
+    """Response from the /ai/chat/assist endpoint."""
+    suggested_content: str

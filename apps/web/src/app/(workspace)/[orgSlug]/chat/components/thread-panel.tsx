@@ -320,6 +320,10 @@ export function ThreadPanel({
         onSend={handleSendReply}
         onUploadFile={onUploadFile}
         placeholder="Reply in thread"
+        conversationContext={[parent, ...replies].slice(-10).map((m) => ({
+          role: m.author.displayName,
+          content: m.content || '(Attachment)',
+        }))}
       />
     </div>
   )

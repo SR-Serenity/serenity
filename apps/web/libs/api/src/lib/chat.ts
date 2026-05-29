@@ -18,9 +18,17 @@ import type {
   ListConversationAssetsResponse,
   ListConversationsResponse,
   ListMessagesResponse,
+  ChatAiRequest,
+  ChatAiResponse,
 } from '../types/chat'
 
 export const chatApi = {
+  assistWithAi: async (token: string, input: ChatAiRequest): Promise<ChatAiResponse> => {
+    return api.post('ai/chat/assist', {
+      token,
+      body: input,
+    })
+  },
   listConversations: async (
     token: string,
     page?: ListPage,

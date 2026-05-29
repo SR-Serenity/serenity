@@ -79,6 +79,9 @@ export type {
   ListPage,
   RealtimeEventTarget,
   ChatRealtimeEvent,
+  ChatAssistMessage,
+  ChatAiRequest,
+  ChatAiResponse,
 } from './types/chat'
 export type {
   AiAuthContext,
