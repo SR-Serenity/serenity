@@ -89,7 +89,7 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
             retrieval_context=case.get("retrieval_context") or None,
         )
 
-        metrics = build_metrics(metric_names)
+        metrics = build_metrics(metric_names, feature=run.feature)
 
         try:
             loop = asyncio.get_event_loop()
