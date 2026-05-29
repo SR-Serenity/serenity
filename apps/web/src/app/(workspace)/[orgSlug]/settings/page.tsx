@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { X } from 'lucide-react'
 import { SettingsSidebar, SettingsTab } from './components/settings-sidebar'
 import { SettingsContent } from './components/settings-content'
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get('tab') as SettingsTab) ?? 'account'
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const router = useRouter()
 

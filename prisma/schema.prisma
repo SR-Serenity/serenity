@@ -204,6 +204,8 @@ model CalendarItem {
   allDay              Boolean             @default(false)
   taskStatus          CalendarTaskStatus?
   dueDate             DateTime?
+  googleEventId       String?
+  googleAccountId     String?
   deletedAt           DateTime?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -220,6 +222,7 @@ model CalendarItem {
   @@index([createdById])
   @@index([deletedAt])
   @@index([roomId])
+  @@index([createdById, googleEventId])
 }
 
 model CalendarAttendee {

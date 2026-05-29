@@ -53,18 +53,19 @@ export default function RegisterPage() {
 
   const handleSuccess = (slug: string) => {
     const notification = sessionStorage.getItem('invite_notification')
-    const nextPath = notification
-      ? `/${slug}?notification=${encodeURIComponent(notification)}`
-      : `/${slug}`
 
     if (notification) {
       sessionStorage.removeItem('invite_notification')
     }
 
     if (isInviteFlow) {
+      const nextPath = notification
+        ? `/${slug}?notification=${encodeURIComponent(notification)}`
+        : `/${slug}`
       window.location.assign(nextPath)
     } else {
-      router.push(nextPath)
+      // New org creators go to email settings to connect their Google account
+      router.push(`/${slug}/settings?tab=email`)
     }
   }
 
