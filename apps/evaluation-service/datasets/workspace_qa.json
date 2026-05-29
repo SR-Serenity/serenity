@@ -1,0 +1,41 @@
+{
+  "name": "Workspace QA — General",
+  "feature": "workspace_qa",
+  "cases": [
+    {
+      "input": "Who are my contacts in the workspace?",
+      "expected_output": "Here are the contacts in your workspace. [List of contacts from the workspace directory]",
+      "retrieval_context": [
+        "The workspace has a contacts directory with team members and external collaborators."
+      ]
+    },
+    {
+      "input": "What meetings do I have this week?",
+      "expected_output": "You have the following meetings this week. [Calendar events listed by date and time]",
+      "retrieval_context": [
+        "Calendar contains scheduled meetings, events, and tasks for the current week."
+      ]
+    },
+    {
+      "input": "Search for wiki pages about onboarding",
+      "expected_output": "I found the following wiki pages related to onboarding. [List of matching wiki pages with titles and summaries]",
+      "retrieval_context": [
+        "The wiki contains documentation pages organized by topic including onboarding guides."
+      ]
+    },
+    {
+      "input": "Show me recent messages from the general channel",
+      "expected_output": "Here are the recent messages from the general conversation. [List of recent messages with sender and content]",
+      "retrieval_context": [
+        "The workspace has chat conversations including a general channel for team-wide communication."
+      ]
+    },
+    {
+      "input": "Find emails about the project deadline",
+      "expected_output": "I found the following email threads mentioning project deadline. [Email threads with subject and snippet]",
+      "retrieval_context": [
+        "Mail threads are searchable by keyword across all connected mail accounts."
+      ]
+    }
+  ]
+}

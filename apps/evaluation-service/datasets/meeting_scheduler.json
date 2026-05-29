@@ -1,0 +1,31 @@
+{
+  "name": "Meeting Scheduler — Extraction",
+  "feature": "meeting_scheduler",
+  "cases": [
+    {
+      "input": "Schedule a meeting with Sarah tomorrow at 2pm for 1 hour",
+      "expected_output": "I'll schedule: Meeting with Sarah, tomorrow at 2:00 PM for 1 hour. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book a room for the design review on Friday afternoon",
+      "expected_output": "I'll book a room for: Design review, Friday afternoon. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set up a weekly standup every Monday at 9am with the whole team",
+      "expected_output": "I'll schedule: Weekly standup, every Monday at 9:00 AM, recurring. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Arrange a call with the client next Tuesday at 10am",
+      "expected_output": "I'll schedule: Call with client, next Tuesday at 10:00 AM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "I want to meet with John and Mary for a sprint planning session next week",
+      "expected_output": "I'll schedule: Sprint planning session with John and Mary, next week. Could you confirm the exact date and time?",
+      "retrieval_context": []
+    }
+  ]
+}

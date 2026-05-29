@@ -1,0 +1,29 @@
+{
+  "name": "evaluation-service",
+  "projectType": "application",
+  "sourceRoot": "apps/evaluation-service/src",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "apps/evaluation-service",
+        "command": "poetry run uvicorn src.main:app --host 0.0.0.0 --port 8002 --reload"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/evaluation-service",
+        "command": "poetry run pytest"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/evaluation-service",
+        "command": "poetry run ruff check src/ tests/"
+      }
+    }
+  }
+}

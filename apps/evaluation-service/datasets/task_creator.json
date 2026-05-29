@@ -1,0 +1,31 @@
+{
+  "name": "Task Creator — Extraction",
+  "feature": "task_creator",
+  "cases": [
+    {
+      "input": "Create a task to review the Q3 report by Friday",
+      "expected_output": "I'll create a task: Title: Review Q3 report, Due: this Friday. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a task for John to fix the login bug, high priority",
+      "expected_output": "I'll create a task: Title: Fix login bug, Assignee: John, Priority: high. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Remind me to send the invoice to the client next Monday",
+      "expected_output": "I'll create a task: Title: Send invoice to client, Due: next Monday. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "I need to update the API documentation",
+      "expected_output": "I'll create a task: Title: Update API documentation. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a code review for the new feature with the team by end of week",
+      "expected_output": "I'll create a task: Title: Code review for new feature, Due: end of this week. Shall I confirm?",
+      "retrieval_context": []
+    }
+  ]
+}
