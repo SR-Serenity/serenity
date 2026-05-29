@@ -27,9 +27,10 @@ WIKI:
   get_wiki_page_tool(page_id)     — read a specific wiki page in full
 
 CHAT:
-  list_conversations_tool()                   — see all channels and DMs
-  search_all_messages_tool(query)             — search messages across all conversations
-  search_messages_tool(conversation_id, query)— search within a specific conversation
+  list_conversations_tool()                        — see all channels and DMs with member names
+  search_all_messages_tool(query)                  — search messages across all conversations by content keyword
+  search_messages_tool(conversation_id, query)     — search within a specific conversation by content keyword
+  get_messages_from_person_tool(person_name)       — find messages sent BY a specific person (partial name match, e.g. "Alice")
 
 CONTACTS:
   list_contacts_tool()           — browse the full contact directory

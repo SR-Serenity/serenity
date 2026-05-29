@@ -298,8 +298,11 @@ export class CalendarService {
   }
 
   private buildRangeFilter(from?: string, to?: string): Prisma.CalendarItemWhereInput | null {
-    const fromDate = from ? new Date(from) : null;
-    const toDate = to ? new Date(to) : null;
+    const parsedFrom = from ? new Date(from) : null;
+    const parsedTo = to ? new Date(to) : null;
+
+    const fromDate = parsedFrom && !isNaN(parsedFrom.getTime()) ? parsedFrom : null;
+    const toDate = parsedTo && !isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     if (!fromDate && !toDate) {
       return null;
