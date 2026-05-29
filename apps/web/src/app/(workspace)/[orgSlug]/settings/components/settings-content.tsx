@@ -93,7 +93,7 @@ export function SettingsContent({ activeTab }: SettingsContentProps) {
           <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
             <AppWindow className="w-8 h-8 text-gray-300" />
           </div>
-          <h2 className="text-lg font-medium text-gray-600 capitalize">{activeTab.replace('-', ' ')}</h2>
+          <h2 className="text-lg font-medium text-gray-600 capitalize">{(activeTab as string).replace('-', ' ')}</h2>
           <p className="text-sm">This section is currently under development.</p>
         </div>
       )

@@ -7,8 +7,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Bot,
   CalendarDays,
-  Command,
-  HelpCircle,
   Home,
   LogOut,
   Maximize2,
@@ -355,15 +353,6 @@ export function WorkspaceRail({
           'border-t border-nav-divider',
         )}
       >
-        <ShellIconActionButton
-          title="Customize"
-          icon={Settings}
-        />
-
-        <ShellIconActionButton
-          title="Help & Support"
-          icon={HelpCircle}
-        />
 
         <AccountPopover
           orgSlug={orgSlug}
@@ -654,10 +643,7 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
           />
         </div>
 
-        <div className="flex w-full flex-col items-center gap-1 px-2 pb-5">
-          <ShellDivider className="mb-2 w-8" />
-          <ShellIconActionButton title="Command menu" icon={Command} />
-        </div>
+
       </aside>
     </>
   )
