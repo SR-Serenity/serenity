@@ -486,3 +486,77 @@ body {
   --lk-accent3:                 #4a88e8;
   --lk-accent4:                 #5f9bf0;
 }
+
+/* ─── Copilot Sparkle animations ──────────────────────────────── */
+@keyframes magical-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.6)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 1)) drop-shadow(0 0 16px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 24px rgba(236, 72, 153, 0.6));
+  }
+}
+
+@keyframes magical-rotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.15);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes rainbow-border {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-magical-glow {
+  animation: magical-glow 2s ease-in-out infinite;
+}
+
+.animate-magical-rotate {
+  animation: magical-rotate 6s linear infinite;
+}
+
+.copilot-sparkle-btn {
+  position: relative;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.copilot-sparkle-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899, #3b82f6, #8b5cf6);
+  background-size: 300% 300%;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: rainbow-border 4s ease infinite;
+}
+
+.copilot-sparkle-btn:hover {
+  background: transparent;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4), 0 0 25px rgba(236, 72, 153, 0.2);
+  transform: translateY(-1px);
+}
+
+.copilot-sparkle-btn:hover::before {
+  opacity: 0.2;
+}
+
+.copilot-sparkle-btn:active {
+  transform: translateY(0);
+}
+
