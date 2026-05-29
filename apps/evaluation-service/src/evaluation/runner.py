@@ -73,6 +73,8 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
             actual_output, latency_ms = await call_ai_chat(
                 user_input=case["input"],
                 auth_context=auth_context,
+                feature=run.feature,
+                case=case,
                 session_id=f"eval-{run_id}-{i}",
             )
         except Exception as e:
@@ -109,6 +111,15 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
         if case_passed:
             passed_cases += 1
 
+        # Populate case metadata for display
+        metadata_dict = {}
+        if "page_title" in case:
+            metadata_dict["page_title"] = case["page_title"]
+        if "page_content_markdown" in case:
+            metadata_dict["page_content_markdown"] = case["page_content_markdown"]
+        if "conversation_context" in case:
+            metadata_dict["conversation_context"] = case["conversation_context"]
+
         # Write results for this case immediately
         async with async_session() as session:
             if metric_data_list:
@@ -125,6 +136,7 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
                         score=md.score,
                         passed=1 if md.success else 0,
                         reason=md.reason,
+                        case_metadata=metadata_dict if metadata_dict else None,
                     ))
             else:
                 # Record failure row so the case appears in results
@@ -140,6 +152,7 @@ async def _run(run_id: str, auth_context: AuthContextInput) -> None:
                     score=0.0,
                     passed=0,
                     reason=ai_error or "Evaluation failed",
+                    case_metadata=metadata_dict if metadata_dict else None,
                 ))
 
             run = await session.get(RunRow, run_id)

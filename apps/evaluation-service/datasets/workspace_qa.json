@@ -1,5 +1,5 @@
 {
-  "name": "Workspace QA — General",
+  "name": "Workspace QA — 20 Cases",
   "feature": "workspace_qa",
   "cases": [
     {
@@ -35,6 +35,111 @@
       "expected_output": "I found the following email threads mentioning project deadline. [Email threads with subject and snippet]",
       "retrieval_context": [
         "Mail threads are searchable by keyword across all connected mail accounts."
+      ]
+    },
+    {
+      "input": "Who is the owner of serenity project?",
+      "expected_output": "The owner of the serenity project is listed as Alex Vance in the project settings.",
+      "retrieval_context": [
+        "Project settings and workspace configuration identify Alex Vance as the lead owner of Serenity."
+      ]
+    },
+    {
+      "input": "What is the email address of David?",
+      "expected_output": "David's email address is david.miller@workspace.com.",
+      "retrieval_context": [
+        "The workspace user directory lists David Miller with email david.miller@workspace.com."
+      ]
+    },
+    {
+      "input": "Find any messages mentioning key results",
+      "expected_output": "Here are the messages mentioning key results: [List of chat history snippets containing 'key results']",
+      "retrieval_context": [
+        "Chat history indexes search queries for key phrases like 'key results' or 'OKRs'."
+      ]
+    },
+    {
+      "input": "Summarize the latest meeting about sprint planning",
+      "expected_output": "In the latest sprint planning meeting, the team agreed to focus on the evaluation module and set the release date to Friday.",
+      "retrieval_context": [
+        "Meeting transcript: Discussed evaluation module, assigned task to Huy, target deadline set to Friday."
+      ]
+    },
+    {
+      "input": "Show me all team members in the Engineering department",
+      "expected_output": "Here are the members of the Engineering team: Huy (Lead), David (Senior Dev), and Mary (QA).",
+      "retrieval_context": [
+        "The departments directory lists Engineering team members: Huy, David, Mary."
+      ]
+    },
+    {
+      "input": "Are there any emails from client-abc?",
+      "expected_output": "Yes, you received an email from support@client-abc.com yesterday regarding API access.",
+      "retrieval_context": [
+        "Email from support@client-abc.com: Requesting API token and credential setups."
+      ]
+    },
+    {
+      "input": "Search the wiki for code guidelines",
+      "expected_output": "I found a wiki page titled 'Code Styling and Linting Guidelines' last updated by David.",
+      "retrieval_context": [
+        "Wiki document: Code Styling Guidelines including eslint and prettier configurations."
+      ]
+    },
+    {
+      "input": "Who is in charge of marketing?",
+      "expected_output": "Sarah Connor is the head of the Marketing department.",
+      "retrieval_context": [
+        "Department list: Marketing is led by Sarah Connor."
+      ]
+    },
+    {
+      "input": "What tasks are assigned to me?",
+      "expected_output": "You have 3 active tasks assigned to you: Implement G-Eval, Fix CORS issues, and Create seed data.",
+      "retrieval_context": [
+        "Tasks list database contains items assigned to current user, filtering out completed tasks."
+      ]
+    },
+    {
+      "input": "Find any files related to Q3 budget",
+      "expected_output": "I found the file 'Q3_Budget_Draft.pdf' in the shared document drive.",
+      "retrieval_context": [
+        "File manager database indexes files by tags and titles including 'Q3', 'budget'."
+      ]
+    },
+    {
+      "input": "Who sent the email about API design?",
+      "expected_output": "The email about API design was sent by Alex Vance.",
+      "retrieval_context": [
+        "Email subject: 'Refined API Design Proposals', sender: Alex Vance."
+      ]
+    },
+    {
+      "input": "Show me recent chat history with Sarah",
+      "expected_output": "Here is your recent chat with Sarah: [Chat messages where Sarah asks about meeting time and you reply 2 PM]",
+      "retrieval_context": [
+        "Direct message channel history between current user and Sarah Connor."
+      ]
+    },
+    {
+      "input": "Find a wiki page about security policy",
+      "expected_output": "I found the wiki page 'Workspace Security Policy and Best Practices' under Guidelines.",
+      "retrieval_context": [
+        "Wiki directory contains a category for Policies containing Security Policy page."
+      ]
+    },
+    {
+      "input": "What is the phone number of John Doe?",
+      "expected_output": "John Doe's phone number is +1-555-0199.",
+      "retrieval_context": [
+        "Contact card for John Doe shows phone number as +1-555-0199."
+      ]
+    },
+    {
+      "input": "Give me a summary of tasks due this Friday",
+      "expected_output": "Here is the summary of tasks due this Friday: 1. Deploy Auth service. 2. Finish evaluation report.",
+      "retrieval_context": [
+        "Task database query filtering for tasks with due date matching upcoming Friday."
       ]
     }
   ]

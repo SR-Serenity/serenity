@@ -11,6 +11,8 @@ const FEATURE_LABELS: Record<string, string> = {
   task_creator: 'Task Creator',
   meeting_scheduler: 'Meeting Scheduler',
   document_understanding: 'Document Understanding',
+  wiki_editor: 'Wiki Editor',
+  chat_assistant: 'Chat Assistant',
 }
 
 export default function DatasetsPage() {

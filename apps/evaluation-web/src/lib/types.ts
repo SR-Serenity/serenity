@@ -1,4 +1,4 @@
-export type Feature = 'workspace_qa' | 'task_creator' | 'meeting_scheduler' | 'document_understanding'
+export type Feature = 'workspace_qa' | 'task_creator' | 'meeting_scheduler' | 'document_understanding' | 'wiki_editor' | 'chat_assistant'
 export type MetricName = 'answer_relevancy' | 'faithfulness' | 'contextual_recall' | 'extraction_accuracy'
 export type RunStatus = 'pending' | 'running' | 'completed' | 'failed'
 
@@ -6,6 +6,9 @@ export interface DatasetCase {
   input: string
   expected_output: string
   retrieval_context: string[]
+  page_title?: string
+  page_content_markdown?: string
+  conversation_context?: Array<{ role: string; content: string }>
 }
 
 export interface DatasetSummary {
@@ -30,6 +33,7 @@ export interface AuthContextInput {
   display_name?: string
   email?: string
   org_name?: string
+  auth_token?: string
 }
 
 export interface RunRequest {
@@ -66,6 +70,11 @@ export interface CaseResult {
   actual_output: string | null
   latency_ms: number | null
   metrics: MetricResult[]
+  case_metadata?: {
+    page_title?: string
+    page_content_markdown?: string
+    conversation_context?: Array<{ role: string; content: string }>
+  }
 }
 
 export interface RunResultsResponse {

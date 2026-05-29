@@ -110,6 +110,26 @@ function CaseCard({ result }: { result: CaseResult }) {
 
       {open && (
         <div className="border-t border-gray-100 px-5 py-4 space-y-4 text-sm">
+          {result.case_metadata?.page_title && (
+            <Field label="Page Title" value={result.case_metadata.page_title} />
+          )}
+          {result.case_metadata?.page_content_markdown && (
+            <Field label="Original Page Content" value={result.case_metadata.page_content_markdown} />
+          )}
+          {result.case_metadata?.conversation_context && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Conversation Context</p>
+              <div className="bg-gray-50 rounded-lg px-3 py-2 space-y-1.5 max-h-48 overflow-y-auto border border-gray-100">
+                {result.case_metadata.conversation_context.map((msg, idx) => (
+                  <div key={idx} className="text-xs">
+                    <span className="font-semibold capitalize text-gray-600">{msg.role}: </span>
+                    <span className="text-gray-700">{msg.content}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Field label="Input" value={result.input} />
           {result.expected_output && <Field label="Expected" value={result.expected_output} />}
           {result.actual_output && <Field label="Actual output" value={result.actual_output} />}

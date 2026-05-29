@@ -8,11 +8,14 @@ class DatasetCase(BaseModel):
     input: str
     expected_output: str
     retrieval_context: list[str] = Field(default_factory=list)
+    page_title: str | None = None
+    page_content_markdown: str | None = None
+    conversation_context: list[dict[str, Any]] | None = None
 
 
 class DatasetImportRequest(BaseModel):
     name: str
-    feature: Literal["workspace_qa", "task_creator", "meeting_scheduler", "document_understanding"]
+    feature: Literal["workspace_qa", "task_creator", "meeting_scheduler", "document_understanding", "wiki_editor", "chat_assistant"]
     cases: list[DatasetCase]
 
 
@@ -36,6 +39,7 @@ class AuthContextInput(BaseModel):
     display_name: str | None = None
     email: str | None = None
     org_name: str | None = None
+    auth_token: str | None = None
 
 
 MetricName = Literal["answer_relevancy", "faithfulness", "contextual_recall", "extraction_accuracy"]
@@ -79,6 +83,7 @@ class CaseResult(BaseModel):
     actual_output: str | None
     latency_ms: int | None
     metrics: list[MetricResult]
+    case_metadata: dict[str, Any] | None = None
 
 
 class RunResultsResponse(BaseModel):

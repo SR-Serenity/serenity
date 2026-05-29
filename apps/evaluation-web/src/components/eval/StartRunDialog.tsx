@@ -44,6 +44,7 @@ export function StartRunDialog({ dataset, onClose }: Props) {
           display_name: session.user.displayName,
           email: session.user.email,
           org_name: session.org.name,
+          auth_token: session.token,
         },
         metrics: metrics.length > 0 ? metrics : undefined,
       })

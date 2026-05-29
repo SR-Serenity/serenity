@@ -59,11 +59,21 @@ export default function DashboardPage() {
                 href={`/runs/${run.id}`}
                 className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
               >
-                <span className="text-sm font-medium text-gray-800">{run.dataset_name}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{run.dataset_name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {run.metrics.map((m) => m.replace(/_/g, ' ')).join(', ')} · {new Date(run.started_at).toLocaleString()}
+                  </p>
+                </div>
                 <RunStatusBadge status={run.status} />
-                <span className="ml-auto text-sm text-gray-500">
-                  {run.passed_cases}/{run.total_cases} passed
-                </span>
+                {run.status === 'completed' && (
+                  <span className="text-sm font-medium text-gray-700">
+                    {run.passed_cases}/{run.total_cases} passed
+                  </span>
+                )}
+                {run.error && (
+                  <span className="text-xs text-red-500 truncate max-w-32">{run.error}</span>
+                )}
               </Link>
             ))}
           </div>

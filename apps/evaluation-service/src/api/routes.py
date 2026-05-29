@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import (
@@ -48,11 +48,16 @@ DATASETS_DIR = Path(__file__).resolve().parents[2] / "datasets"
 
 
 @router.post("/datasets/seed", response_model=DatasetListResponse)
-async def seed_datasets():
-    """Load all JSON files from the datasets/ folder into the DB (skips duplicates by name)."""
+async def seed_datasets(overwrite: bool = True):
+    """Load all JSON files from the datasets/ folder into the DB."""
     async with async_session() as session:
-        existing = (await session.execute(select(DatasetRow))).scalars().all()
-        existing_names = {r.name for r in existing}
+        if overwrite:
+            await session.execute(text("DELETE FROM eval_datasets"))
+            await session.commit()
+            existing_names = set()
+        else:
+            existing = (await session.execute(select(DatasetRow))).scalars().all()
+            existing_names = {r.name for r in existing}
 
     added: list[DatasetRow] = []
     for path in sorted(DATASETS_DIR.glob("*.json")):
@@ -192,6 +197,7 @@ async def get_run_results(run_id: str):
                 actual_output=r.actual_output,
                 latency_ms=r.latency_ms,
                 metrics=[],
+                case_metadata=r.case_metadata,
             )
         cases[r.case_index].metrics.append(
             MetricResult(

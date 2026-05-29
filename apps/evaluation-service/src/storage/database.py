@@ -55,11 +55,23 @@ class ResultRow(Base):
     score = Column(Float, nullable=True)
     passed = Column(Integer, nullable=True)  # 0/1
     reason = Column(Text, nullable=True)
+    case_metadata = Column(JSON, nullable=True)
 
 
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Safely alter table to add case_metadata column if it doesn't exist
+    async with engine.begin() as conn:
+        try:
+            # Check if PostgreSQL or SQLite, ADD COLUMN if missing
+            if "postgresql" in settings.DATABASE_URL:
+                await conn.execute(text("ALTER TABLE eval_results ADD COLUMN IF NOT EXISTS case_metadata JSONB;"))
+            else:
+                await conn.execute(text("ALTER TABLE eval_results ADD COLUMN case_metadata JSON;"))
+        except Exception:
+            pass
 
 
 async def get_session() -> AsyncSession:

@@ -1,5 +1,5 @@
 {
-  "name": "Task Creator — Extraction",
+  "name": "Task Creator — 20 Cases",
   "feature": "task_creator",
   "cases": [
     {
@@ -25,6 +25,81 @@
     {
       "input": "Schedule a code review for the new feature with the team by end of week",
       "expected_output": "I'll create a task: Title: Code review for new feature, Due: end of this week. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a task: draft the press release, priority low",
+      "expected_output": "I'll create a task: Title: Draft the press release, Priority: low. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create a task for Mary to update onboarding guide",
+      "expected_output": "I'll create a task: Title: Update onboarding guide, Assignee: Mary. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Remind me to buy groceries tonight at 8pm",
+      "expected_output": "I'll create a task: Title: Buy groceries, Due: tonight at 8:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a high priority task: investigate server crash",
+      "expected_output": "I'll create a task: Title: Investigate server crash, Priority: high. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create a task to follow up with the design team next Thursday",
+      "expected_output": "I'll create a task: Title: Follow up with design team, Due: next Thursday. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set a task: prepare presentation for the board meeting, due tomorrow",
+      "expected_output": "I'll create a task: Title: Prepare presentation for board meeting, Due: tomorrow. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a task for Sarah: write unit tests for core service",
+      "expected_output": "I'll create a task: Title: Write unit tests for core service, Assignee: Sarah. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Remind me to call the landlord tomorrow morning",
+      "expected_output": "I'll create a task: Title: Call the landlord, Due: tomorrow morning. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create a todo: submit timesheet by end of day",
+      "expected_output": "I'll create a task: Title: Submit timesheet, Due: end of day today. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add task: schedule interview with candidate Alex",
+      "expected_output": "I'll create a task: Title: Schedule interview with candidate Alex. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Remind me to check the database backups every Sunday",
+      "expected_output": "I'll create a task: Title: Check database backups, Due: every Sunday. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create task for David: fix layout bug on homepage",
+      "expected_output": "I'll create a task: Title: Fix layout bug on homepage, Assignee: David. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add high priority task: renew domain registration before next month",
+      "expected_output": "I'll create a task: Title: Renew domain registration, Priority: high, Due: before next month. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Remind me to send status report to manager by Friday 5pm",
+      "expected_output": "I'll create a task: Title: Send status report to manager, Due: this Friday at 5:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create a task: clean up old docker volumes",
+      "expected_output": "I'll create a task: Title: Clean up old docker volumes. Shall I confirm?",
       "retrieval_context": []
     }
   ]
