@@ -13,6 +13,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
+import type { AiSource } from '@serenity/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -446,6 +447,16 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     router.push(target)
   }
 
+  function handleOpenSource(source: AiSource) {
+    if (!source.url) return
+    // If it's a relative wiki path, use router.push for SPA navigation
+    if (source.url.startsWith('/')) {
+      router.push(source.url)
+    } else {
+      window.open(source.url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   // ── Compact mode (sidebar panel) ───────────────────────────────────────────
   if (compact) {
     if (view === 'history') {
@@ -544,6 +555,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 onConfirmAction={executeAction}
                 onRejectAction={() => undefined}
                 onStatusChange={persistActionStatus}
+                onOpenSource={handleOpenSource}
               />
             ) : (
               <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
@@ -653,6 +665,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                   onConfirmAction={executeAction}
                   onRejectAction={() => undefined}
                   onStatusChange={persistActionStatus}
+                  onOpenSource={handleOpenSource}
                 />
               </div>
             </div>

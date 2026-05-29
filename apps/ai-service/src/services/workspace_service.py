@@ -95,6 +95,13 @@ def get_wiki_page(auth_token: str, page_id: str) -> dict | None:
         return None
 
 
+def update_wiki_page(auth_token: str, page_id: str, body: dict) -> dict | None:
+    try:
+        return _patch(f"wiki/pages/{page_id}", auth_token, body)
+    except Exception:
+        return None
+
+
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 def list_conversations(auth_token: str) -> list[dict]:

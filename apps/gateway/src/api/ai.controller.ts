@@ -46,6 +46,16 @@ export class AiController {
     );
   }
 
+  @Post('wiki/edit')
+  @ApiOperation({ summary: 'Inline wiki AI command: apply a prompt to the current page' })
+  editWikiPage(@Req() req: RequestWithAuth, @Body() body: unknown) {
+    return this.apiProxy.forwardAiPostRequest(
+      'ai/wiki/edit',
+      body,
+      req.headers.authorization,
+    );
+  }
+
   // ── AI session persistence endpoints (proxy to core-service) ─────────────
 
   @Get('sessions')

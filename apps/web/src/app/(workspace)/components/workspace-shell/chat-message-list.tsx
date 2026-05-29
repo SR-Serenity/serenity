@@ -3,9 +3,10 @@
 import type { RefObject } from 'react'
 import { Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { AiProposedAction } from '@serenity/api'
+import type { AiProposedAction, AiSource } from '@serenity/api'
 import { ProposedActionCard } from './proposed-action-card'
 import { AssistantContent } from './assistant-content'
+import { SourceList } from './source-list'
 import type { ChatEntry } from './ai-agent-panel'
 
 export function ChatMessageList({
@@ -15,6 +16,7 @@ export function ChatMessageList({
   onConfirmAction,
   onRejectAction,
   onStatusChange,
+  onOpenSource,
 }: {
   messages: ChatEntry[]
   compact: boolean
@@ -28,6 +30,8 @@ export function ChatMessageList({
     status: 'confirmed' | 'rejected',
     editedAction: AiProposedAction,
   ) => void
+  /** Called when user clicks a source pill to navigate to the document */
+  onOpenSource?: (source: AiSource) => void
 }) {
   return (
     <div className={cn('space-y-3', !compact && 'pb-2')}>
@@ -55,10 +59,14 @@ export function ChatMessageList({
               ) : (
                 <span className="whitespace-pre-wrap">{message.content}</span>
               )}
-              {compact && !message.pending && message.sources && message.sources.length > 0 && (
-                <div className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500">
-                  {message.sources.length} source{message.sources.length === 1 ? '' : 's'}
-                </div>
+
+              {/* Source pills — shown inside the bubble for both compact and full */}
+              {!message.pending && message.sources && message.sources.length > 0 && (
+                <SourceList
+                  sources={message.sources}
+                  compact={compact}
+                  onOpen={onOpenSource}
+                />
               )}
             </div>
           </div>

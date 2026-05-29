@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useWikiStore } from '@/stores/wiki-store'
 import { NotionBlockEditor } from './notion-block-editor'
+import type { AiCommandBarContext } from './notion-block-editor'
 import { WikiSharePanel } from './wiki-share-panel'
 
 const EMPTY_DEPARTMENTS: Department[] = []
@@ -46,7 +47,7 @@ export function WikiEditorPanel() {
   const params = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [sharePanelOpen, setSharePanelOpen] = useState(false)
-  const { token, currentOrg } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg })))
+  const { token, currentOrg, user } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg, user: state.user })))
   const isAdmin = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN'
   const orgId = currentOrg?.id
   const { departments } = useWorkspaceStore(
@@ -304,6 +305,18 @@ export function WikiEditorPanel() {
             pages={pages
               .filter(p => p.id !== selectedPage.id)
               .map(p => ({ id: p.id, title: p.title, url: `/${params.orgSlug}/wiki/${encodeURIComponent(p.id)}` }))}
+            aiContext={selectedPage.canEdit && token && currentOrg && user ? ({
+              token,
+              pageId: selectedPage.id,
+              pageTitle: draft.title || selectedPage.title || 'Untitled',
+              authContext: {
+                orgId: currentOrg.id,
+                userId: user.id,
+                role: currentOrg.role ?? null,
+                orgName: currentOrg.name ?? null,
+                orgSlug: currentOrg.slug ?? null,
+              },
+            } satisfies AiCommandBarContext) : undefined}
           />
 
         </article>

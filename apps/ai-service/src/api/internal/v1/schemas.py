@@ -48,6 +48,7 @@ ProposedActionType = Literal[
     "BOOK_ROOM",
     "UPDATE_CALENDAR_ITEM",
     "CREATE_WIKI_PAGE",
+    "EDIT_WIKI_PAGE",
 ]
 
 
@@ -151,3 +152,22 @@ class WikiSearchResult(CamelModel):
 
 class WikiSearchResponse(CamelModel):
     results: list[WikiSearchResult]
+
+
+# ── Wiki Editor (inline AI command) ──────────────────────────────────────────
+
+class WikiEditorRequest(CamelModel):
+    """Request for the /ai/wiki/edit endpoint (inline slash-command agent)."""
+    auth_context: AuthContext
+    page_id: str
+    page_title: str
+    page_content_markdown: str
+    prompt: str
+    org_slug: str | None = None
+
+
+class WikiEditorResponse(CamelModel):
+    """Response from the /ai/wiki/edit endpoint."""
+    answer: str
+    updated_content_markdown: str
+    proposed_action: ProposedAction | None = None

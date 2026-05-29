@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat
+from src.ai.v1.agents.wiki_editor import wiki_editor_agent
 from src.api.internal.v1.schemas import (
     ChatRequest,
     ChatResponse,
@@ -18,6 +19,8 @@ from src.api.internal.v1.schemas import (
     FileIndexResponse,
     FileSource,
     WikiDeleteRequest,
+    WikiEditorRequest,
+    WikiEditorResponse,
     WikiIndexRequest,
     WikiIndexResponse,
     WikiSearchRequest,
@@ -160,6 +163,31 @@ async def search_wiki(payload: WikiSearchRequest, request: Request) -> WikiSearc
             )
             for result in results
         ]
+    )
+
+
+@router.post("/wiki/edit", response_model=WikiEditorResponse)
+async def edit_wiki(payload: WikiEditorRequest, request: Request) -> WikiEditorResponse:
+    """Inline wiki AI command: apply a user prompt to the current page content."""
+    _assert_internal_token(request)
+
+    explanation, updated_markdown = wiki_editor_agent.edit(
+        page_id=payload.page_id,
+        page_title=payload.page_title,
+        page_content_markdown=payload.page_content_markdown,
+        prompt=payload.prompt,
+    )
+
+    proposed_action = wiki_editor_agent.build_proposed_action(
+        page_id=payload.page_id,
+        page_title=payload.page_title,
+        updated_content_markdown=updated_markdown,
+    )
+
+    return WikiEditorResponse(
+        answer=explanation,
+        updated_content_markdown=updated_markdown,
+        proposed_action=proposed_action,
     )
 
 

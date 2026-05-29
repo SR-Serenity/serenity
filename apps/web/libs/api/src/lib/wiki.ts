@@ -5,6 +5,8 @@ import type {
   ListWikiPagesResponse,
   ListWikiSharesResponse,
   UpdateWikiPageInput,
+  WikiAiEditRequest,
+  WikiAiEditResponse,
   WikiFavoriteResponse,
   WikiPage,
   WikiPageShare,
@@ -74,5 +76,9 @@ export const wikiApi = {
 
   removeShare: async (token: string, pageId: string, userId: string): Promise<void> => {
     return api.delete(`wiki/pages/${pageId}/shares/${userId}`, { token })
+  },
+
+  editWithAi: async (token: string, input: WikiAiEditRequest): Promise<WikiAiEditResponse> => {
+    return api.post('ai/wiki/edit', { token, body: input })
   },
 }
