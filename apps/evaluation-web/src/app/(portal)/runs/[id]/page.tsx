@@ -6,7 +6,7 @@ import { evalApi } from '@/lib/api-client'
 import type { RunResultsResponse, CaseResult } from '@/lib/types'
 import { RunStatusBadge } from '@/components/eval/RunStatusBadge'
 import { MetricScoreBar } from '@/components/eval/MetricScoreBar'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, BarChart3, CheckCircle2, TrendingUp, Sparkles } from 'lucide-react'
 
 export default function RunDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -34,6 +34,24 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
   if (!data) return null
 
   const { run, results } = data
+
+  // Calculate average scores and pass rates for each metric
+  const metricStats: Record<string, { total: number; sum: number; passed: number }> = {}
+  results.forEach((res) => {
+    res.metrics.forEach((m) => {
+      if (m.metric_name === 'error') return
+      if (m.score != null) {
+        if (!metricStats[m.metric_name]) {
+          metricStats[m.metric_name] = { total: 0, sum: 0, passed: 0 }
+        }
+        metricStats[m.metric_name].total += 1
+        metricStats[m.metric_name].sum += m.score
+        if (m.passed) {
+          metricStats[m.metric_name].passed += 1
+        }
+      }
+    })
+  })
 
   return (
     <div className="p-8 space-y-6 max-w-5xl">
@@ -70,11 +88,79 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard label="Total Cases" value={run.total_cases} />
-            <StatCard label="Passed" value={run.passed_cases} />
-            <StatCard label="Pass Rate" value={`${run.total_cases > 0 ? Math.round((run.passed_cases / run.total_cases) * 100) : 0}%`} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <StatCard 
+              label="Total Cases" 
+              value={run.total_cases} 
+              icon={<BarChart3 className="text-blue-500 w-5 h-5" />}
+              bgColor="bg-blue-50/50"
+            />
+            <StatCard 
+              label="Passed Cases" 
+              value={run.passed_cases} 
+              icon={<CheckCircle2 className="text-green-500 w-5 h-5" />}
+              bgColor="bg-green-50/50"
+            />
+            <StatCard 
+              label="Overall Pass Rate" 
+              value={`${run.total_cases > 0 ? Math.round((run.passed_cases / run.total_cases) * 100) : 0}%`} 
+              icon={<TrendingUp className="text-indigo-500 w-5 h-5" />}
+              bgColor="bg-indigo-50/50"
+            />
           </div>
+
+          {Object.keys(metricStats).length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200/80 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">Metric Breakdown</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(metricStats).map(([name, stats]) => {
+                  const avgScore = stats.total > 0 ? Math.round((stats.sum / stats.total) * 100) : 0
+                  const passRate = stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0
+                  const label = name.replace(/_/g, ' ')
+                  
+                  // Color styling based on score
+                  let colorClass = 'bg-red-500'
+                  let textColorClass = 'text-red-700'
+                  let bgColorClass = 'bg-red-50/40 border-red-100/60'
+                  if (avgScore >= 70) {
+                    colorClass = 'bg-green-500'
+                    textColorClass = 'text-green-700'
+                    bgColorClass = 'bg-green-50/40 border-green-100/60'
+                  } else if (avgScore >= 40) {
+                    colorClass = 'bg-amber-500'
+                    textColorClass = 'text-amber-700'
+                    bgColorClass = 'bg-amber-50/40 border-amber-100/60'
+                  }
+
+                  return (
+                    <div 
+                      key={name} 
+                      className={`rounded-xl border p-4 space-y-3 transition-all duration-200 hover:shadow-md hover:scale-[1.01] ${bgColorClass}`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 truncate" title={label}>
+                          {label}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-white shadow-sm border border-gray-100/80 shrink-0 ${textColorClass}`}>
+                          {passRate}% pass
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-extrabold text-gray-900 tracking-tight">{avgScore}%</span>
+                        <span className="text-[10px] text-gray-400 font-medium">avg score</span>
+                      </div>
+                      <div className="w-full bg-gray-200/60 rounded-full h-1.5 overflow-hidden">
+                        <div className={`h-1.5 rounded-full transition-all duration-500 ${colorClass}`} style={{ width: `${avgScore}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {results.map((c) => (
@@ -164,11 +250,18 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value, icon, bgColor = 'bg-white' }: { label: string; value: string | number; icon?: React.ReactNode; bgColor?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-semibold text-gray-900 mt-1">{value}</p>
+    <div className={`rounded-xl border border-gray-200 p-5 flex items-center justify-between transition-all duration-200 hover:shadow-sm ${bgColor}`}>
+      <div className="space-y-1">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">{label}</p>
+        <p className="text-3xl font-bold text-gray-900 tracking-tight">{value}</p>
+      </div>
+      {icon && (
+        <div className="p-3 bg-white rounded-lg shadow-sm border border-gray-100/60 flex items-center justify-center">
+          {icon}
+        </div>
+      )}
     </div>
   )
 }
