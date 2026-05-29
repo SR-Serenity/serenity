@@ -375,9 +375,6 @@ export class WikiService {
     departmentId?: string | null,
   ) {
     if (visibility === WikiPageVisibility.DEPARTMENT) {
-      if (membership.role === WorkspaceRole.MEMBER) {
-        throw new ForbiddenException('Only admins can assign pages to departments');
-      }
       if (!departmentId) {
         throw new BadRequestException('Department pages require a department');
       }
@@ -387,6 +384,11 @@ export class WikiService {
       });
       if (!department) {
         throw new NotFoundException('Department not found');
+      }
+      const isMemberOfDept = membership.departmentId === departmentId;
+      const isPrivileged = membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
+      if (!isPrivileged && !isMemberOfDept) {
+        throw new ForbiddenException('You can only create pages in your own department');
       }
     }
   }

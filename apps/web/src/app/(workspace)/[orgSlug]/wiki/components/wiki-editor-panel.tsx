@@ -9,7 +9,6 @@ import {
   Loader2,
   Lock,
   MoreHorizontal,
-  Plus,
   Share2,
   Star,
   Trash2,
@@ -68,7 +67,6 @@ export function WikiEditorPanel() {
     toggleFavorite,
     deleteSelectedPage,
     createPage,
-    createSubPage,
     scheduleSave,
   } = useWikiStore(
     useShallow(state => ({
@@ -83,7 +81,6 @@ export function WikiEditorPanel() {
       toggleFavorite: state.toggleFavorite,
       deleteSelectedPage: state.deleteSelectedPage,
       createPage: state.createPage,
-      createSubPage: state.createSubPage,
       scheduleSave: state.scheduleSave,
     })),
   )
@@ -109,33 +106,6 @@ export function WikiEditorPanel() {
     const dept = departments[0]
     createPage(token, params.orgSlug, visibility, dept?.id ?? null, dept?.name ?? null, path => router.push(path))
   }
-
-  const handleCreateSubPage = useCallback(async () => {
-    if (!token || !selectedPage) return null
-    const visibility = selectedPage.visibility
-    const deptId = visibility === 'DEPARTMENT'
-      ? selectedPage.departmentId ?? departments[0]?.id ?? null
-      : null
-    const deptName = visibility === 'DEPARTMENT'
-      ? selectedPage.departmentName ?? departments[0]?.name ?? null
-      : null
-
-    const page = await createSubPage(
-      token,
-      params.orgSlug,
-      visibility,
-      deptId,
-      deptName,
-      selectedPage.id,
-    )
-    if (!page) return null
-
-    return {
-      id: page.id,
-      title: page.title || 'Untitled',
-      url: `/${params.orgSlug}/wiki/${encodeURIComponent(page.id)}`,
-    }
-  }, [token, selectedPage, departments, createSubPage, params.orgSlug])
 
   const coverColor = selectedPage?.coverColor ?? null
 
@@ -322,25 +292,6 @@ export function WikiEditorPanel() {
               )}
             </div>
 
-            {selectedPage.canEdit && (
-              <button
-                type="button"
-                title="Add sub-page"
-                onClick={() => {
-                  if (!token) return
-                  const dept = departments[0]
-                  createPage(
-                    token, params.orgSlug, selectedPage.visibility,
-                    dept?.id ?? null, dept?.name ?? null,
-                    path => router.push(path), selectedPage.id,
-                  )
-                }}
-                className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[#9b9a97] hover:bg-[#f1f1ef] hover:text-[#787774]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add sub-page
-              </button>
-            )}
           </div>
 
           {/* Block editor */}
@@ -350,7 +301,6 @@ export function WikiEditorPanel() {
             markdownFallback={draft.contentMarkdown}
             editable={selectedPage.canEdit}
             onChange={(contentJson, contentMarkdown) => updateDraft({ contentJson, contentMarkdown })}
-            onCreateSubPage={handleCreateSubPage}
             pages={pages
               .filter(p => p.id !== selectedPage.id)
               .map(p => ({ id: p.id, title: p.title, url: `/${params.orgSlug}/wiki/${encodeURIComponent(p.id)}` }))}
