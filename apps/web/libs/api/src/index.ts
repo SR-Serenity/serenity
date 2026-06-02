@@ -28,6 +28,9 @@ export type {
   ListWikiPagesResponse,
   ListWikiSharesResponse,
   UpdateWikiPageInput,
+  WikiAiEditProposedAction,
+  WikiAiEditRequest,
+  WikiAiEditResponse,
   WikiFavoriteResponse,
   WikiPage,
   WikiPageShare,
@@ -76,6 +79,9 @@ export type {
   ListPage,
   RealtimeEventTarget,
   ChatRealtimeEvent,
+  ChatAssistMessage,
+  ChatAiRequest,
+  ChatAiResponse,
 } from './types/chat'
 export type {
   AiAuthContext,

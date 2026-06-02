@@ -9,6 +9,9 @@ import { WorkspaceRole } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtPayload, type SignOptions, sign, verify } from 'jsonwebtoken';
 import { PrismaService } from '../database/prisma.service';
+import { seedOrganizationData } from './auth.seed';
+import axios from 'axios';
+
 
 type RegisterInput = {
   email: string;
@@ -86,8 +89,13 @@ export class AuthService {
         },
       });
 
-      return { user, organization };
+      const seedResult = await seedOrganizationData(tx, organization.id, organization.slug, user);
+
+      return { user, organization, seedResult };
     });
+
+    this.indexSeededWikiPages(created.organization.id, created.user.id, created.seedResult?.wikiPages);
+
 
     return this.authResponse(
       created.user.id,
@@ -229,23 +237,34 @@ export class AuthService {
       throw new BadRequestException('Organization slug is already in use');
     }
 
-    const organization = await this.prisma.organization.create({
-      data: {
-        name: input.name.trim(),
-        slug: input.slug.toLowerCase(),
-      },
+    const created = await this.prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name: input.name.trim(),
+          slug: input.slug.toLowerCase(),
+        },
+      });
+
+      const member = await tx.workspaceMember.create({
+        data: {
+          orgId: organization.id,
+          userId,
+          role: WorkspaceRole.OWNER,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      const seedResult = await seedOrganizationData(tx, organization.id, organization.slug, member.user);
+
+      return { organization, member, seedResult };
     });
 
-    const member = await this.prisma.workspaceMember.create({
-      data: {
-        orgId: organization.id,
-        userId,
-        role: WorkspaceRole.OWNER,
-      },
-      include: {
-        user: true,
-      },
-    });
+    const { organization, member, seedResult } = created;
+
+    this.indexSeededWikiPages(organization.id, member.user.id, seedResult?.wikiPages);
+
 
     return this.authResponse(
       member.user.id,
@@ -438,4 +457,54 @@ export class AuthService {
       );
     }
   }
+
+  private indexSeededWikiPages(
+    orgId: string,
+    createdById: string,
+    wikiPages?: Array<{ id: string; title: string; contentMarkdown: string; contentJson: any }>
+  ) {
+    if (!wikiPages || wikiPages.length === 0) return;
+
+    const rawUrl = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+    let aiBaseUrl = rawUrl.trim();
+    if (aiBaseUrl.endsWith('/api')) {
+      aiBaseUrl = aiBaseUrl.replace(':2998/api', ':8001/api/internal/v1');
+    }
+    if (!aiBaseUrl.includes('/api/internal/v1')) {
+      aiBaseUrl = aiBaseUrl.replace(/\/$/, '') + '/api/internal/v1';
+    }
+
+    const internalToken = process.env.AI_INTERNAL_API_TOKEN || 'dev-internal-token';
+
+    Promise.all(
+      wikiPages.map(async (page) => {
+        try {
+          await axios.post(
+            `${aiBaseUrl}/ai/wiki/index`,
+            {
+              orgId,
+              pageId: page.id,
+              title: page.title,
+              contentMarkdown: page.contentMarkdown,
+              contentJson: page.contentJson ?? null,
+              metadata: {
+                visibility: 'WORKSPACE',
+                createdById,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+            {
+              headers: { 'x-internal-api-token': internalToken },
+              timeout: 10000,
+            }
+          );
+        } catch (err: any) {
+          console.warn(`[Seed Indexing] Failed to index wiki page ${page.title}: ${err.message}`);
+        }
+      })
+    ).catch((err) => {
+      console.error('[Seed Indexing] Error indexing wiki pages:', err);
+    });
+  }
 }
+

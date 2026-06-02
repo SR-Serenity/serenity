@@ -5,20 +5,14 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Bell,
   Bot,
   CalendarDays,
-  Command,
-  FileText,
-  HelpCircle,
   Home,
   LogOut,
   Maximize2,
-  MessageSquare,
   MoreVertical,
   PanelRight,
   Plus,
-  Search,
   Settings,
   Settings2,
   Shuffle,
@@ -65,12 +59,8 @@ interface WorkspaceRailProps {
 }
 
 const utilityActions = [
-  { id: 'search', title: 'Search', icon: Search },
-  { id: 'notifications', title: 'Notifications', icon: Bell },
   { id: 'calendar', title: 'Calendar', icon: CalendarDays },
-  { id: 'messages', title: 'Messages', icon: MessageSquare },
   { id: 'copilot', title: 'Copilot', icon: Bot },
-  { id: 'notes', title: 'Notes', icon: FileText },
 ] as const
 
 type UtilityActionId = typeof utilityActions[number]['id']
@@ -78,7 +68,6 @@ type AddonViewId = UtilityActionId | 'add'
 
 const routeAddonConflicts: Array<{ addon: UtilityActionId; segment: string }> = [
   { addon: 'calendar', segment: 'calendar' },
-  { addon: 'messages', segment: 'chat' },
 ]
 
 function getConflictingAddon(currentPath: string): UtilityActionId | null {
@@ -364,15 +353,6 @@ export function WorkspaceRail({
           'border-t border-nav-divider',
         )}
       >
-        <ShellIconActionButton
-          title="Customize"
-          icon={Settings}
-        />
-
-        <ShellIconActionButton
-          title="Help & Support"
-          icon={HelpCircle}
-        />
 
         <AccountPopover
           orgSlug={orgSlug}
@@ -461,39 +441,10 @@ function AddonContent({
 
   if (activeView === 'calendar') return <CalendarAddonPanel />
 
-  if (activeView === 'search') {
-    return (
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            placeholder="Search workspace"
-            className="h-10 w-full rounded-lg border border-divider bg-surface pl-9 pr-3 text-sm outline-none focus:border-focus"
-          />
-        </div>
-        <p className="text-sm text-muted">Search results will appear here.</p>
-      </div>
-    )
-  }
-
-  if (activeView === 'notifications') {
-    return <div className="rounded-lg bg-surface p-3 text-sm text-muted">No new notifications.</div>
-  }
-
-  if (activeView === 'messages') {
-    return <div className="rounded-lg bg-surface p-3 text-sm text-muted">Recent messages will appear here.</div>
-  }
-
   if (activeView === 'copilot') {
     return <AiChatPanel compact={true} />
   }
-
-  return (
-    <textarea
-      placeholder="Quick notes"
-      className="h-56 w-full resize-none rounded-lg border border-divider bg-surface p-3 text-sm outline-none focus:border-focus"
-    />
-  )
+  return null
 }
 
 function WorkspaceAddonPanel({
@@ -692,10 +643,7 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
           />
         </div>
 
-        <div className="flex w-full flex-col items-center gap-1 px-2 pb-5">
-          <ShellDivider className="mb-2 w-8" />
-          <ShellIconActionButton title="Command menu" icon={Command} />
-        </div>
+
       </aside>
     </>
   )

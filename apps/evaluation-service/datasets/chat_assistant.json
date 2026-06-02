@@ -1,0 +1,186 @@
+{
+  "name": "Chat Assistant — 20 Cases",
+  "feature": "chat_assistant",
+  "cases": [
+    {
+      "input": "Translate the last message to Vietnamese",
+      "expected_output": "Chúng tôi cần cập nhật tài liệu API trước thứ Sáu.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "We need to update the API documentation by Friday."
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a polite reply to the manager's request",
+      "expected_output": "Sure, I'll take a look at it right away and send you the feedback.",
+      "conversation_context": [
+        {
+          "role": "assistant",
+          "content": "Could you review the design draft by tomorrow morning?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Draft a response declining the meeting invitation nicely",
+      "expected_output": "Hi Sarah, thank you for the invite. Unfortunately, I have a conflicting priority at that time and won't be able to attend. Let me know if we can reschedule.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Hey, can you join the marketing alignment sync at 3pm today?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Rephrase my response to make it sound more professional",
+      "expected_output": "I will inspect the report and provide an update shortly.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "i will check the report and let you know soon."
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a quick answer to: Are you available for a call in 10 minutes?",
+      "expected_output": "Yes, I am available. Let's hop on the call.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Are you available for a call in 10 minutes?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Translate: I will check the report and get back to you shortly, to French",
+      "expected_output": "Je vais vérifier le rapport et je vous recontacterai sous peu.",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Draft an announcement message for the team about the upcoming release",
+      "expected_output": "Hi team, we will deploy v1.3.0 tomorrow morning at 9am. Please ensure all PRs are merged by tonight.",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a reply to a client asking for a discount on services",
+      "expected_output": "Thank you for reaching out. We offer highly tailored, premium solutions and cannot adjust our standard rates at this time. However, we'd love to review the scope with you.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Can you offer a 20% discount on the premium plan?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Make my message more enthusiastic and positive",
+      "expected_output": "That sounds absolutely fantastic! I'm super excited to collaborate on this project!",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Sounds good. Let's work on this project."
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a reply: Yes, the bug is fixed and deployed",
+      "expected_output": "Yes, the bug has been resolved and the fix is now deployed to production.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Is the login bug fixed yet?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Draft a thank you message for the team after successful deployment",
+      "expected_output": "Thank you everyone for the hard work! The deployment was a great success. Have a wonderful weekend!",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Rephrase: Send me the document now, to be polite",
+      "expected_output": "Could you please send me the document when you have a moment?",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest an response to: What is the current status of the task?",
+      "expected_output": "I am currently working on the API integration and expect to finish it by end of day.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "What is the status of the integration task?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Translate: Let's discuss this during our sync tomorrow, to Vietnamese",
+      "expected_output": "Chúng ta hãy thảo luận vấn đề này trong buổi họp đồng bộ ngày mai.",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Draft a reminder message for the team to submit their timesheets",
+      "expected_output": "Friendly reminder to submit your weekly timesheets by Friday afternoon. Thank you!",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a response to: Did we finish the security audit?",
+      "expected_output": "Yes, the security audit has been completed. I will share the report with you shortly.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Did we finish the security audit?"
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Make my draft reply to the user query more concise and clear",
+      "expected_output": "Our support hours are 9 AM - 5 PM on weekdays. Let us know if you need help.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Just to let you know, our support staff is generally available from Monday to Friday, starting from nine in the morning and going all the way until five in the evening. Don't hesitate to reach out if you have any questions."
+        }
+      ],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a message asking Sarah if she needs help with the task",
+      "expected_output": "Hi Sarah, do you need any assistance with the wiki page update? I have some free time today.",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Draft a welcome message for a new team member joining the chat channel",
+      "expected_output": "Welcome to the channel! Glad to have you join our team. Let us know if you have any questions as you set up.",
+      "conversation_context": [],
+      "retrieval_context": []
+    },
+    {
+      "input": "Suggest a follow-up response to: I haven't received the invoice yet",
+      "expected_output": "Apologies for the delay. I will resend the invoice to your email immediately.",
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "I checked my inbox but haven't received the invoice yet."
+        }
+      ],
+      "retrieval_context": []
+    }
+  ]
+}

@@ -23,6 +23,7 @@ export class GmailClient {
       scope: [
         'https://www.googleapis.com/auth/gmail.modify',
         'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/calendar.events',
       ],
     });
   }

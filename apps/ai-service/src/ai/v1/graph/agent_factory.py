@@ -36,20 +36,6 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
             if domain == Domain.WORKSPACE_QA:
                 return _run_workspace_qa(agent, state, config)
 
-            if domain == Domain.DOCUMENT_UNDERSTANDING:
-                answer, sources = agent.ask(
-                    org_id=state["org_id"],
-                    file_ids=_context_file_ids(state),
-                    question=_latest_user_text(state),
-                )
-                return {
-                    "domain_agent_response": DomainAgentResponse(
-                        domain=domain,
-                        text=answer,
-                        sources=sources,
-                    )
-                }
-
             if domain == Domain.SCHEDULE_AGENT:
                 from langgraph.types import interrupt
                 from src.api.internal.v1.schemas import ChatMessage as _ChatMessage
@@ -133,12 +119,6 @@ def _latest_user_text(state: PipelineState) -> str:
         if getattr(message, "type", None) == "human":
             return str(message.content)
     return ""
-
-
-def _context_file_ids(state: PipelineState) -> list[str]:
-    context = state.get("context", {})
-    file_ids = context.get("fileIds") or context.get("file_ids") or []
-    return list(file_ids) if isinstance(file_ids, list) else []
 
 
 def _chat_messages(state: PipelineState):

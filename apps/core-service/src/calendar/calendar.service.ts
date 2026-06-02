@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,15 +10,18 @@ import {
   CalendarItemType,
   CalendarTaskStatus,
   CalendarVisibility,
+  MailAccountStatus,
   Prisma,
   WorkspaceRole,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { MailTokenService } from '../mail/mail-token.service';
 import {
   CreateCalendarItemDto,
   ListCalendarItemsQueryDto,
   UpdateCalendarItemDto,
 } from './dto/calendar.dto';
+import { GoogleCalendarClient } from './google-calendar.client';
 
 type CalendarItemWithRelations = Prisma.CalendarItemGetPayload<{
   include: {
@@ -51,10 +55,22 @@ type CalendarItemWithRelations = Prisma.CalendarItemGetPayload<{
 
 @Injectable()
 export class CalendarService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CalendarService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gcal: GoogleCalendarClient,
+    private readonly tokenService: MailTokenService,
+  ) {}
 
   async listItems(orgId: string, userId: string, query: ListCalendarItemsQueryDto) {
     await this.ensureOrgAccess(orgId, userId);
+
+    if (query.from && query.to) {
+      await this.syncGoogleEvents(orgId, userId, query.from, query.to).catch((err) =>
+        this.logger.warn(`Google Calendar sync skipped: ${err instanceof Error ? err.message : err}`),
+      );
+    }
 
     const where: Prisma.CalendarItemWhereInput = {
       orgId,
@@ -121,7 +137,9 @@ export class CalendarService {
       include: this.includeRelations(),
     });
 
-    return this.toDto(item);
+    const dto = this.toDto(item);
+    await this.pushCreateToGoogle(orgId, userId, dto);
+    return dto;
   }
 
   async updateItem(
@@ -228,13 +246,17 @@ export class CalendarService {
       });
     });
 
-    return this.toDto(item);
+    const dto = this.toDto(item);
+    await this.pushUpdateToGoogle(orgId, userId, dto);
+    return dto;
   }
 
   async deleteItem(orgId: string, userId: string, role: WorkspaceRole, itemId: string) {
     await this.ensureOrgAccess(orgId, userId);
     const existing = await this.findEditableItem(orgId, itemId);
     this.assertCanEdit(existing, userId, role);
+
+    await this.pushDeleteToGoogle(orgId, userId, existing.googleEventId ?? null);
 
     await this.prisma.calendarItem.update({
       where: { id: existing.id },
@@ -276,8 +298,11 @@ export class CalendarService {
   }
 
   private buildRangeFilter(from?: string, to?: string): Prisma.CalendarItemWhereInput | null {
-    const fromDate = from ? new Date(from) : null;
-    const toDate = to ? new Date(to) : null;
+    const parsedFrom = from ? new Date(from) : null;
+    const parsedTo = to ? new Date(to) : null;
+
+    const fromDate = parsedFrom && !isNaN(parsedFrom.getTime()) ? parsedFrom : null;
+    const toDate = parsedTo && !isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     if (!fromDate && !toDate) {
       return null;
@@ -420,8 +445,140 @@ export class CalendarService {
         displayName: attendee.user.displayName,
         email: attendee.user.email,
       })),
+      googleEventId: item.googleEventId ?? null,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     };
+  }
+
+  private shouldSyncToGoogle(type: CalendarItemType) {
+    return type === CalendarItemType.EVENT || type === CalendarItemType.MEETING;
+  }
+
+  private async pushCreateToGoogle(orgId: string, userId: string, item: ReturnType<CalendarService['toDto']>) {
+    if (!this.shouldSyncToGoogle(item.type as CalendarItemType) || !item.startAt || !item.endAt) return;
+    const creds = await this.getRefreshToken(orgId, userId);
+    if (!creds) return;
+    try {
+      const googleEventId = await this.gcal.createEvent(creds.refreshToken, {
+        title: item.title,
+        description: item.descriptionMarkdown,
+        location: item.location,
+        startAt: new Date(item.startAt),
+        endAt: new Date(item.endAt),
+        allDay: item.allDay,
+      });
+      await this.prisma.calendarItem.update({
+        where: { id: item.id },
+        data: { googleEventId, googleAccountId: creds.accountId },
+      });
+      item.googleEventId = googleEventId;
+    } catch (err: unknown) {
+      this.logger.warn(`Google Calendar create failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  private async pushUpdateToGoogle(orgId: string, userId: string, item: ReturnType<CalendarService['toDto']>) {
+    if (!this.shouldSyncToGoogle(item.type as CalendarItemType) || !item.googleEventId || !item.startAt || !item.endAt) return;
+    const creds = await this.getRefreshToken(orgId, userId);
+    if (!creds) return;
+    try {
+      await this.gcal.updateEvent(creds.refreshToken, item.googleEventId, {
+        title: item.title,
+        description: item.descriptionMarkdown,
+        location: item.location,
+        startAt: new Date(item.startAt),
+        endAt: new Date(item.endAt),
+        allDay: item.allDay,
+      });
+    } catch (err: unknown) {
+      this.logger.warn(`Google Calendar update failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  private async pushDeleteToGoogle(orgId: string, userId: string, googleEventId: string | null) {
+    if (!googleEventId) return;
+    const creds = await this.getRefreshToken(orgId, userId);
+    if (!creds) return;
+    try {
+      await this.gcal.deleteEvent(creds.refreshToken, googleEventId);
+    } catch (err: unknown) {
+      this.logger.warn(`Google Calendar delete failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  private async getRefreshToken(orgId: string, userId: string) {
+    const account = await this.prisma.mailAccount.findFirst({
+      where: { orgId, userId, status: MailAccountStatus.CONNECTED },
+      select: { id: true, encryptedRefreshToken: true },
+    });
+    if (!account?.encryptedRefreshToken) return null;
+    return { accountId: account.id, refreshToken: this.tokenService.decrypt(account.encryptedRefreshToken) };
+  }
+
+  private async syncGoogleEvents(orgId: string, userId: string, from: string, to: string) {
+    const creds = await this.getRefreshToken(orgId, userId);
+    if (!creds) return;
+    const { accountId, refreshToken } = creds;
+    const googleEvents = await this.gcal.listEvents(refreshToken, from, to);
+    const fetchedIds = new Set(googleEvents.map((e) => e.id).filter(Boolean) as string[]);
+
+    // Remove local records for Google events that no longer exist in this range
+    await this.prisma.calendarItem.deleteMany({
+      where: {
+        createdById: userId,
+        orgId,
+        deletedAt: null,
+        googleEventId: { not: null, notIn: [...fetchedIds] },
+        startAt: { gte: new Date(from), lte: new Date(to) },
+      },
+    });
+
+    for (const event of googleEvents) {
+      if (!event.id || !event.summary) continue;
+
+      const allDay = !event.start?.dateTime;
+      const startAt = event.start?.dateTime
+        ? new Date(event.start.dateTime)
+        : event.start?.date
+          ? new Date(event.start.date)
+          : null;
+      const endAt = event.end?.dateTime
+        ? new Date(event.end.dateTime)
+        : event.end?.date
+          ? new Date(event.end.date)
+          : null;
+
+      const payload = {
+        title: event.summary,
+        descriptionMarkdown: event.description ?? null,
+        location: event.location ?? null,
+        startAt,
+        endAt,
+        allDay,
+        updatedAt: new Date(),
+      };
+
+      const existing = await this.prisma.calendarItem.findFirst({
+        where: { createdById: userId, googleEventId: event.id, deletedAt: null },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await this.prisma.calendarItem.update({ where: { id: existing.id }, data: payload });
+      } else {
+        await this.prisma.calendarItem.create({
+          data: {
+            orgId,
+            createdById: userId,
+            type: CalendarItemType.EVENT,
+            visibility: CalendarVisibility.PERSONAL,
+            googleEventId: event.id,
+            googleAccountId: accountId,
+            ...payload,
+          },
+        });
+      }
+    }
   }
 }

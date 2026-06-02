@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
@@ -100,6 +100,7 @@ function splitEmails(value: string) {
 
 export default function EmailPage() {
   const params = useParams<{ orgSlug: string }>()
+  const router = useRouter()
   const { token } = useAuthStore(useShallow(state => ({ token: state.token })))
   const [accounts, setAccounts] = useState<MailAccount[]>([])
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
@@ -383,18 +384,20 @@ export default function EmailPage() {
   if (!loading && accounts.length === 0) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center bg-white px-6 text-slate-900 [color-scheme:light]">
-        <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+        <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <Mail className="h-5 w-5" />
           </div>
-          <h1 className="text-xl font-semibold tracking-normal text-slate-950">Connect Gmail</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Connect your Gmail account to start background sync and use mail in Serenity.
+          <h1 className="text-xl font-semibold tracking-normal text-slate-950">No email account connected</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Connect your Google account in Settings to start using Mail and Calendar sync in Serenity.
           </p>
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-          <Button onClick={handleConnect} disabled={busyAction === 'connect'} className="mt-5 w-full">
-            {busyAction === 'connect' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-            Connect Gmail
+          <Button
+            onClick={() => router.push(`/${params.orgSlug}/settings?tab=email`)}
+            className="mt-6 w-full"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Go to Settings → Email
           </Button>
         </div>
       </div>

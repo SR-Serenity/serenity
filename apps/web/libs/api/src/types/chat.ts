@@ -230,3 +230,25 @@ export type ChatRealtimeEvent =
       conversationId: string
       payload: { messageId: string; userId: string; emoji: string }
     })
+export type ChatAssistMessage = {
+  role: string
+  content: string
+}
+
+export type ChatAiRequest = {
+  conversationContext: ChatAssistMessage[]
+  prompt: string
+  authContext: {
+    orgId: string
+    userId: string
+    role?: string | null
+    displayName?: string | null
+    email?: string | null
+    orgName?: string | null
+    orgSlug?: string | null
+  }
+}
+
+export type ChatAiResponse = {
+  suggestedContent: string
+}

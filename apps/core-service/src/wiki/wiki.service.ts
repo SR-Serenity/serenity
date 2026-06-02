@@ -13,6 +13,7 @@ import {
   UpdateShareDto,
   UpdateWikiPageDto,
 } from './dto/wiki.dto';
+import { WikiIndexQueueService } from './wiki-index-queue.service';
 
 type Membership = {
   role: WorkspaceRole;
@@ -37,7 +38,10 @@ type WikiPageWithMeta = Prisma.WikiPageGetPayload<{
 
 @Injectable()
 export class WikiService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly indexQueue: WikiIndexQueueService,
+  ) {}
 
   async listPages(orgId: string, userId: string) {
     const membership = await this.getMembership(orgId, userId);
@@ -88,6 +92,7 @@ export class WikiService {
       include: this.includeMeta(userId),
     });
 
+    await this.indexQueue.enqueueIndex(page.id);
     return this.toDto(page, userId, membership);
   }
 
@@ -137,6 +142,12 @@ export class WikiService {
       include: this.includeMeta(userId),
     });
 
+    const shouldReindex = input.title !== undefined
+      || input.contentMarkdown !== undefined
+      || input.contentJson !== undefined;
+    if (shouldReindex) {
+      await this.indexQueue.enqueueIndex(page.id);
+    }
     return this.toDto(page, userId, membership);
   }
 
@@ -150,6 +161,7 @@ export class WikiService {
       data: { deletedAt: new Date() },
     });
 
+    await this.indexQueue.enqueueDelete(orgId, existing.id);
     return { success: true };
   }
 
@@ -375,9 +387,6 @@ export class WikiService {
     departmentId?: string | null,
   ) {
     if (visibility === WikiPageVisibility.DEPARTMENT) {
-      if (membership.role === WorkspaceRole.MEMBER) {
-        throw new ForbiddenException('Only admins can assign pages to departments');
-      }
       if (!departmentId) {
         throw new BadRequestException('Department pages require a department');
       }
@@ -387,6 +396,11 @@ export class WikiService {
       });
       if (!department) {
         throw new NotFoundException('Department not found');
+      }
+      const isMemberOfDept = membership.departmentId === departmentId;
+      const isPrivileged = membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
+      if (!isPrivileged && !isMemberOfDept) {
+        throw new ForbiddenException('You can only create pages in your own department');
       }
     }
   }

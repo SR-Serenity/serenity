@@ -26,12 +26,6 @@ def synthesizer_node(state: PipelineState) -> dict:
     language = state.get("detected_language", "English") or "English"
     responses = state.get("domain_agent_response", [])
 
-    document_response = next(
-        (r for r in responses if r.domain == Domain.DOCUMENT_UNDERSTANDING), None
-    )
-    if document_response and document_response.text:
-        return {"answer": document_response.text, "sources": document_response.sources}
-
     proposed_actions = [a for r in responses for a in r.proposed_actions]
     if proposed_actions:
         return {"answer": _summarize_proposals(proposed_actions, language)}
@@ -131,6 +125,6 @@ def _generate_greeting(state: PipelineState, language: str) -> str:
 
 def _fallback_answer(language: str) -> str:
     return _localize(
-        "Serenity AI is connected. Send a workspace question or attach a file to begin.",
+        "Serenity AI is connected. Send a workspace question to begin.",
         language,
     )

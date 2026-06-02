@@ -63,3 +63,37 @@ export interface CreateWikiPageInput {
 }
 
 export type UpdateWikiPageInput = Partial<CreateWikiPageInput>
+
+export interface WikiAiEditRequest {
+  pageId: string
+  pageTitle: string
+  pageContentMarkdown: string
+  prompt: string
+  authContext: {
+    orgId: string
+    userId: string
+    role?: string | null
+    displayName?: string | null
+    email?: string | null
+    orgName?: string | null
+    orgSlug?: string | null
+  }
+}
+
+export interface WikiAiEditProposedAction {
+  type: 'EDIT_WIKI_PAGE'
+  payload: {
+    pageId: string
+    title: string
+    contentMarkdown: string
+  }
+  confidence: number
+  requiresConfirmation: boolean
+}
+
+export interface WikiAiEditResponse {
+  answer: string
+  updatedContentMarkdown: string
+  proposedAction: WikiAiEditProposedAction | null
+}
+

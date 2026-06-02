@@ -9,9 +9,7 @@ import {
   Loader2,
   Lock,
   MoreHorizontal,
-  Plus,
   Share2,
-  Sparkles,
   Star,
   Trash2,
   Users,
@@ -23,6 +21,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useWikiStore } from '@/stores/wiki-store'
 import { NotionBlockEditor } from './notion-block-editor'
+import type { AiCommandBarContext } from './notion-block-editor'
 import { WikiSharePanel } from './wiki-share-panel'
 
 const EMPTY_DEPARTMENTS: Department[] = []
@@ -48,7 +47,7 @@ export function WikiEditorPanel() {
   const params = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [sharePanelOpen, setSharePanelOpen] = useState(false)
-  const { token, currentOrg } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg })))
+  const { token, currentOrg, user } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg, user: state.user })))
   const isAdmin = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN'
   const orgId = currentOrg?.id
   const { departments } = useWorkspaceStore(
@@ -64,6 +63,7 @@ export function WikiEditorPanel() {
     saving,
     dirty,
     error,
+    pages,
     updateDraft,
     toggleFavorite,
     deleteSelectedPage,
@@ -77,6 +77,7 @@ export function WikiEditorPanel() {
       saving: state.saving,
       dirty: state.dirty,
       error: state.error,
+      pages: state.pages,
       updateDraft: state.updateDraft,
       toggleFavorite: state.toggleFavorite,
       deleteSelectedPage: state.deleteSelectedPage,
@@ -175,15 +176,6 @@ export function WikiEditorPanel() {
           )}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => useWorkspaceStore.getState().requestOpenAiPanel()}
-            title="Ask AI about this page"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-[#9b9a97] hover:bg-[#f1f1ef]"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Ask AI</span>
-          </button>
           <button
             type="button"
             onClick={() => setSharePanelOpen(open => !open)}
@@ -301,25 +293,6 @@ export function WikiEditorPanel() {
               )}
             </div>
 
-            {selectedPage.canEdit && (
-              <button
-                type="button"
-                title="Add sub-page"
-                onClick={() => {
-                  if (!token) return
-                  const dept = departments[0]
-                  createPage(
-                    token, params.orgSlug, selectedPage.visibility,
-                    dept?.id ?? null, dept?.name ?? null,
-                    path => router.push(path), selectedPage.id,
-                  )
-                }}
-                className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[#9b9a97] hover:bg-[#f1f1ef] hover:text-[#787774]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add sub-page
-              </button>
-            )}
           </div>
 
           {/* Block editor */}
@@ -329,7 +302,23 @@ export function WikiEditorPanel() {
             markdownFallback={draft.contentMarkdown}
             editable={selectedPage.canEdit}
             onChange={(contentJson, contentMarkdown) => updateDraft({ contentJson, contentMarkdown })}
+            pages={pages
+              .filter(p => p.id !== selectedPage.id)
+              .map(p => ({ id: p.id, title: p.title, url: `/${params.orgSlug}/wiki/${encodeURIComponent(p.id)}` }))}
+            aiContext={selectedPage.canEdit && token && currentOrg && user ? ({
+              token,
+              pageId: selectedPage.id,
+              pageTitle: draft.title || selectedPage.title || 'Untitled',
+              authContext: {
+                orgId: currentOrg.id,
+                userId: user.id,
+                role: currentOrg.role ?? null,
+                orgName: currentOrg.name ?? null,
+                orgSlug: currentOrg.slug ?? null,
+              },
+            } satisfies AiCommandBarContext) : undefined}
           />
+
         </article>
       </div>
 

@@ -23,6 +23,9 @@
     },
     {
       "path": "./apps/web/libs/ui"
+    },
+    {
+      "path": "./apps/evaluation-web"
     }
   ]
 }

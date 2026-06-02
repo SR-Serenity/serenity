@@ -26,29 +26,38 @@ export function ShellIconActionButton({
   className,
   id,
 }: ShellIconActionButtonProps) {
+  const isCopilot = id === 'copilot' || title.toLowerCase() === 'copilot'
+
   const classes = cn(
     'relative flex items-center justify-center shrink-0 cursor-pointer group',
     'w-9 h-9 rounded-xl border border-transparent outline-none',
     'transition-all duration-150 ease-out',
     'focus-visible:border-focus focus-visible:bg-primary/10',
-    active
-      ? 'bg-primary/10 text-accent-txt'
-      : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
+    isCopilot
+      ? 'copilot-sparkle-btn'
+      : active
+        ? 'bg-primary/10 text-accent-txt'
+        : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
     disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-nav-icon',
     className,
+  )
+
+  const iconClasses = cn(
+    'h-[18px] w-[18px]',
+    isCopilot ? 'text-violet-600 group-hover:text-violet-500' : ''
   )
 
   if (as === 'link' && href) {
     return (
       <Link href={href} id={id} title={title} className={classes}>
-        <Icon className="h-[18px] w-[18px]" />
+        <Icon className={iconClasses} />
       </Link>
     )
   }
 
   return (
     <button type="button" id={id} title={title} onClick={onClick} disabled={disabled} className={classes}>
-      <Icon className="h-[18px] w-[18px]" />
+      <Icon className={iconClasses} />
     </button>
   )
 }

@@ -54,46 +54,69 @@ export class MailService {
 
   async handleGoogleCallback(code: string, state: string) {
     const parsed = this.parseState(state);
-    await this.sync.ensureOrgAccess(parsed.orgId, parsed.userId);
-    const exchanged = await this.gmail.exchangeCode(code);
-    if (!exchanged.email) {
-      throw new BadRequestException('Google profile did not return an email address');
-    }
-    const encryptedRefreshToken = this.tokenService.encrypt(exchanged.refreshToken);
-    const account = await this.prisma.mailAccount.upsert({
-      where: {
-        provider_providerAccountId: {
+    try {
+      await this.sync.ensureOrgAccess(parsed.orgId, parsed.userId);
+      const exchanged = await this.gmail.exchangeCode(code);
+      if (!exchanged.email) {
+        throw new BadRequestException('Google profile did not return an email address');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: parsed.userId },
+        select: { email: true },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      if (exchanged.email.toLowerCase() !== user.email.toLowerCase()) {
+        throw new BadRequestException(
+          `You can only connect a Google account matching your Serenity email (${user.email})`
+        );
+      }
+
+      const encryptedRefreshToken = this.tokenService.encrypt(exchanged.refreshToken);
+      const account = await this.prisma.mailAccount.upsert({
+        where: {
+          provider_providerAccountId: {
+            provider: MailProvider.GOOGLE,
+            providerAccountId: exchanged.providerAccountId,
+          },
+        },
+        create: {
+          orgId: parsed.orgId,
+          userId: parsed.userId,
           provider: MailProvider.GOOGLE,
           providerAccountId: exchanged.providerAccountId,
+          email: exchanged.email,
+          displayName: exchanged.email,
+          encryptedRefreshToken,
+          accessTokenExpiresAt: exchanged.expiryDate,
+          historyId: exchanged.historyId,
+          status: MailAccountStatus.CONNECTED,
         },
-      },
-      create: {
-        orgId: parsed.orgId,
-        userId: parsed.userId,
-        provider: MailProvider.GOOGLE,
-        providerAccountId: exchanged.providerAccountId,
-        email: exchanged.email,
-        displayName: exchanged.email,
-        encryptedRefreshToken,
-        accessTokenExpiresAt: exchanged.expiryDate,
-        historyId: exchanged.historyId,
-        status: MailAccountStatus.CONNECTED,
-      },
-      update: {
-        orgId: parsed.orgId,
-        userId: parsed.userId,
-        email: exchanged.email,
-        displayName: exchanged.email,
-        encryptedRefreshToken,
-        accessTokenExpiresAt: exchanged.expiryDate,
-        historyId: exchanged.historyId,
-        status: MailAccountStatus.CONNECTED,
-        lastError: null,
-      },
-    });
-    await this.queue.enqueueSync(account.id, 'initial');
-    await this.queue.enqueueWatchRenewal(account.id);
-    return parsed.returnTo;
+        update: {
+          orgId: parsed.orgId,
+          userId: parsed.userId,
+          email: exchanged.email,
+          displayName: exchanged.email,
+          encryptedRefreshToken,
+          accessTokenExpiresAt: exchanged.expiryDate,
+          historyId: exchanged.historyId,
+          status: MailAccountStatus.CONNECTED,
+          lastError: null,
+        },
+      });
+      await this.queue.enqueueSync(account.id, 'initial');
+      await this.queue.enqueueWatchRenewal(account.id);
+      return parsed.returnTo;
+    } catch (e) {
+      if (parsed?.returnTo) {
+        const errorParam = e instanceof BadRequestException ? 'email_mismatch' : 'connection_failed';
+        const separator = parsed.returnTo.includes('?') ? '&' : '?';
+        return `${parsed.returnTo}${separator}error=${errorParam}`;
+      }
+      throw e;
+    }
   }
 
   async disconnectAccount(orgId: string, userId: string, accountId: string) {

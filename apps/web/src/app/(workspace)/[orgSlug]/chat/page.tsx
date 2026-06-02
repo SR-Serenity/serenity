@@ -485,6 +485,10 @@ export default function ChatPage() {
                     replyingTo={replyingTo}
                     onCancelReply={() => setReplyingTo(null)}
                     placeholder={`Message ${selectedConversationName}`}
+                    conversationContext={messages.slice(-10).map((m) => ({
+                      role: m.author.displayName,
+                      content: m.content || '(Attachment)',
+                    }))}
                   />
                 </>
               )

@@ -26,6 +26,16 @@ export class AiController {
     );
   }
 
+  @Post('chat/assist')
+  @ApiOperation({ summary: 'Inline AI assistant for messaging channels' })
+  chatAssist(@Req() req: RequestWithAuth, @Body() body: unknown) {
+    return this.apiProxy.forwardAiPostRequest(
+      'ai/chat/assist',
+      body,
+      req.headers.authorization,
+    );
+  }
+
   @Post('files/index')
   @ApiOperation({ summary: 'Index an uploaded file for Serenity AI' })
   indexFile(@Req() req: RequestWithAuth, @Body() body: unknown) {
@@ -41,6 +51,16 @@ export class AiController {
   askFile(@Req() req: RequestWithAuth, @Body() body: unknown) {
     return this.apiProxy.forwardAiPostRequest(
       'ai/files/ask',
+      body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('wiki/edit')
+  @ApiOperation({ summary: 'Inline wiki AI command: apply a prompt to the current page' })
+  editWikiPage(@Req() req: RequestWithAuth, @Body() body: unknown) {
+    return this.apiProxy.forwardAiPostRequest(
+      'ai/wiki/edit',
       body,
       req.headers.authorization,
     );

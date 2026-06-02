@@ -119,6 +119,7 @@ model Organization {
   officeRooms        OfficeRoom[]
   meetingNotes       MeetingNote[]
   aiSessions         AiSession[]
+  documentFiles      DocumentFile[]
 }
 
 model User {
@@ -203,6 +204,8 @@ model CalendarItem {
   allDay              Boolean             @default(false)
   taskStatus          CalendarTaskStatus?
   dueDate             DateTime?
+  googleEventId       String?
+  googleAccountId     String?
   deletedAt           DateTime?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -219,6 +222,7 @@ model CalendarItem {
   @@index([createdById])
   @@index([deletedAt])
   @@index([roomId])
+  @@index([createdById, googleEventId])
 }
 
 model CalendarAttendee {
@@ -670,4 +674,35 @@ model AiMessage {
   session AiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
+}
+
+model DocumentFile {
+  id          String   @id @default(cuid())
+  orgId       String
+  fileId      String
+  title       String?
+  mimeType    String?
+  gcsUri      String?
+  chunksCount Int      @default(0)
+  indexedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org    Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  chunks DocumentChunk[]
+
+  @@unique([orgId, fileId])
+  @@index([orgId])
+}
+
+model DocumentChunk {
+  id        String                      @id @default(cuid())
+  docFileId String
+  orgId     String
+  page      Int
+  text      String                      @db.Text
+  embedding Unsupported("vector(1536)")?
+
+  docFile DocumentFile @relation(fields: [docFileId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
 }

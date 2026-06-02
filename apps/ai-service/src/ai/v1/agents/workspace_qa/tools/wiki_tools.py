@@ -5,6 +5,7 @@ from typing import Annotated
 from langchain.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
 
+from src.ai.v1.documents.index_store import get_index_store
 from src.services.workspace_service import get_wiki_page, list_wiki_pages
 
 
@@ -76,6 +77,29 @@ def search_wiki_pages_tool(
     if not auth_token:
         return "No auth token available."
     try:
+        org_id = runtime.context.get("org_id") or runtime.context.get("orgId")
+        store = get_index_store()
+        if org_id:
+            results = store.search(
+                org_id=org_id,
+                source_type="wiki",
+                query=query,
+                limit=5,
+            )
+            if results:
+                lines = [f"Wiki pages matching '{query}':"]
+                for result in results:
+                    page = get_wiki_page(auth_token, result.source_id)
+                    if not page:
+                        continue
+                    title = page.get("title", "Untitled")
+                    heading = " > ".join(result.heading_path or [])
+                    preview = (result.content or "")[:200].replace("\n", " ")
+                    heading_text = f" ({heading})" if heading else ""
+                    lines.append(f"  [{result.source_id}] {title}{heading_text}\n    {preview}…")
+                if len(lines) > 1:
+                    return "\n".join(lines)
+
         pages = list_wiki_pages(auth_token)
         terms = {t.lower() for t in query.split() if len(t) > 2}
         matches = []

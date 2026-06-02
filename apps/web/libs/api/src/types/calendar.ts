@@ -36,6 +36,7 @@ export interface CalendarItem {
   allDay: boolean
   taskStatus: CalendarTaskStatus | null
   dueDate: string | null
+  googleEventId: string | null
   createdById: string
   attendees: CalendarAttendee[]
   createdAt: string

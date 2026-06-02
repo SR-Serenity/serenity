@@ -3,18 +3,7 @@
 import { 
   User, 
   Settings, 
-  Lock, 
-  Zap, 
-  Bell, 
-  Keyboard, 
-  Calendar, 
   Mail, 
-  Video, 
-  CheckSquare, 
-  Hexagon, 
-  FlaskConical, 
-  ArrowUpCircle, 
-  Info,
   Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,18 +11,7 @@ import { cn } from '@/lib/utils'
 export type SettingsTab = 
   | 'account' 
   | 'general' 
-  | 'privacy' 
-  | 'efficiency' 
-  | 'notifications' 
-  | 'shortcuts' 
-  | 'calendar' 
   | 'email' 
-  | 'video' 
-  | 'tasks' 
-  | 'internal' 
-  | 'lab' 
-  | 'update' 
-  | 'about'
   | 'organization'
 
 interface SettingsSidebarProps {
@@ -44,18 +22,7 @@ interface SettingsSidebarProps {
 const sidebarItems: { id: SettingsTab; label: string; icon: any }[] = [
   { id: 'account', label: 'Account and Security', icon: User },
   { id: 'general', label: 'General', icon: Settings },
-  { id: 'privacy', label: 'Privacy', icon: Lock },
-  { id: 'efficiency', label: 'Efficiency', icon: Zap },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-  { id: 'calendar', label: 'Calendar', icon: Calendar },
-  { id: 'email', label: 'Email', icon: Mail },
-  { id: 'video', label: 'Video Meetings', icon: Video },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-  { id: 'internal', label: 'Internal Settings', icon: Hexagon },
-  { id: 'lab', label: 'Lab', icon: FlaskConical },
-  { id: 'update', label: 'Software Update', icon: ArrowUpCircle },
-  { id: 'about', label: 'About Serenity', icon: Info },
+  { id: 'email', label: 'Email & Calendar', icon: Mail },
   { id: 'organization', label: 'Manage Organization', icon: Building2 },
 ]
 

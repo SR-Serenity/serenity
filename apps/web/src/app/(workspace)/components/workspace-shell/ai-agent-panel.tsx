@@ -6,15 +6,14 @@ import { aiApi, calendarApi, wikiApi } from '@serenity/api'
 import type { AiProposedAction, AiSessionMessage } from '@serenity/api'
 import {
   Bot,
-  CalendarClock,
   CheckCircle2,
-  FileText,
   MessageSquare,
   PanelRightClose,
   Plus,
   Sparkles,
   X,
 } from 'lucide-react'
+import type { AiSource } from '@serenity/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -28,7 +27,6 @@ import { DeleteConversationDialog } from './delete-conversation-dialog'
 const suggestions = [
   { label: "What's new in my workspace?", icon: Sparkles },
   { label: 'Write meeting agenda', icon: MessageSquare },
-  { label: 'Analyze PDFs or images', icon: FileText },
   { label: 'Create a task tracker', icon: CheckCircle2 },
 ]
 
@@ -449,6 +447,16 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     router.push(target)
   }
 
+  function handleOpenSource(source: AiSource) {
+    if (!source.url) return
+    // If it's a relative wiki path, use router.push for SPA navigation
+    if (source.url.startsWith('/')) {
+      router.push(source.url)
+    } else {
+      window.open(source.url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   // ── Compact mode (sidebar panel) ───────────────────────────────────────────
   if (compact) {
     if (view === 'history') {
@@ -547,6 +555,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 onConfirmAction={executeAction}
                 onRejectAction={() => undefined}
                 onStatusChange={persistActionStatus}
+                onOpenSource={handleOpenSource}
               />
             ) : (
               <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
@@ -656,6 +665,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                   onConfirmAction={executeAction}
                   onRejectAction={() => undefined}
                   onStatusChange={persistActionStatus}
+                  onOpenSource={handleOpenSource}
                 />
               </div>
             </div>

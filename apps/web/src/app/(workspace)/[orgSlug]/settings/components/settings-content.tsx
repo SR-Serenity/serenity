@@ -1,13 +1,29 @@
 'use client'
 
+import React, { useEffect, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuthStore } from '@/stores/auth-store'
 import { MembersTab } from './members-tab'
 import { DepartmentsTab } from './departments-tab'
 import { SettingsTab } from './settings-sidebar'
-import { ExternalLink, ShieldCheck, Palette, Monitor, AppWindow } from 'lucide-react'
+import {
+  AlertCircle,
+  AppWindow,
+  Calendar,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  Mail,
+  Monitor,
+  Palette,
+  RefreshCcw,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { User } from '@serenity/api'
+import { mailApi } from '@serenity/api'
+import type { MailAccount, User } from '@serenity/api'
 
 interface SettingsContentProps {
   activeTab: SettingsTab
@@ -27,6 +43,8 @@ export function SettingsContent({ activeTab }: SettingsContentProps) {
       return <AccountSettings user={user} />
     case 'general':
       return <GeneralSettings />
+    case 'email':
+      return <EmailSettings />
     case 'organization':
       return (
         <div className="flex flex-col h-full overflow-y-auto no-scrollbar bg-white">
@@ -75,7 +93,7 @@ export function SettingsContent({ activeTab }: SettingsContentProps) {
           <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
             <AppWindow className="w-8 h-8 text-gray-300" />
           </div>
-          <h2 className="text-lg font-medium text-gray-600 capitalize">{activeTab.replace('-', ' ')}</h2>
+          <h2 className="text-lg font-medium text-gray-600 capitalize">{(activeTab as string).replace('-', ' ')}</h2>
           <p className="text-sm">This section is currently under development.</p>
         </div>
       )
@@ -124,6 +142,226 @@ function AccountSettings({ user }: { user: User | null }) {
       </section>
       
       <div className="h-px bg-gray-100 w-full" />
+    </div>
+  )
+}
+
+function EmailSettings() {
+  const { token } = useAuthStore(useShallow((s) => ({ token: s.token })))
+  const { orgSlug } = useParams<{ orgSlug: string }>()
+  const searchParams = useSearchParams()
+  const [accounts, setAccounts] = useState<MailAccount[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busyAction, setBusyAction] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'email_mismatch') {
+      setError('You can only connect a Google account matching your Serenity email.')
+    } else if (errorParam === 'connection_failed') {
+      setError('Failed to connect Google account. Please try again.')
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!token) return
+    mailApi
+      .listAccounts(token)
+      .then((r) => setAccounts(r.accounts))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [token])
+
+  async function handleConnect() {
+    if (!token) return
+    setBusyAction('connect')
+    setError(null)
+    try {
+      const returnTo = `${window.location.origin}/${orgSlug}/settings?tab=email`
+      const res = await mailApi.connectGoogle(token, returnTo)
+      window.location.href = res.url
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to connect')
+      setBusyAction(null)
+    }
+  }
+
+  async function handleDisconnect(accountId: string) {
+    if (!token) return
+    setBusyAction(`disconnect-${accountId}`)
+    setError(null)
+    try {
+      await mailApi.disconnectAccount(token, accountId)
+      setAccounts((prev) => prev.filter((a) => a.id !== accountId))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to disconnect')
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const statusConfig: Record<MailAccount['status'], { label: string; color: string; icon: React.ReactNode }> = {
+    CONNECTED: {
+      label: 'Connected',
+      color: 'text-green-600 bg-green-50 border-green-200',
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    },
+    NEEDS_REAUTH: {
+      label: 'Re-authentication needed',
+      color: 'text-amber-600 bg-amber-50 border-amber-200',
+      icon: <RefreshCcw className="w-3.5 h-3.5" />,
+    },
+    ERROR: {
+      label: 'Error',
+      color: 'text-red-600 bg-red-50 border-red-200',
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
+    },
+  }
+
+  return (
+    <div className="p-8 max-w-2xl space-y-10 overflow-y-auto h-full no-scrollbar bg-white">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Email & Calendar</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Connect your Google account to enable Gmail and Google Calendar sync across Serenity.
+        </p>
+      </div>
+
+      {/* What you get */}
+      <section className="rounded-xl border border-gray-100 bg-gray-50/60 p-5 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">What connecting enables</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm">
+              <Mail className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Gmail</p>
+              <p className="text-xs text-gray-500 leading-relaxed">Read, send, and manage your email directly in Serenity.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm">
+              <Calendar className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Google Calendar</p>
+              <p className="text-xs text-gray-500 leading-relaxed">Sync your Google Calendar events into the Serenity planner.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Connected accounts */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-700">Connected accounts</h3>
+          {accounts.length > 0 && (
+            <button
+              onClick={handleConnect}
+              disabled={busyAction === 'connect'}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 cursor-pointer"
+            >
+              {busyAction === 'connect' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <span className="text-base leading-none">+</span>
+              )}
+              Add account
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading…
+          </div>
+        ) : accounts.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+              <Mail className="h-5 w-5 text-gray-400" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700">No accounts connected</p>
+            <p className="mt-1 text-xs text-gray-500">Connect your Google account to get started.</p>
+            {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+            <button
+              onClick={handleConnect}
+              disabled={busyAction === 'connect'}
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {busyAction === 'connect' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
+              Connect Google
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            {accounts.map((account) => {
+              const s = statusConfig[account.status]
+              const isDisconnecting = busyAction === `disconnect-${account.id}`
+              return (
+                <div
+                  key={account.id}
+                  className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 font-bold text-sm">
+                      {account.email[0]?.toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{account.email}</p>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium', s.color)}>
+                          {s.icon}
+                          {s.label}
+                        </span>
+                        {account.lastSyncedAt && (
+                          <span className="text-xs text-gray-400">
+                            Synced {new Date(account.lastSyncedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      {account.status === 'ERROR' && account.lastError && (
+                        <p className="mt-1 text-xs text-red-500 truncate">{account.lastError}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    {account.status === 'NEEDS_REAUTH' && (
+                      <button
+                        onClick={handleConnect}
+                        disabled={busyAction === 'connect'}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        <RefreshCcw className="w-3 h-3" />
+                        Reconnect
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDisconnect(account.id)}
+                      disabled={isDisconnecting}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50 transition-colors cursor-pointer"
+                      title="Disconnect account"
+                    >
+                      {isDisconnecting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

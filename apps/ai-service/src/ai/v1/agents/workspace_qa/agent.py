@@ -15,6 +15,7 @@ from src.ai.v1.agents.workspace_qa.tools.calendar_tools import (
     update_calendar_item_tool,
 )
 from src.ai.v1.agents.workspace_qa.tools.chat_tools import (
+    get_messages_from_person_tool,
     list_conversations_tool,
     search_all_messages_tool,
     search_messages_tool,
@@ -46,6 +47,7 @@ _WORKSPACE_QA_TOOLS = [
     list_conversations_tool,
     search_all_messages_tool,
     search_messages_tool,
+    get_messages_from_person_tool,
     # Contacts
     list_contacts_tool,
     search_contacts_tool,

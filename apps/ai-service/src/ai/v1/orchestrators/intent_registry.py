@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from src.ai.v1.agents.document_understanding import document_agent
 from src.ai.v1.agents.schedule_agent import schedule_agent
 from src.ai.v1.agents.workspace_qa import create_workspace_qa_agent
 from src.ai.v1.contexts.schemas.enums import Domain
@@ -21,12 +20,6 @@ INTENT_REGISTRY: dict[Domain, IntentConfig] = {
         agent_factory=create_workspace_qa_agent,
         description="Workspace questions using tools and workspace context.",
         examples=["What did we decide?", "Find workspace context about onboarding."],
-    ),
-    Domain.DOCUMENT_UNDERSTANDING: IntentConfig(
-        domain=Domain.DOCUMENT_UNDERSTANDING,
-        agent_factory=lambda: document_agent,
-        description="Uploaded file and document understanding with citations.",
-        examples=["Summarize this file.", "What does the PDF say about expenses?"],
     ),
     Domain.SCHEDULE_AGENT: IntentConfig(
         domain=Domain.SCHEDULE_AGENT,

@@ -1,10 +1,12 @@
 'use client'
 
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { AlertCircle, FileText, Loader2, Paperclip, Send, X } from 'lucide-react'
-import type { ChatAttachmentDraft, ChatMessage } from '@serenity/api'
+import { AlertCircle, FileText, Loader2, Paperclip, Send, Sparkles, X } from 'lucide-react'
+import type { ChatAttachmentDraft, ChatMessage, ChatAssistMessage } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
+import { ChatAiCommandBar } from './chat-ai-command-bar'
 
 type UploadState = 'uploading' | 'ready' | 'error'
 
@@ -24,6 +26,7 @@ type MessageInputProps = {
   onCancelReply?: () => void
   disabled?: boolean
   placeholder?: string
+  conversationContext?: ChatAssistMessage[]
 }
 
 function formatBytes(size?: number | null) {
@@ -39,11 +42,15 @@ export function MessageInput({
   onCancelReply,
   disabled,
   placeholder = 'Message',
+  conversationContext = [],
 }: MessageInputProps) {
+  const { token, user, currentOrg } = useAuthStore()
   const [content, setContent] = useState('')
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [aiBarOpen, setAiBarOpen] = useState(false)
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -92,6 +99,11 @@ export function MessageInput({
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === '/' && content === '') {
+      event.preventDefault()
+      setAiBarOpen(true)
+      return
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       void handleSend()
@@ -155,7 +167,7 @@ export function MessageInput({
   }
 
   return (
-    <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-2 sm:px-4">
+    <div className="relative shrink-0 border-t border-gray-100 bg-white px-3 py-2 sm:px-4">
       <div>
         {replyingTo && (
           <div className="mb-2 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm animate-in fade-in slide-in-from-bottom-1 duration-150">
@@ -266,6 +278,17 @@ export function MessageInput({
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setAiBarOpen(true)}
+                disabled={disabled || isSending}
+                title="Ask AI (or type /)"
+                className="copilot-sparkle-btn"
+              >
+                <Sparkles className="h-4 w-4 text-violet-600" />
+              </Button>
             </div>
 
             <Button
@@ -281,6 +304,26 @@ export function MessageInput({
           </div>
         </div>
       </div>
+
+      {token && user && currentOrg && (
+        <ChatAiCommandBar
+          open={aiBarOpen}
+          token={token}
+          conversationContext={conversationContext}
+          authContext={{
+            orgId: currentOrg.id,
+            userId: user.id,
+            displayName: user.displayName,
+          }}
+          onAccept={(suggestedText) => {
+            setContent(suggestedText)
+            setAiBarOpen(false)
+            setTimeout(resizeTextarea, 0)
+            setTimeout(() => textareaRef.current?.focus(), 10)
+          }}
+          onClose={() => setAiBarOpen(false)}
+        />
+      )}
     </div>
   )
 }

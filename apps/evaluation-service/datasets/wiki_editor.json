@@ -1,0 +1,146 @@
+{
+  "name": "Wiki Editor — 20 Cases",
+  "feature": "wiki_editor",
+  "cases": [
+    {
+      "input": "Rewrite this paragraph to make it sound more professional",
+      "expected_output": "Our primary objective is to finalize the deployment checklist by Friday to ensure a smooth production release.",
+      "page_title": "Release Procedures",
+      "page_content_markdown": "Hey, we gotta get this deploy list done by Friday, ok guys?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Summarize the main points of this document",
+      "expected_output": "Summary:\n- Remote work hours are flexible.\n- Daily standups are at 10:00 AM.\n- Submit timesheets weekly.",
+      "page_title": "Remote Working Guidelines",
+      "page_content_markdown": "# Guidelines\nRemote work allows flexible scheduling. Standups occur daily at 10 AM. Timesheets are due weekly.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a list of team guidelines to this page",
+      "expected_output": "Here are the team guidelines:\n- Be respectful.\n- Document your code.\n- Communicate changes early.",
+      "page_title": "Team Standards",
+      "page_content_markdown": "# Standards\nWe strive for excellence.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Improve the clarity and formatting of these release notes",
+      "expected_output": "## Release Notes - v1.2.0\n### New Features\n- Added evaluation metrics dashboard\n### Bug Fixes\n- Resolved database connection leaks",
+      "page_title": "Changelog",
+      "page_content_markdown": "v1.2.0 is out. added evaluation metrics and fixed some DB memory leaks.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Translate this wiki page to Vietnamese",
+      "expected_output": "# Hướng dẫn cài đặt\nChạy `npm install` để bắt đầu.",
+      "page_title": "Setup Guide",
+      "page_content_markdown": "# Setup Instructions\nRun `npm install` to get started.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Make the tone of this onboarding guide more friendly and welcoming",
+      "expected_output": "Welcome to the team! We are absolutely thrilled to have you here. Let's make something amazing together.",
+      "page_title": "Onboarding",
+      "page_content_markdown": "This is the onboarding guide. Complete the checklist below to begin working.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a standard FAQ section to the API guidelines page",
+      "expected_output": "## Frequently Asked Questions\n**Q: What is the rate limit?**\n- A: 100 requests per minute.",
+      "page_title": "API Guidelines",
+      "page_content_markdown": "# API Specs\nWe use REST APIs.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Correct the spelling and grammar in this draft",
+      "expected_output": "We need to ensure that the server is updated with the latest security patches.",
+      "page_title": "Maintenance Draft",
+      "page_content_markdown": "we need to secure that server is update with the latest security patch.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Formatting this raw text into Markdown sections",
+      "expected_output": "# Project Goals\n- Goal 1\n- Goal 2",
+      "page_title": "Goals Draft",
+      "page_content_markdown": "Goals: Goal 1, Goal 2.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Simplify the explanation of the deployment process",
+      "expected_output": "To deploy:\n1. Build the project.\n2. Push the Docker image.\n3. Restart the service.",
+      "page_title": "Deployment Instructions",
+      "page_content_markdown": "First compile files, then compile docker assets, push it to docker registry and run docker stack deploy restart.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a checklist for the code review process to this page",
+      "expected_output": "# Review Checklist\n- [ ] Code compiles without errors\n- [ ] Unit tests pass\n- [ ] Clean styling formatting",
+      "page_title": "Code Review Policy",
+      "page_content_markdown": "# Code Review",
+      "retrieval_context": []
+    },
+    {
+      "input": "Update this security guidelines page to include a warning about API keys",
+      "expected_output": "> [!WARNING]\n> Never commit raw API keys to repository.",
+      "page_title": "Security Guidelines",
+      "page_content_markdown": "# Security\nKeep passwords secure.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Create a neat markdown table summarizing these project milestones",
+      "expected_output": "| Milestone | Due Date | Owner |\n|---|---|---|\n| Kickoff | June 1 | Huy |\n| Demo | July 15 | David |",
+      "page_title": "Milestones",
+      "page_content_markdown": "Kickoff is June 1st owned by Huy, Demo is July 15th owned by David.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Refactor the getting started section to be more step-by-step",
+      "expected_output": "### Step 1: Run dev server\n### Step 2: Open localhost",
+      "page_title": "Getting Started",
+      "page_content_markdown": "Run npm run dev, then open browser on localhost.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Summarize the troubleshooting steps in a bulleted list",
+      "expected_output": "- Check server logs\n- Verify database credentials\n- Restart redis instance",
+      "page_title": "Troubleshooting Guide",
+      "page_content_markdown": "First check logs, then double check DB passwords, then restart redis cache.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Make this feature description more concise",
+      "expected_output": "The notification engine sends instant updates to users via email and chat alerts.",
+      "page_title": "Notification Engine",
+      "page_content_markdown": "The notification system is designed to provide immediate notifications to clients. It triggers mail sending processes as well as real-time messaging updates.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a section explaining the project architecture",
+      "expected_output": "## Architecture\nThe system uses a microservice architecture composed of NestJS services, a Python AI service, and a Next.js frontend.",
+      "page_title": "Architecture Overview",
+      "page_content_markdown": "# Architecture",
+      "retrieval_context": []
+    },
+    {
+      "input": "Change the tone of this page to be objective and technical",
+      "expected_output": "The system processes incoming webhooks asynchronously using a Redis message queue.",
+      "page_title": "Webhook Processing",
+      "page_content_markdown": "Basically, our system does some pretty cool magic processing on webhooks using a fast Redis queue.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Polish the summary of the team guidelines",
+      "expected_output": "Guidelines Summary:\n1. Standups are mandatory.\n2. Create PRs for review.\n3. Keep documentation updated.",
+      "page_title": "Guidelines Summary",
+      "page_content_markdown": "standup are daily and you must attend. make pull request. write docs.",
+      "retrieval_context": []
+    },
+    {
+      "input": "Add a table of contents and clear headings to this doc",
+      "expected_output": "## Table of Contents\n- [Introduction](#introduction)\n- [Prerequisites](#prerequisites)\n\n## Introduction\n...",
+      "page_title": "Developer Manual",
+      "page_content_markdown": "# Dev Manual\nthis manual covers prerequisites and introduction.",
+      "retrieval_context": []
+    }
+  ]
+}
