@@ -207,41 +207,18 @@ export default function ChatPage() {
       conversationId: selectedConversation.id,
     })
 
-    const form = new FormData()
-    form.set('file', file)
-    form.set('api_key', intent.apiKey)
-    form.set('timestamp', String(intent.timestamp))
-    form.set('signature', intent.signature)
-    form.set('public_id', intent.publicId)
-    form.set('folder', intent.folder)
-
     const uploadResponse = await fetch(intent.uploadUrl, {
-      method: 'POST',
-      body: form,
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: file,
     })
 
     if (!uploadResponse.ok) {
-      throw new Error('Cloudinary upload failed')
-    }
-
-    const uploaded = await uploadResponse.json() as {
-      public_id: string
-      secure_url: string
-      bytes: number
-      resource_type: string
-      format?: string
-      width?: number
-      height?: number
+      throw new Error('GCS upload failed')
     }
 
     const completed = await chatApi.completeAttachmentUpload(token, intent.attachmentId, {
-      publicId: uploaded.public_id,
-      secureUrl: uploaded.secure_url,
-      bytes: uploaded.bytes,
-      resourceType: uploaded.resource_type,
-      format: uploaded.format,
-      width: uploaded.width,
-      height: uploaded.height,
+      objectPath: intent.objectPath,
     })
 
     return {

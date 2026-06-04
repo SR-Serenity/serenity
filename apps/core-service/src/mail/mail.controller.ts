@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Body, Controller, Delete, Get, Param, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import {

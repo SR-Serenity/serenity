@@ -10,8 +10,20 @@ import { WikiModule } from './wiki/wiki.module';
 import { MailModule } from './mail/mail.module';
 import { OfficeModule } from './office/office.module';
 import { AiModule } from './ai/ai.module';
+import { AutomationModule } from './automation/automation.module';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, UsersModule, OrganizationsModule, ChatModule, ContactsModule, CalendarModule, WikiModule, MailModule, OfficeModule, AiModule],
+  imports: [
+    AuthModule,
+    DatabaseModule,
+    UsersModule,
+    OrganizationsModule,
+    ChatModule, ContactsModule,
+    CalendarModule,
+    WikiModule,
+    MailModule,
+    OfficeModule,
+    AiModule,
+    AutomationModule],
 })
 export class AppModule {}

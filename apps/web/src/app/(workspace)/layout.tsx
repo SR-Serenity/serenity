@@ -24,6 +24,7 @@ import {
   Search,
   UserSquare,
   Users,
+  Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
@@ -65,6 +66,7 @@ function buildApps(basePath: string): WorkspaceRailItem[] {
     { id: 'mail', icon: Mail, label: 'Mail', href: `${basePath}/mail` },
     { id: 'chat', icon: MessageSquare, label: 'Chat', href: `${basePath}/chat` },
     { id: 'wiki', icon: FileText, label: 'Wiki', href: `${basePath}/wiki` },
+    { id: 'automation', icon: Zap, label: 'Automation', href: `${basePath}/automation` },
   ]
 }
 

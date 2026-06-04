@@ -152,21 +152,11 @@ export type CreateAttachmentUploadIntentInput = {
 export type CreateAttachmentUploadIntentResponse = {
   attachmentId: string
   uploadUrl: string
-  apiKey: string
-  timestamp: number
-  signature: string
-  publicId: string
-  folder: string
+  objectPath: string
 }
 
 export type CompleteAttachmentUploadInput = {
-  publicId: string
-  secureUrl: string
-  bytes: number
-  resourceType: string
-  format?: string
-  width?: number
-  height?: number
+  objectPath: string
 }
 
 export type CompleteAttachmentUploadResponse = {

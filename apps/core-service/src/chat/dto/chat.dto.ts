@@ -9,12 +9,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ChatConversationType } from '@prisma/client';
 
 export class CreateChannelDto {
@@ -99,43 +97,7 @@ export class CompleteAttachmentUploadDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-    publicId!: string;
-
-  @ApiProperty()
-  @IsUrl({ require_tld: false })
-    secureUrl!: string;
-
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  @Max(50_000_000)
-    bytes!: number;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(40)
-    resourceType!: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(40)
-    format?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-    width?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-    height?: number;
+    objectPath!: string;
 }
 
 export class AddReactionDto {
