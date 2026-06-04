@@ -23,6 +23,7 @@
     "@tiptap/suggestion": "^3.23.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
     "jwt-decode": "^4.0.0",
     "livekit-client": "^2.19.0",
     "lucide-react": "^1.8.0",
