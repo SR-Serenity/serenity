@@ -84,7 +84,7 @@ export class ChatController {
   }
 
   @Post('attachments/upload-intent')
-  @ApiOperation({ summary: 'Create a Cloudinary upload intent for a chat attachment' })
+  @ApiOperation({ summary: 'Create a GCS signed upload URL for a chat attachment' })
   createUploadIntent(
     @Req() req: RequestWithAuth,
     @Body() body: unknown,
@@ -97,7 +97,7 @@ export class ChatController {
   }
 
   @Post('attachments/:attachmentId/complete')
-  @ApiOperation({ summary: 'Complete a direct Cloudinary chat attachment upload' })
+  @ApiOperation({ summary: 'Complete a direct GCS chat attachment upload' })
   completeAttachmentUpload(
     @Req() req: RequestWithAuth,
     @Param('attachmentId') attachmentId: string,

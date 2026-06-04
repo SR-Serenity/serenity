@@ -255,10 +255,13 @@ export class ChatService {
       id: message.id,
     }));
 
+    const presented = cursorPage.items
+      .reverse()
+      .map((message) => this.presentMessage(message));
+    const resolved = await this.resolveMessagesAttachmentUrls(presented);
+
     return {
-      messages: cursorPage.items
-        .reverse()
-        .map((message) => this.presentMessage(message)),
+      messages: resolved,
       nextCursor: cursorPage.nextCursor,
     };
   }
@@ -448,8 +451,10 @@ export class ChatService {
       id: attachment.id,
     }));
 
+    const resolved = await this.uploads.resolveAttachmentUrls(cursorPage.items);
+
     return {
-      attachments: cursorPage.items,
+      attachments: resolved,
       nextCursor: cursorPage.nextCursor,
     };
   }
@@ -460,7 +465,7 @@ export class ChatService {
   ) {
     await this.ensureConversationAccess(auth, input.conversationId);
     const folder = `serenity/${auth.orgId}/conversations/${input.conversationId}`;
-    const intent = this.uploads.createSignedUploadIntent({
+    const intent = await this.uploads.createSignedUploadIntent({
       filename: input.filename,
       contentType: input.contentType,
       size: input.size,
@@ -478,7 +483,7 @@ export class ChatService {
             ? ChatAttachmentKind.GIF
             : ChatAttachmentKind.FILE,
         uploadStatus: ChatAttachmentUploadStatus.PENDING,
-        publicId: intent.publicId,
+        publicId: intent.objectPath,
         name: input.filename,
         mimeType: input.contentType,
         size: input.size,
@@ -490,11 +495,7 @@ export class ChatService {
     return {
       attachmentId: intent.attachmentId,
       uploadUrl: intent.uploadUrl,
-      apiKey: intent.apiKey,
-      timestamp: intent.timestamp,
-      signature: intent.signature,
-      publicId: intent.publicId,
-      folder: intent.folder,
+      objectPath: intent.objectPath,
     };
   }
 
@@ -513,34 +514,28 @@ export class ChatService {
     if (attachment.uploadedById !== auth.userId) {
       throw new ForbiddenException('Attachment upload access denied');
     }
-    if (attachment.publicId !== input.publicId) {
-      throw new BadRequestException('Attachment publicId mismatch');
+    if (attachment.publicId !== input.objectPath) {
+      throw new BadRequestException('Attachment objectPath mismatch');
     }
 
     const completed = await this.prisma.chatAttachment.update({
       where: { id: attachmentId },
       data: {
         uploadStatus: ChatAttachmentUploadStatus.COMPLETED,
-        url: input.secureUrl,
-        size: input.bytes,
-        provider: UploadProvider.CLOUDINARY,
+        provider: UploadProvider.GCS,
         metadata: {
           ...(typeof attachment.metadata === 'object' &&
           attachment.metadata !== null &&
           !Array.isArray(attachment.metadata)
             ? attachment.metadata
             : {}),
-          publicId: input.publicId,
-          resourceType: input.resourceType,
-          format: input.format,
-          width: input.width,
-          height: input.height,
-          bytes: input.bytes,
+          objectPath: input.objectPath,
         },
       },
     });
 
-    return { attachment: completed };
+    const [withUrl] = await this.uploads.resolveAttachmentUrls([completed]);
+    return { attachment: withUrl };
   }
 
   async editMessage(
@@ -832,6 +827,22 @@ export class ChatService {
       attachments: [],
       reactions: [],
     };
+  }
+
+  private async resolveMessagesAttachmentUrls(
+    messages: MessageWithInclude[],
+  ): Promise<MessageWithInclude[]> {
+    const allAttachments = messages.flatMap((m) => m.attachments);
+    if (allAttachments.length === 0) return messages;
+    const resolved = await this.uploads.resolveAttachmentUrls(allAttachments);
+    const urlMap = new Map(resolved.map((a) => [a.id, a.url]));
+    return messages.map((m) => ({
+      ...m,
+      attachments: m.attachments.map((a) => ({
+        ...a,
+        url: urlMap.get(a.id) ?? a.url,
+      })),
+    }));
   }
 
   private decodeCursor<T>(value?: string): T | null {

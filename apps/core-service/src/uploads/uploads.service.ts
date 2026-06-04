@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import crypto from 'node:crypto';
-import { v2 as cloudinary } from 'cloudinary';
+import { Storage } from '@google-cloud/storage';
 import { UploadProvider } from './config/enums/upload-provider.enum';
 import type {
   CreateSignedUploadIntentInput,
@@ -8,6 +8,8 @@ import type {
 } from './config/types/upload.types';
 
 const MAX_UPLOAD_BYTES = 50_000_000;
+const UPLOAD_SIGNED_URL_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const DOWNLOAD_SIGNED_URL_TTL_MS = 60 * 60 * 1000; // 1 hour
 const ALLOWED_UPLOAD_CONTENT_TYPES = new Set([
   'application/pdf',
   'image/gif',
@@ -21,31 +23,76 @@ const ALLOWED_UPLOAD_CONTENT_TYPES = new Set([
 
 @Injectable()
 export class UploadsService {
-  createSignedUploadIntent(input: CreateSignedUploadIntentInput): SignedUploadIntent {
+  private storage: Storage;
+
+  constructor() {
+    this.storage = new Storage({ projectId: process.env.GCS_PROJECT_ID });
+  }
+
+  async createSignedUploadIntent(
+    input: CreateSignedUploadIntentInput
+  ): Promise<SignedUploadIntent> {
     this.validateUploadRequest(input.contentType, input.size);
-    const { cloudName, apiKey, apiSecret } = this.cloudinaryConfig();
+    const bucket = this.bucketName();
     const attachmentId = crypto.randomUUID();
-    const publicId = `${input.folder}/${attachmentId}`;
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signature = cloudinary.utils.api_sign_request(
-      {
-        folder: input.folder,
-        public_id: publicId,
-        timestamp,
-      },
-      apiSecret,
-    );
+    const objectPath = `${input.folder}/${attachmentId}`;
+
+    const [uploadUrl] = await this.storage
+      .bucket(bucket)
+      .file(objectPath)
+      .getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + UPLOAD_SIGNED_URL_TTL_MS,
+        contentType: input.contentType,
+      });
 
     return {
-      provider: UploadProvider.CLOUDINARY,
+      provider: UploadProvider.GCS,
       attachmentId,
-      uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
-      apiKey,
-      timestamp,
-      signature,
-      publicId,
-      folder: input.folder,
+      uploadUrl,
+      objectPath,
     };
+  }
+
+  async getSignedDownloadUrl(
+    objectPath: string,
+    opts?: { filename?: string; mimeType?: string },
+  ): Promise<string> {
+    const bucket = this.bucketName();
+    const isImage = opts?.mimeType?.startsWith('image/');
+    const disposition =
+      !isImage && opts?.filename
+        ? `attachment; filename="${opts.filename}"`
+        : undefined;
+
+    const [url] = await this.storage
+      .bucket(bucket)
+      .file(objectPath)
+      .getSignedUrl({
+        version: 'v4',
+        action: 'read',
+        expires: Date.now() + DOWNLOAD_SIGNED_URL_TTL_MS,
+        ...(disposition ? { responseDisposition: disposition } : {}),
+      });
+    return url;
+  }
+
+  async resolveAttachmentUrls<
+    T extends { publicId: string; url: string | null; name: string; mimeType: string | null },
+  >(attachments: T[]): Promise<(T & { url: string })[]> {
+    if (attachments.length === 0) {
+      return attachments as (T & { url: string })[];
+    }
+    const signedUrls = await Promise.all(
+      attachments.map((a) =>
+        this.getSignedDownloadUrl(a.publicId, {
+          filename: a.name,
+          mimeType: a.mimeType ?? undefined,
+        }),
+      ),
+    );
+    return attachments.map((a, i) => ({ ...a, url: signedUrls[i] }));
   }
 
   private validateUploadRequest(contentType: string, size: number) {
@@ -57,14 +104,11 @@ export class UploadsService {
     }
   }
 
-  private cloudinaryConfig() {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-    if (!cloudName || !apiKey || !apiSecret) {
-      throw new BadRequestException('Cloudinary is not configured');
+  private bucketName(): string {
+    const name = process.env.GCS_BUCKET_NAME;
+    if (!name) {
+      throw new BadRequestException('GCS is not configured');
     }
-
-    return { cloudName, apiKey, apiSecret };
+    return name;
   }
 }
