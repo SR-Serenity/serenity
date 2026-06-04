@@ -16,6 +16,7 @@ import { ChatRealtimeEvent } from '../realtime/config/enums/chat-realtime-event.
 import { UploadProvider } from '../uploads/config/enums/upload-provider.enum';
 import { UploadsService } from '../uploads/uploads.service';
 import { ChatEventsService } from './chat-events.service';
+import { AutomationEngineService } from '../automation/automation-engine.service';
 import type {
   AddReactionDto,
   AddConversationMembersDto,
@@ -74,7 +75,8 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: ChatEventsService,
-    private readonly uploads: UploadsService
+    private readonly uploads: UploadsService,
+    private readonly automationEngine: AutomationEngineService,
   ) {}
 
   async listConversations(auth: AuthContext, page?: CursorPageDto) {
@@ -365,6 +367,14 @@ export class ChatService {
       conversationId,
       payload: message,
     });
+
+    if (message.content) {
+      void this.automationEngine.runMessageKeyword(auth.orgId, {
+        conversationId,
+        content: message.content,
+        authorId: auth.userId,
+      });
+    }
 
     return { message };
   }

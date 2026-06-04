@@ -9,6 +9,7 @@ import { WikiController } from './wiki.controller';
 import { MailController } from './mail.controller';
 import { OfficeController } from './office.controller';
 import { AiController } from './ai.controller';
+import { AutomationController } from './automation.controller';
 
 @Module({
   providers: [ApiProxyService],
@@ -22,6 +23,7 @@ import { AiController } from './ai.controller';
     MailController,
     OfficeController,
     AiController,
+    AutomationController,
   ],
 })
 export class ApiProxyModule {}

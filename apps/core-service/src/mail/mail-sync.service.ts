@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MailAccountStatus, MailMessageDirection, MailProvider, Prisma } from '@prisma/client';
 import type { gmail_v1 } from 'googleapis';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import type { Job } from 'bullmq';

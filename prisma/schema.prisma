@@ -120,6 +120,7 @@ model Organization {
   meetingNotes       MeetingNote[]
   aiSessions         AiSession[]
   documentFiles      DocumentFile[]
+  automationRules    AutomationRule[]
 }
 
 model User {
@@ -705,4 +706,32 @@ model DocumentChunk {
   docFile DocumentFile @relation(fields: [docFileId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+}
+
+enum AutomationTriggerType {
+  SCHEDULE
+  MEMBER_JOINED
+  MESSAGE_KEYWORD
+}
+
+enum AutomationActionType {
+  AI_AGENT
+}
+
+model AutomationRule {
+  id            String                @id @default(cuid())
+  orgId         String
+  name          String
+  enabled       Boolean               @default(true)
+  triggerType   AutomationTriggerType
+  triggerConfig Json                  @default("{}")
+  actionType    AutomationActionType
+  actionConfig  Json                  @default("{}")
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([orgId, triggerType, enabled])
 }

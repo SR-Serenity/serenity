@@ -2,15 +2,20 @@
 
 import logging
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from src.ai.v1.agents.wiki_editor.prompts import WIKI_EDITOR_SYSTEM_PROMPT
+from src.ai.v1.agents.wiki_editor.prompts import (
+    WIKI_EDITOR_EXPLAIN_HUMAN,
+    WIKI_EDITOR_EXPLAIN_SYSTEM,
+    WIKI_EDITOR_HUMAN_TEMPLATE,
+    WIKI_EDITOR_SYSTEM_PROMPT,
+)
 from src.api.internal.v1.schemas import ProposedAction
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Max characters of page content to send to the LLM (avoids huge context costs).
 _MAX_CONTENT_CHARS = 24_000
 
 
@@ -18,6 +23,13 @@ class WikiEditorAgent:
     """Inline wiki editor: takes a page + user prompt and returns edited Markdown."""
 
     name = "WikiEditorAgent"
+
+    def _make_llm(self, temperature: float = 0.7) -> ChatOpenAI:
+        return ChatOpenAI(
+            model=settings.OPENAI_MODEL,
+            api_key=settings.OPENAI_API_KEY,
+            temperature=temperature,
+        )
 
     def health(self) -> dict[str, str]:
         return {"agent": self.name, "status": "ready"}
@@ -36,31 +48,28 @@ class WikiEditorAgent:
         Returns:
             (explanation, updated_content_markdown) — both strings.
         """
-        truncated = page_content_markdown[:_MAX_CONTENT_CHARS]
-        system_prompt = WIKI_EDITOR_SYSTEM_PROMPT.format(
-            page_title=page_title,
-            page_content=truncated,
-            prompt=prompt,
-        )
-
         if not settings.OPENAI_API_KEY:
             logger.warning("wiki_editor: OPENAI_API_KEY not set — returning original content")
             return "No AI available.", page_content_markdown
 
-        llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
-            temperature=0.3,
+        truncated = page_content_markdown[:_MAX_CONTENT_CHARS]
+        system_prompt = WIKI_EDITOR_SYSTEM_PROMPT.format(
+            page_title=page_title,
+            page_content=truncated,
         )
+        human_message = WIKI_EDITOR_HUMAN_TEMPLATE.format(prompt=prompt)
 
         try:
-            response = llm.invoke(system_prompt)
+            llm = self._make_llm(temperature=0.7)
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=human_message),
+            ])
             updated = str(response.content).strip()
 
-            # Safety: strip accidental code fences the model may add
+            # Strip accidental code fences the model may add
             if updated.startswith("```"):
                 lines = updated.split("\n")
-                # Remove first line (```markdown or ```) and last line (```)
                 inner = lines[1:] if len(lines) > 1 else lines
                 if inner and inner[-1].strip() == "```":
                     inner = inner[:-1]
@@ -69,13 +78,25 @@ class WikiEditorAgent:
             if not updated:
                 return "No changes made.", page_content_markdown
 
-            # Build a short explanation from the prompt
-            explanation = f'Applied: "{prompt.strip()}"'
+            explanation = self._generate_explanation(prompt=prompt)
             return explanation, updated
 
         except Exception as exc:
             logger.exception("wiki_editor: unexpected error: %s", exc)
             return f"Error: {exc}", page_content_markdown
+
+    def _generate_explanation(self, *, prompt: str) -> str:
+        """Generate a one-sentence human-readable summary of what was done."""
+        try:
+            llm = self._make_llm(temperature=0.3)
+            response = llm.invoke([
+                SystemMessage(content=WIKI_EDITOR_EXPLAIN_SYSTEM),
+                HumanMessage(content=WIKI_EDITOR_EXPLAIN_HUMAN.format(prompt=prompt)),
+            ])
+            explanation = str(response.content).strip()
+            return explanation if explanation else f'Applied: "{prompt.strip()}"'
+        except Exception:
+            return f'Applied: "{prompt.strip()}"'
 
     def build_proposed_action(
         self,

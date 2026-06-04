@@ -9,6 +9,7 @@ import {
   ApiProperty,
   ApiPropertyOptional,
   ApiTags,
+  PartialType,
 } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
@@ -137,24 +138,7 @@ class CreateCalendarItemBodyDto {
     attendeeIds?: string[];
 }
 
-class UpdateCalendarItemBodyDto extends CreateCalendarItemBodyDto {
-  @ApiPropertyOptional({ enum: CalendarItemType, enumName: 'CalendarItemType' })
-  @IsOptional()
-  @IsEnum(CalendarItemType)
-    override type?: CalendarItemType;
-
-  @ApiPropertyOptional({ enum: CalendarVisibility, enumName: 'CalendarVisibility' })
-  @IsOptional()
-  @IsEnum(CalendarVisibility)
-    override visibility?: CalendarVisibility;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(180)
-    override title?: string;
-}
+class UpdateCalendarItemBodyDto extends PartialType(CreateCalendarItemBodyDto) {}
 
 @ApiTags('calendar')
 @ApiBearerAuth()
@@ -167,7 +151,7 @@ export class CalendarController {
   @ApiOkResponse({ description: 'Calendar items retrieved' })
   listItems(@Req() req: RequestWithAuth, @Query() query: ListCalendarItemsQueryDto) {
     const authorization = req.headers.authorization as string;
-    return this.apiProxy.forwardGetRequest('calendar/items', authorization, query);
+    return this.apiProxy.forwardGetRequest('calendar/items', authorization, query as any);
   }
 
   @Post()

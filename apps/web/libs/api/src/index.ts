@@ -1,4 +1,4 @@
-export { authApi, orgApi, chatApi, aiApi, contactsApi, calendarApi, wikiApi, mailApi, officeApi } from './lib'
+export { authApi, orgApi, chatApi, aiApi, contactsApi, calendarApi, wikiApi, mailApi, officeApi, automationApi } from './lib'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
@@ -127,3 +127,11 @@ export type {
   CreateRoomInput,
   UpdateRoomInput,
 } from './types/office'
+export type {
+  AutomationRule,
+  AutomationTriggerType,
+  AutomationActionType,
+  CreateAutomationRuleInput,
+  UpdateAutomationRuleInput,
+  ListAutomationRulesResponse,
+} from './types/automation'
