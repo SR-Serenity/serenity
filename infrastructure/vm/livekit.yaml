@@ -1,0 +1,13 @@
+# LiveKit server config for the single-VM deployment (non-secret).
+# API keys are injected via the LIVEKIT_KEYS env var (see docker-compose.yml).
+#
+# Single-port UDP mux (7882) keeps the firewall simple: just TCP 7880/7881 +
+# UDP 7882. use_external_ip lets LiveKit advertise the VM's public IP for ICE.
+
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+logging:
+  level: info

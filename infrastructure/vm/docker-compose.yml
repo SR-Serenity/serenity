@@ -89,6 +89,10 @@ services:
       REDIS_URL: redis://redis:6379
       AUTH_SERVICE_URL: http://auth-service:3000/api
       AI_SERVICE_URL: http://ai-service:8001/api/internal/v1
+      # LiveKit (sourced from .env so the secret lives in one place)
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_WS_URL: ${LIVEKIT_WS_URL}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -134,6 +138,23 @@ services:
       PORT: 3000
     depends_on:
       gateway: { condition: service_started }
+    networks: [serenity]
+    restart: always
+
+  # ---------------- LiveKit (self-hosted WebRTC SFU) ----------------
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: serenity-livekit
+    command: --config /etc/livekit.yaml
+    environment:
+      # "key: secret" — both come from .env (compose substitution)
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    ports:
+      - '7880:7880' # signaling (WebSocket)
+      - '7881:7881' # RTC over TCP (fallback)
+      - '7882:7882/udp' # media (UDP mux)
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
     networks: [serenity]
     restart: always
 
