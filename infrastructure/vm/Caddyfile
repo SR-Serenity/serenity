@@ -32,6 +32,53 @@
 	}
 }
 
+# --- Per-service public subdomains -----------------------------------------
+# Each backend service gets its own TLS hostname (Caddy auto-provisions certs).
+# Inter-service calls STILL use the Docker network names (see docker-compose.yml);
+# these subdomains are for external/browser clients only.
+# Requires DNS A records -> the VM IP (grey-cloud / DNS-only in Cloudflare).
+
+# API gateway (the guarded public API surface).
+gateway.guix.tech {
+	encode zstd gzip
+	reverse_proxy gateway:3000
+}
+
+# Core REST API (direct access; normally reached via the gateway).
+core.guix.tech {
+	encode zstd gzip
+	reverse_proxy core-service:3000
+}
+
+# Auth service (login/register/JWT; normally reached via the gateway).
+auth.guix.tech {
+	encode zstd gzip
+	reverse_proxy auth-service:3000
+}
+
+# Realtime service. flush_interval -1 disables buffering for SSE/WS streams.
+realtime.guix.tech {
+	encode zstd gzip
+	reverse_proxy realtime-service:3000 {
+		flush_interval -1
+	}
+}
+
+# LiveKit signaling over WSS (media still flows direct on UDP 7882 / TCP 7881).
+livekit.guix.tech {
+	encode zstd gzip
+	reverse_proxy livekit:7880
+}
+
+# AI service — INTERNAL API (/api/internal/v1). Exposing it publicly is risky:
+# it is meant to be called only by gateway/core over the Docker network. It is
+# protected by INTERNAL_API_TOKEN, but consider removing this block (and its DNS
+# record) unless you truly need external access.
+ai.guix.tech {
+	encode zstd gzip
+	reverse_proxy ai-service:8001
+}
+
 # --- Arcane Docker UI on its own subdomain ---------------------------------
 # Set ARCANE_SITE_ADDRESS=arcane.yourdomain.com in .env to enable.
 # Until set, it defaults to a non-routable http://arcane.localhost (inert).

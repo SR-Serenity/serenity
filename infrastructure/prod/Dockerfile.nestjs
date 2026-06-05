@@ -45,7 +45,7 @@ USER nodejs
 EXPOSE 3000
 
 # Use dumb-init to handle signals properly (graceful shutdown)
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start the application
 CMD ["node", "dist/main.js"]
