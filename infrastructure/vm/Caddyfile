@@ -31,3 +31,20 @@
 		reverse_proxy web:3000
 	}
 }
+
+# --- Arcane Docker UI on its own subdomain ---------------------------------
+# Set ARCANE_SITE_ADDRESS=arcane.yourdomain.com in .env to enable.
+# Until set, it defaults to a non-routable http://arcane.localhost (inert).
+# WARNING: Arcane has root-level Docker access. Keep a strong Arcane password
+# and consider enabling the basic_auth layer below as defense-in-depth.
+{$ARCANE_SITE_ADDRESS:http://arcane.localhost} {
+	encode zstd gzip
+
+	# Optional extra gate in front of Arcane's own login. Generate a hash with:
+	#   docker compose exec caddy caddy hash-password --plaintext 'your-pass'
+	# basic_auth {
+	#	admin <PASTE_BCRYPT_HASH>
+	# }
+
+	reverse_proxy arcane:3552
+}

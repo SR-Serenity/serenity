@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useInView, useScroll } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
 
 /* ─── Animation helpers ──────────────────────────────────────── */
