@@ -1,0 +1,52 @@
+# Builds a single NestJS service for the single-VM deployment.
+# Used by infrastructure/vm/docker-compose.yml with build-arg SERVICE_NAME.
+#
+#   docker build --build-arg SERVICE_NAME=core-service \
+#     -f infrastructure/vm/Dockerfile.nestjs -t serenity-core-service .
+#
+# Context must be the repo root (compose sets context: ../..).
+
+# ---------- build stage ----------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+RUN corepack enable
+
+# Whole repo (node_modules excluded by .dockerignore). pnpm workspace globs
+# need the apps'/libs' package.json present, so copy everything before install.
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+
+# Services import @prisma/client — the client must be generated before build.
+RUN pnpm prisma generate
+
+ARG SERVICE_NAME
+RUN pnpm nx build ${SERVICE_NAME}
+
+# ---------- runtime stage ----------
+FROM node:20-alpine
+
+WORKDIR /app
+RUN apk add --no-cache dumb-init
+ENV NODE_ENV=production
+
+ARG SERVICE_NAME
+
+# Compiled service bundle -> /app/dist/main.js
+COPY --from=builder /app/dist/apps/${SERVICE_NAME} ./dist
+
+# node_modules (incl. generated prisma client + the prisma CLI used for
+# `migrate deploy`). Not pruned so the `migrate` compose service can run.
+COPY --from=builder /app/node_modules ./node_modules
+
+# Prisma schema + migrations (needed by `prisma migrate deploy`).
+COPY --from=builder /app/prisma ./prisma
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 \
+  && chown -R nodejs:nodejs /app
+USER nodejs
+
+EXPOSE 3000
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+CMD ["node", "dist/main.js"]

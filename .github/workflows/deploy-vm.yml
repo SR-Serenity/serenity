@@ -1,0 +1,177 @@
+name: Build & Deploy
+
+# Registry-based, affected-aware deploy to the single GCE VM.
+#
+#   push to main  ->  build ONLY changed services (nx affected)
+#                 ->  push images to Artifact Registry
+#                 ->  ship compose+Caddyfile to the VM, pull & restart
+#
+# Auth to GCP is keyless via Workload Identity Federation (the org forbids SA
+# keys). The CI run mints an OIDC token and impersonates the serenity-ci SA.
+#
+# Required GitHub secrets (Settings -> Secrets and variables -> Actions):
+#   VM_HOST      external IP (or domain) of the VM
+#   VM_USER      SSH user on the VM (run `whoami` on the VM)
+#   VM_SSH_KEY   private SSH key authorized in the VM's ~/.ssh/authorized_keys
+# Required GitHub variables:
+#   GCP_WIF_PROVIDER   full WIF provider resource name (see docs/DEPLOY_GCP_VM.md)
+#   GCP_CI_SA          serenity-ci@<project>.iam.gserviceaccount.com
+#   PUBLIC_URL         browser-facing origin baked into web (e.g. https://app.example.com)
+#
+# Adjust PROJECT_ID / REGION / AR_REPO below if you used different names.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to deploy: space-separated list, or "all". Empty = auto-detect.'
+        required: false
+        default: ''
+
+env:
+  PROJECT_ID: project-f65bf900-efde-4dae-af2
+  REGION: us-central1
+  AR_REPO: serenity
+
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan affected services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.plan.outputs.services }}
+      registry: ${{ steps.plan.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: nrwl/nx-set-shas@v4
+      - id: plan
+        run: |
+          MANUAL='${{ github.event.inputs.services }}'
+          if [ "$MANUAL" = "all" ]; then
+            SVCS="gateway auth-service core-service realtime-service web"
+          elif [ -n "$MANUAL" ]; then
+            SVCS="$MANUAL"
+          else
+            AFFECTED="$(pnpm nx show projects --affected --type app \
+              --base="$NX_BASE" --head="$NX_HEAD" | tr ',\n' '  ')"
+            SVCS=""
+            for p in $AFFECTED; do
+              case "$p" in
+                @org/web) SVCS="$SVCS web" ;;
+                gateway|auth-service|core-service|realtime-service) SVCS="$SVCS $p" ;;
+              esac
+            done
+          fi
+          SVCS="$(echo $SVCS | xargs)"
+          echo "services=$SVCS" >> "$GITHUB_OUTPUT"
+          echo "registry=${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Deploy plan::services = '$SVCS'"
+
+  build:
+    name: Build & push images
+    needs: plan
+    if: needs.plan.outputs.services != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGISTRY: ${{ needs.plan.outputs.registry }}
+      SERVICES: ${{ needs.plan.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (keyless, WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_CI_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build & push affected images
+        run: |
+          SHA="${{ github.sha }}"
+          for svc in $SERVICES; do
+            if [ "$svc" = "web" ]; then
+              DOCKERFILE=infrastructure/vm/Dockerfile.nextjs
+              BUILD_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.PUBLIC_URL }} \
+                          --build-arg NEXT_PUBLIC_REALTIME_URL=${{ vars.PUBLIC_URL }} \
+                          --build-arg NEXT_PUBLIC_LIVEKIT_WS_URL=${{ vars.NEXT_PUBLIC_LIVEKIT_WS_URL }}"
+            else
+              DOCKERFILE=infrastructure/vm/Dockerfile.nestjs
+              BUILD_ARGS="--build-arg SERVICE_NAME=$svc"
+            fi
+            echo "::group::build $svc"
+            docker build $BUILD_ARGS \
+              -f "$DOCKERFILE" \
+              -t "$REGISTRY/$svc:latest" \
+              -t "$REGISTRY/$svc:$SHA" \
+              .
+            docker push "$REGISTRY/$svc:latest"
+            docker push "$REGISTRY/$svc:$SHA"
+            echo "::endgroup::"
+          done
+
+  deploy:
+    name: Pull & restart on VM
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ship the compose file + Caddyfile to the VM (small, no secrets).
+      - name: Copy compose files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: 'infrastructure/vm/docker-compose.yml,infrastructure/vm/Caddyfile'
+          target: '~/serenity'
+          strip_components: 2
+
+      - name: Pull & restart
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          SERVICES: ${{ needs.plan.outputs.services }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: SERVICES
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -eu
+            cd ~/serenity
+            echo "==> Pulling: $SERVICES"
+            docker compose pull $SERVICES
+            echo "==> Ensuring data + edge layer is up"
+            docker compose up -d postgres redis caddy arcane
+            echo "==> Running database migrations"
+            docker compose --profile tools run --rm migrate || \
+              echo "WARNING: migration step failed; see logs above"
+            echo "==> Restarting services"
+            docker compose up -d $SERVICES
+            docker compose up -d
+            docker image prune -f || true
+            docker compose ps

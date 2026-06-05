@@ -1,0 +1,62 @@
+# Builds the Next.js `web` app for the single-VM deployment.
+#
+# IMPORTANT: NEXT_PUBLIC_* values are inlined into the client bundle at BUILD
+# time, so the public site URL must be known here (passed as build-args by
+# docker-compose from .env). Rebuild web whenever the public URL changes.
+#
+# Context must be the repo root (compose sets context: ../..).
+
+# ---------- build stage ----------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+RUN corepack enable
+
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+# web transitively imports types from packages that depend on the prisma client.
+RUN pnpm prisma generate
+
+# Baked-in public config (browser-visible).
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_REALTIME_URL
+ARG NEXT_PUBLIC_LIVEKIT_WS_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_REALTIME_URL=${NEXT_PUBLIC_REALTIME_URL} \
+    NEXT_PUBLIC_LIVEKIT_WS_URL=${NEXT_PUBLIC_LIVEKIT_WS_URL} \
+    NEXT_TELEMETRY_DISABLED=1
+
+# Builds to apps/web/.next (see apps/web/project.json + next.config.js).
+# output: 'standalone' produces apps/web/.next/standalone.
+RUN pnpm nx build web
+
+# ---------- runtime stage ----------
+FROM node:20-alpine
+
+WORKDIR /app
+RUN apk add --no-cache dumb-init
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+# Standalone server (self-contained, only traced deps).
+COPY --from=builder /app/apps/web/.next/standalone ./
+
+# Static assets + public/ aren't traced into standalone — copy them in.
+# Placed in both the monorepo-nested and flat locations so it works regardless
+# of how Next resolves the output-tracing root.
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/.next/static ./.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/public ./public
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 \
+  && chown -R nodejs:nodejs /app
+USER nodejs
+
+EXPOSE 3000
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+# Locate the standalone server.js wherever Next placed it, then run it.
+CMD ["sh", "-c", "node \"$(find . -name server.js -not -path '*/node_modules/*' | head -n1)\""]

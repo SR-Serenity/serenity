@@ -1,0 +1,33 @@
+# Reverse proxy + automatic HTTPS for the single-VM stack.
+#
+# SITE_ADDRESS controls the entrypoint:
+#   - A domain (e.g. app.example.com)  -> Caddy gets a free Let's Encrypt cert.
+#   - ":80"                            -> plain HTTP (use when you only have an IP).
+#
+# Routing (most-specific path wins):
+#   /api/realtime/*  -> realtime-service  (Server-Sent Events; buffering off)
+#   /api/*           -> gateway
+#   everything else  -> web (Next.js)
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Realtime SSE stream. flush_interval -1 disables response buffering so
+	# events are pushed to the browser immediately.
+	@realtime path /api/realtime/*
+	handle @realtime {
+		reverse_proxy realtime-service:3000 {
+			flush_interval -1
+		}
+	}
+
+	# REST API gateway (proxies on to auth-service / core-service).
+	handle /api/* {
+		reverse_proxy gateway:3000
+	}
+
+	# Next.js frontend.
+	handle {
+		reverse_proxy web:3000
+	}
+}

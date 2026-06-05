@@ -58,7 +58,9 @@ test-output
 .codex
 .cursor
 .gemini
-.github
+# Keep CI workflows tracked, but ignore local AI/agent config under .github
+.github/*
+!.github/workflows/
 .vscode
 
 # Environment variables (NEVER commit!)
@@ -67,6 +69,9 @@ test-output
 .env.*.local
 .env.production.local
 .env.development.local
+# Per-service env files (real values) — but keep *.example templates tracked
+.env.*
+!.env*.example
 
 # Docker
 .dockerignore
