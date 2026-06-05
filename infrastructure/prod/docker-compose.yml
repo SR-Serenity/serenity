@@ -1,0 +1,206 @@
+# Production Docker Compose Configuration
+# Features: Optimized images, security hardening, no debug info
+# Usage: docker-compose -f infrastructure/prod/docker-compose.yml up
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: serenity-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: serenity
+      POSTGRES_USER: ${POSTGRES_USER:-serenity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-serenity}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - serenity-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-serenity} -d serenity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: serenity-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - serenity-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  # API Gateway
+  gateway:
+    build:
+      context: ../..
+      dockerfile: infrastructure/prod/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: gateway
+    container_name: serenity-gateway
+    ports:
+      - "2991:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - JWT_SECRET=${JWT_SECRET:-change-me}
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/prod/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: auth-service
+    container_name: serenity-auth-service
+    ports:
+      - "2992:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - JWT_SECRET=${JWT_SECRET:-change-me}
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - serenity-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+
+  # Core Service
+  core-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/prod/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: core-service
+    container_name: serenity-core-service
+    ports:
+      - "2993:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change-me}
+      - AUTH_SERVICE_URL=http://auth-service:3000/api
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - serenity-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+
+  # Realtime Service
+  realtime-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/prod/Dockerfile.nestjs
+      args:
+        SERVICE_NAME: realtime-service
+    container_name: serenity-realtime-service
+    ports:
+      - "2996:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-serenity}:${POSTGRES_PASSWORD:-serenity}@postgres:5432/serenity?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - serenity-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+
+  # Web Frontend
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/prod/Dockerfile.nextjs
+    container_name: serenity-web
+    ports:
+      - "2997:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:2991
+      - NEXT_PUBLIC_REALTIME_URL=http://localhost:2996
+    depends_on:
+      - gateway
+    networks:
+      - serenity-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+
+  # Cloudflare Tunnel (Production only)
+  cloudflared:
+    image: cloudflare/cloudflared:2025.2.0
+    container_name: serenity-cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - gateway
+      - web
+    networks:
+      - serenity-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  serenity-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

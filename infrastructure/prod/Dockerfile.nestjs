@@ -1,0 +1,51 @@
+# Production Dockerfile for NestJS Services
+# Features: Multi-stage build, optimized image size, security hardening
+# Usage: docker build --build-arg SERVICE_NAME=core-service -f infrastructure/prod/Dockerfile.nestjs -t serenity-core-service:latest .
+
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install dependencies (including dev for build tools)
+RUN corepack enable && pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the service
+ARG SERVICE_NAME
+RUN pnpm nx build ${SERVICE_NAME}
+
+# Prune production dependencies (remove dev dependencies)
+RUN pnpm prune --prod
+
+# Runtime stage - minimal production image
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install only dumb-init for signal handling
+RUN apk add --no-cache dumb-init
+
+# Copy built application from builder
+ARG SERVICE_NAME
+COPY --from=builder /app/dist/apps/${SERVICE_NAME} ./dist
+
+# Copy pruned production dependencies
+COPY --from=builder /app/node_modules ./node_modules
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
+
+EXPOSE 3000
+
+# Use dumb-init to handle signals properly (graceful shutdown)
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start the application
+CMD ["node", "dist/main.js"]

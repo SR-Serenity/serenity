@@ -1,0 +1,737 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum ChatConversationType {
+  PUBLIC_CHANNEL
+  PRIVATE_CHANNEL
+  DM
+}
+
+enum ChatAttachmentKind {
+  FILE
+  GIF
+}
+
+enum ChatAttachmentUploadStatus {
+  PENDING
+  COMPLETED
+}
+
+enum ContactType {
+  EMPLOYEE
+  GUEST
+  AI_AGENT
+}
+
+enum ContactStatus {
+  ACTIVE
+  INVITED
+  ARCHIVED
+}
+
+enum CalendarItemType {
+  EVENT
+  MEETING
+  TASK
+}
+
+enum CalendarVisibility {
+  COMPANY
+  PERSONAL
+}
+
+enum CalendarTaskStatus {
+  TODO
+  DONE
+}
+
+enum WikiPageVisibility {
+  WORKSPACE
+  DEPARTMENT
+  PRIVATE
+}
+
+enum WikiSharePermission {
+  VIEW
+  COMMENT
+  EDIT
+}
+
+enum MailProvider {
+  GOOGLE
+}
+
+enum MailAccountStatus {
+  CONNECTED
+  NEEDS_REAUTH
+  ERROR
+}
+
+enum OfficeRoomType {
+  OPEN
+  PRIVATE
+  FOCUS
+  SOCIAL
+}
+
+enum MailMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Organization {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  memberships WorkspaceMember[]
+  departments  Department[]
+  invitations Invitation[]
+  chatConversations ChatConversation[]
+  chatAttachments    ChatAttachment[]
+  contacts           Contact[]
+  calendarItems      CalendarItem[]
+  wikiPages          WikiPage[]
+  mailAccounts       MailAccount[]
+  mailThreads        MailThread[]
+  mailMessages       MailMessage[]
+  mailAttachments    MailAttachment[]
+  officeRooms        OfficeRoom[]
+  meetingNotes       MeetingNote[]
+  aiSessions         AiSession[]
+  documentFiles      DocumentFile[]
+  automationRules    AutomationRule[]
+}
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  displayName  String
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  memberships  WorkspaceMember[]
+  invitations  Invitation[]      @relation("Inviter")
+  chatMemberships ChatConversationMember[]
+  chatMessages    ChatMessage[]
+  chatReactions   ChatReaction[]
+  chatMessageVisibilities ChatMessageVisibility[]
+  chatUploads      ChatAttachment[] @relation("ChatAttachmentUploader")
+  calendarItems    CalendarItem[] @relation("CalendarItemCreator")
+  calendarAttendances CalendarAttendee[]
+  wikiPages            WikiPage[]      @relation("WikiPageCreator")
+  wikiFavorites        WikiPageFavorite[]
+  wikiRecents          WikiPageRecent[]
+  wikiSharesReceived   WikiPageShare[] @relation("WikiShareReceiver")
+  wikiSharesGranted    WikiPageShare[] @relation("WikiShareGrantor")
+  mailAccounts         MailAccount[]
+  officeRoomsCreated   OfficeRoom[]    @relation("OfficeRoomCreator")
+  officeParticipations OfficeRoomParticipant[]
+  aiSessions           AiSession[]
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  orgId     String
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members      WorkspaceMember[]
+  invitations  Invitation[]
+  contacts     Contact[]
+  wikiPages    WikiPage[]
+
+  @@index([orgId])
+}
+
+model Contact {
+  id           String        @id @default(cuid())
+  orgId        String
+  type         ContactType
+  status       ContactStatus @default(ACTIVE)
+  displayName  String
+  email        String?
+  phone        String?
+  company      String?
+  title        String?
+  departmentId String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([orgId, type])
+  @@index([departmentId])
+  @@index([email])
+}
+
+model CalendarItem {
+  id                  String              @id @default(cuid())
+  orgId               String
+  createdById         String
+  type                CalendarItemType
+  visibility          CalendarVisibility  @default(PERSONAL)
+  title               String
+  descriptionMarkdown String?
+  location            String?
+  roomId              String?
+  wikiPageId          String?   @unique
+  startAt             DateTime?
+  endAt               DateTime?
+  allDay              Boolean             @default(false)
+  taskStatus          CalendarTaskStatus?
+  dueDate             DateTime?
+  googleEventId       String?
+  googleAccountId     String?
+  deletedAt           DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User          @relation("CalendarItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  attendees    CalendarAttendee[]
+  room         OfficeRoom?   @relation("CalendarItemRoom", fields: [roomId], references: [id], onDelete: SetNull)
+  wikiPage     WikiPage?     @relation("CalendarItemNotes", fields: [wikiPageId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, startAt])
+  @@index([orgId, dueDate])
+  @@index([orgId, visibility])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@index([roomId])
+  @@index([createdById, googleEventId])
+}
+
+model CalendarAttendee {
+  id        String   @id @default(cuid())
+  itemId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  item CalendarItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, userId])
+  @@index([userId])
+}
+
+model WikiPage {
+  id              String             @id @default(cuid())
+  orgId           String
+  parentId        String?
+  createdById     String
+  title           String
+  icon            String?
+  coverColor      String?
+  contentMarkdown String             @default("")
+  contentJson     Json?
+  visibility      WikiPageVisibility @default(PRIVATE)
+  departmentId    String?
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent       WikiPage?          @relation("WikiPageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     WikiPage[]         @relation("WikiPageTree")
+  creator      User               @relation("WikiPageCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  department   Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  favorites    WikiPageFavorite[]
+  recents      WikiPageRecent[]
+  shares       WikiPageShare[]
+  meetingNote  CalendarItem?     @relation("CalendarItemNotes")
+
+  @@index([orgId, parentId])
+  @@index([orgId, visibility])
+  @@index([orgId, updatedAt])
+  @@index([createdById])
+  @@index([departmentId])
+  @@index([deletedAt])
+}
+
+model WikiPageFavorite {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId, createdAt])
+}
+
+model WikiPageRecent {
+  id       String   @id @default(cuid())
+  pageId   String
+  userId   String
+  viewedAt DateTime @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId, viewedAt])
+}
+
+model WikiPageShare {
+  id          String              @id @default(cuid())
+  pageId      String
+  userId      String
+  permission  WikiSharePermission @default(VIEW)
+  grantedById String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user      User     @relation("WikiShareReceiver", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User     @relation("WikiShareGrantor", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([pageId])
+  @@index([userId])
+}
+
+model WorkspaceMember {
+  id            String        @id @default(cuid())
+  userId        String
+  orgId         String
+  role          WorkspaceRole @default(MEMBER)
+  departmentId  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+  @@index([userId])
+  @@index([departmentId])
+}
+
+model Invitation {
+  id           String           @id @default(cuid())
+  email        String
+  orgId        String
+  role         WorkspaceRole    @default(MEMBER)
+  departmentId String?
+  token        String           @unique
+  expiresAt    DateTime
+  status       InvitationStatus @default(PENDING)
+  inviterId    String
+  createdAt    DateTime         @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  inviter      User        @relation("Inviter", fields: [inviterId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([token])
+  @@index([email, orgId])
+}
+
+model ChatConversation {
+  id        String               @id @default(cuid())
+  orgId     String
+  type      ChatConversationType
+  name      String?
+  slug      String?
+  dmKey     String?
+  createdById String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members      ChatConversationMember[]
+  messages     ChatMessage[]
+  attachments  ChatAttachment[]
+
+  @@unique([orgId, slug])
+  @@unique([orgId, dmKey])
+  @@index([orgId, type])
+  @@index([orgId, updatedAt, id])
+}
+
+model ChatConversationMember {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  authorId       String
+  parentId       String?
+  replyToId      String?
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  editedAt       DateTime?
+  unsentAt       DateTime?
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent       ChatMessage?     @relation("ChatThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      ChatMessage[]    @relation("ChatThread")
+  replyTo      ChatMessage?     @relation("ChatInlineReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  inlineReplies ChatMessage[]   @relation("ChatInlineReply")
+  reactions    ChatReaction[]
+  attachments  ChatAttachment[]
+  visibilities ChatMessageVisibility[]
+
+  @@index([conversationId, createdAt])
+  @@index([parentId, createdAt])
+  @@index([replyToId])
+  @@index([conversationId, parentId, createdAt, id])
+}
+
+model ChatMessageVisibility {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  deletedAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, deletedAt])
+}
+
+model ChatReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([userId])
+  @@index([messageId, createdAt])
+}
+
+model ChatAttachment {
+  id             String                     @id @default(cuid())
+  messageId      String?
+  orgId          String
+  conversationId String
+  uploadedById   String
+  kind           ChatAttachmentKind
+  uploadStatus   ChatAttachmentUploadStatus @default(PENDING)
+  publicId       String
+  url            String?
+  name           String
+  mimeType       String?
+  size           Int?
+  provider       String?
+  metadata       Json?
+  createdAt      DateTime                   @default(now())
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  uploadedBy   User             @relation("ChatAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  message      ChatMessage?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([publicId])
+  @@index([messageId])
+  @@index([conversationId, uploadedById, uploadStatus])
+}
+
+model MailAccount {
+  id                    String            @id @default(cuid())
+  orgId                 String
+  userId                String
+  provider              MailProvider
+  providerAccountId     String
+  email                 String
+  displayName           String?
+  encryptedRefreshToken String?
+  accessTokenExpiresAt  DateTime?
+  historyId             String?
+  watchExpirationAt     DateTime?
+  status                MailAccountStatus @default(CONNECTED)
+  lastSyncedAt          DateTime?
+  lastError             String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threads      MailThread[]
+  messages     MailMessage[]
+  attachments  MailAttachment[]
+
+  @@unique([provider, providerAccountId])
+  @@index([orgId, userId])
+  @@index([email])
+  @@index([status, updatedAt])
+}
+
+model MailThread {
+  id               String   @id @default(cuid())
+  orgId            String
+  accountId        String
+  providerThreadId String
+  subject          String
+  snippet          String?
+  fromName         String?
+  fromEmail        String?
+  toEmails         String[]
+  labelIds         String[]
+  unread           Boolean  @default(false)
+  starred          Boolean  @default(false)
+  archived         Boolean  @default(false)
+  trashed          Boolean  @default(false)
+  sentAt           DateTime?
+  lastMessageAt    DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account      MailAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages     MailMessage[]
+  attachments  MailAttachment[]
+
+  @@unique([accountId, providerThreadId])
+  @@index([orgId, lastMessageAt])
+  @@index([accountId, unread])
+  @@index([accountId, trashed])
+}
+
+model MailMessage {
+  id                String               @id @default(cuid())
+  orgId             String
+  accountId         String
+  threadId          String
+  providerMessageId String
+  direction         MailMessageDirection
+  subject           String
+  snippet           String?
+  bodyText          String?
+  bodyHtml          String?
+  fromName          String?
+  fromEmail         String?
+  toEmails          String[]
+  ccEmails          String[]
+  bccEmails         String[]
+  labelIds          String[]
+  sentAt            DateTime?
+  internalDate      DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account      MailAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  thread       MailThread       @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  attachments  MailAttachment[]
+
+  @@unique([accountId, providerMessageId])
+  @@index([threadId, sentAt])
+  @@index([orgId, sentAt])
+}
+
+model MailAttachment {
+  id                   String   @id @default(cuid())
+  orgId                String
+  accountId            String
+  threadId             String
+  messageId            String
+  providerAttachmentId String?
+  filename             String
+  mimeType             String?
+  size                 Int?
+  createdAt            DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account      MailAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  thread       MailThread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  message      MailMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([threadId])
+  @@index([accountId])
+}
+
+model OfficeRoom {
+  id          String         @id @default(cuid())
+  orgId       String
+  name        String
+  type        OfficeRoomType @default(OPEN)
+  icon        String?
+  maxCapacity Int            @default(20)
+  position    Json?
+  createdById String
+  deletedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  organization Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User                     @relation("OfficeRoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  participants OfficeRoomParticipant[]
+  notes        MeetingNote[]
+  meetings     CalendarItem[]           @relation("CalendarItemRoom")
+
+  @@index([orgId])
+  @@index([orgId, deletedAt])
+}
+
+model OfficeRoomParticipant {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  room OfficeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model MeetingNote {
+  id              String    @id @default(cuid())
+  roomId          String
+  orgId           String
+  contentMarkdown String    @default("")
+  sessionStartAt  DateTime  @default(now())
+  sessionEndAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  room         OfficeRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, sessionStartAt])
+  @@index([orgId])
+}
+
+enum AiMessageRole {
+  user
+  assistant
+}
+
+model AiSession {
+  id        String      @id @default(cuid())
+  orgId     String
+  userId    String
+  title     String      @default("New chat")
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, userId, updatedAt])
+}
+
+model AiMessage {
+  id              String        @id @default(cuid())
+  sessionId       String
+  role            AiMessageRole
+  content         String        @db.Text
+  sources         Json?
+  proposedActions Json?
+  createdAt       DateTime      @default(now())
+
+  session AiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model DocumentFile {
+  id          String   @id @default(cuid())
+  orgId       String
+  fileId      String
+  title       String?
+  mimeType    String?
+  gcsUri      String?
+  chunksCount Int      @default(0)
+  indexedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org    Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  chunks DocumentChunk[]
+
+  @@unique([orgId, fileId])
+  @@index([orgId])
+}
+
+model DocumentChunk {
+  id        String                      @id @default(cuid())
+  docFileId String
+  orgId     String
+  page      Int
+  text      String                      @db.Text
+  embedding Unsupported("vector(1536)")?
+
+  docFile DocumentFile @relation(fields: [docFileId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+}
+
+enum AutomationTriggerType {
+  SCHEDULE
+  MEMBER_JOINED
+  MESSAGE_KEYWORD
+}
+
+enum AutomationActionType {
+  AI_AGENT
+}
+
+model AutomationRule {
+  id            String                @id @default(cuid())
+  orgId         String
+  name          String
+  enabled       Boolean               @default(true)
+  triggerType   AutomationTriggerType
+  triggerConfig Json                  @default("{}")
+  actionType    AutomationActionType
+  actionConfig  Json                  @default("{}")
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([orgId, triggerType, enabled])
+}

@@ -21,3 +21,105 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+---
+
+# Project: Serenity
+
+Multi-tenant workspace platform (Slack-like). Nx monorepo with pnpm workspaces.
+
+## Apps
+
+| App | Port | Description |
+|-----|------|-------------|
+| `apps/web` (`@org/web`) | 9999 | Next.js 16 frontend |
+| `apps/gateway` | — | API gateway |
+| `apps/auth-service` | — | Auth (login, register, JWT) |
+| `apps/core-service` | 2993 | Main REST API |
+| `apps/realtime-service` | — | WebSocket |
+
+Run web dev server: `pnpm nx dev @org/web` (port 9999)
+
+## Dependency management — IMPORTANT
+
+**Always add packages from the monorepo root**, never from inside an app folder.
+
+```bash
+# correct
+cd /home/huy-ph/Documents/DATN/serenity
+pnpm add <pkg> --filter @org/web
+
+# wrong — creates a local node_modules inside the app
+cd apps/web && pnpm add <pkg>
+```
+
+All `node_modules` live at the root. There must be no `node_modules` inside individual apps.
+
+## apps/web stack
+
+- **Next.js 16** App Router, React 19
+- **Tailwind CSS v4** — use `@import "tailwindcss"` in CSS (not `@tailwind` directives)
+- **PostCSS** — uses `@tailwindcss/postcss` plugin (not `tailwindcss` directly)
+- **shadcn/ui** — style: `base-nova`, components in `src/components/ui/`, requires `@base-ui/react`
+- **next-intl** — i18n with `en` / `vi` locales
+
+## apps/web styling conventions
+
+- Prefer **Tailwind utilities** for spacing, sizing, radii, flex/grid, and one-off layout values (`px-4`, `h-8`, `rounded-md`, `gap-2`)
+- Use **CSS variables in `src/app/global.css` only for semantic design tokens** that should theme the product consistently: colors, surfaces, borders, shadows, typography, and shared layout constants
+- Do **not** create custom `--space-*`, `--size-*`, or `--radius-*` scales when Tailwind already provides the same values
+- In components, avoid hardcoded hex colors; use semantic tokens through Tailwind arbitrary values or mapped theme tokens
+- If a value must change across themes or be reused as a product token, define it once in `global.css`; otherwise keep it in Tailwind classes close to the component
+
+## apps/web color system
+
+Brand color is `#070738` (deep navy). **Do not hardcode hex values in components.**
+
+**Single source of truth:** CSS variables in `src/app/global.css` `:root` block.
+
+| CSS variable | Purpose |
+|---|---|
+| `--brand` | Primary brand color (#070738) |
+| `--brand-hover` | Hover state (slightly lighter) |
+| `--brand-light` | Light tint for backgrounds |
+| `--brand-surface` | Page/panel background |
+| `--brand-muted` | Secondary/muted text |
+| `--brand-border` | Subtle borders |
+
+These are registered in `@theme inline` so Tailwind generates utility classes:
+`bg-brand`, `text-brand`, `border-brand-border`, `text-brand-muted`, etc.
+
+Use `src/lib/colors.ts` **only** for raw hex values needed in SVG fills or canvas — not in JSX classNames.
+
+To retheme: change the CSS variables in `global.css`, everything updates automatically.
+
+## apps/web key paths
+
+```
+src/
+  app/
+    (auth)/          # login, register — public routes, split-panel layout
+    (workspace)/     # [orgSlug] — protected, requires auth cookie
+  components/
+    auth/            # LoginForm, RegisterForm (4-step), OrgPicker
+    ui/              # shadcn components (Button, Input, Label, Card, Badge, Progress…)
+  hooks/
+    use-auth.tsx     # AuthProvider + useAuth() — auth state, login/register/logout
+  lib/
+    utils.ts         # cn(), slugify()
+    colors.ts        # raw hex constants (for SVG/canvas only)
+  middleware.ts      # route protection via auth_token cookie
+libs/
+  api/src/           # authApi (login, register, switchOrg), request() client, types
+  ui/src/            # legacy custom Button/Input/Spinner — prefer src/components/ui/ for new work
+```
+
+## apps/web routing
+
+| URL | Page | Auth |
+|-----|------|------|
+| `/login` | Login + org picker | Public |
+| `/register` | 4-step onboarding | Public |
+| `/[orgSlug]` | Workspace dashboard | Protected |
+
+Middleware reads `auth_token` + `auth_org_slug` cookies.

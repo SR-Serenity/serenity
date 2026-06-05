@@ -1,0 +1,106 @@
+import {
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import axios from 'axios';
+import { JwtPayload, verify } from 'jsonwebtoken';
+import { mapProxyError } from '../common/errors/proxy-error.util';
+
+type AuthContext = {
+  userId: string;
+  orgId: string;
+};
+
+@Injectable()
+export class AuthProxyService {
+  async forwardAuthRequest(
+    endpoint: string,
+    body: unknown,
+    authHeader?: string,
+    method: 'POST' | 'PATCH' | 'DELETE' = 'POST'
+  ) {
+    try {
+      const url = `${this.authServiceUrl()}/auth/${endpoint}`;
+      const headers = this.forwardHeaders(authHeader);
+
+      let response;
+      switch (method) {
+        case 'PATCH':
+          response = await axios.patch(url, body, { headers });
+          break;
+        case 'DELETE':
+          response = await axios.delete(url, { headers });
+          break;
+        default:
+          response = await axios.post(url, body, { headers });
+      }
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'Auth service');
+    }
+  }
+
+  async forwardAuthGet(endpoint: string, authHeader?: string) {
+    try {
+      const response = await axios.get(`${this.authServiceUrl()}/auth/${endpoint}`, {
+        headers: this.forwardHeaders(authHeader),
+      });
+      return response.data;
+    } catch (error) {
+      throw mapProxyError(error, 'Auth service');
+    }
+  }
+
+  getRequestContext(authHeader?: string) {
+    return this.requireAuthContext(authHeader);
+  }
+
+  private requireAuthContext(authHeader?: string): AuthContext {
+    if (!authHeader) {
+      throw new UnauthorizedException('Missing authorization header');
+    }
+    const [scheme, token] = authHeader.split(' ');
+    if (scheme !== 'Bearer' || !token) {
+      throw new UnauthorizedException('Invalid authorization header');
+    }
+
+    const payload = verify(token, this.jwtSecret());
+    if (!payload || typeof payload === 'string') {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+
+    const decoded = payload as JwtPayload;
+    const userId = decoded.user_id ?? decoded.sub;
+    const orgId = decoded.org_id;
+    if (typeof userId !== 'string' || typeof orgId !== 'string') {
+      throw new UnauthorizedException('Token missing user_id or org_id');
+    }
+
+    return { userId, orgId };
+  }
+
+  private forwardHeaders(authHeader?: string) {
+    if (!authHeader) {
+      return {};
+    }
+    const context = this.requireAuthContext(authHeader);
+    return {
+      authorization: authHeader,
+      'x-user-id': context.userId,
+      'x-org-id': context.orgId,
+    };
+  }
+
+  private authServiceUrl() {
+    return process.env.AUTH_SERVICE_URL ?? 'http://localhost:2992/api';
+  }
+
+  private jwtSecret() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new InternalServerErrorException('JWT_SECRET is not configured');
+    }
+    return secret;
+  }
+}

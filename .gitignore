@@ -58,5 +58,101 @@ test-output
 .codex
 .cursor
 .gemini
-.github
+# Keep CI workflows tracked, but ignore local AI/agent config under .github
+.github/*
+!.github/workflows/
 .vscode
+
+# Environment variables (NEVER commit!)
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+# Per-service env files (real values) — but keep *.example templates tracked
+.env.*
+!.env*.example
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Cloudflare Tunnel credentials (SENSITIVE!)
+.cloudflared/
+!cloudflare-config.example.yml
+!cloudflare-tunnel.yml
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.cer
+credentials.json
+private-key.json
+certificate.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ESLint cache
+.eslintcache
+
+# Build cache
+.webpack/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Jest/Testing
+.jest-cache
+.jest_cache/
+coverage/
+*.lcov
+
+# IDE specific folders
+.idea/
+*.iml
+.metals/
+.bloop/
+.envrc
+
+# OS files
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+.tmp/
+/ref
+
+# Python
+.venv
+venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+service-account-key.json

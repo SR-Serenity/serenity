@@ -1,0 +1,106 @@
+{
+  "name": "Meeting Scheduler — 20 Cases",
+  "feature": "meeting_scheduler",
+  "cases": [
+    {
+      "input": "Schedule a meeting with Sarah tomorrow at 2pm for 1 hour",
+      "expected_output": "I'll schedule: Meeting with Sarah, tomorrow at 2:00 PM for 1 hour. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book a room for the design review on Friday afternoon",
+      "expected_output": "I'll book a room for: Design review, Friday afternoon. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set up a weekly standup every Monday at 9am with the whole team",
+      "expected_output": "I'll schedule: Weekly standup, every Monday at 9:00 AM, recurring. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Arrange a call with the client next Tuesday at 10am",
+      "expected_output": "I'll schedule: Call with client, next Tuesday at 10:00 AM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "I want to meet with John and Mary for a sprint planning session next week",
+      "expected_output": "I'll schedule: Sprint planning session with John and Mary, next week. Could you confirm the exact date and time?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book Room A for tomorrow from 10am to 11:30am",
+      "expected_output": "I'll book Room A for tomorrow from 10:00 AM to 11:30 AM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a 30-minute sync with David at 4pm today",
+      "expected_output": "I'll schedule a 30-minute sync with David at 4:00 PM today. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set up a meeting: Project kickoff, next Wednesday at 9:00 AM",
+      "expected_output": "I'll schedule: Project kickoff meeting on next Wednesday at 9:00 AM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book a room for the engineering sync on Thursday morning",
+      "expected_output": "I'll book a room for: Engineering sync, Thursday morning. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Arrange a coffee chat with Emily next Monday at 3pm",
+      "expected_output": "I'll schedule: Coffee chat with Emily, next Monday at 3:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a recurring meeting every Friday at 11am for design sync",
+      "expected_output": "I'll schedule: Design sync, every Friday at 11:00 AM, recurring. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book the main conference room for a board meeting on Tuesday afternoon",
+      "expected_output": "I'll book the Main Conference Room for: Board meeting, Tuesday afternoon. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a call with the QA team on Friday at 4pm",
+      "expected_output": "I'll schedule: Call with QA team, Friday at 4:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set up a 1-hour 1on1 meeting with my manager tomorrow morning at 10",
+      "expected_output": "I'll schedule a 1-hour 1on1 meeting with your manager, tomorrow at 10:00 AM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book Room B for a brainstorm session on Monday from 2pm to 4pm",
+      "expected_output": "I'll book Room B for: Brainstorm session, Monday from 2:00 PM to 4:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a client presentation next Thursday at 3pm in the main hall",
+      "expected_output": "I'll schedule: Client presentation, next Thursday at 3:00 PM in the Main Hall. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Set up a recurring weekly standup on Tuesdays at 9:30 AM",
+      "expected_output": "I'll schedule: Weekly standup, Tuesdays at 9:30 AM, recurring. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Book a meeting room for a product demo with external partners on Wednesday afternoon",
+      "expected_output": "I'll book a meeting room for: Product demo with external partners, Wednesday afternoon. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Schedule a 15-minute quick call with Alex today at 5pm",
+      "expected_output": "I'll schedule a 15-minute call with Alex, today at 5:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    },
+    {
+      "input": "Arrange a feedback session with the team next Friday at 2pm",
+      "expected_output": "I'll schedule: Feedback session with team, next Friday at 2:00 PM. Shall I confirm?",
+      "retrieval_context": []
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+"""Serenity AI graph runtime adapter."""
+
+from dataclasses import dataclass, field
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.types import Command
+
+from src.ai.v1.contexts.message_manager import ConversationContextManager
+from src.ai.v1.graph.builder import get_main_graph
+from src.ai.v1.memory.namespaces import make_thread_id
+from src.api.internal.v1.schemas import ChatRequest, ChatResponse
+from src.integrations.langfuse import callbacks, langchain_metadata, new_trace_id, span, trace_metadata
+
+
+@dataclass
+class RuntimeState:
+    thread_messages: dict[str, list[str]] = field(default_factory=dict)
+    user_memories: dict[tuple[str, str], list[str]] = field(default_factory=dict)
+    workspace_facts: dict[str, list[str]] = field(default_factory=dict)
+    context_manager: ConversationContextManager = field(
+        default_factory=lambda: ConversationContextManager(max_tokens=8000, message_window=20)
+    )
+
+
+runtime_state = RuntimeState()
+
+
+async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> ChatResponse:
+    thread_id = make_thread_id(
+        payload.auth_context.org_id,
+        payload.auth_context.user_id,
+        payload.session_id,
+    )
+    trace_id = new_trace_id()
+    metadata = trace_metadata(
+        org_id=payload.auth_context.org_id,
+        user_id=payload.auth_context.user_id,
+        session_id=payload.session_id,
+        thread_id=thread_id,
+        entrypoint=payload.context.entrypoint,
+        conversation_id=payload.context.conversation_id,
+        meeting_id=payload.context.meeting_id,
+    )
+    thread_config = {"configurable": {"thread_id": thread_id}}
+    run_config = {
+        "callbacks": callbacks(),
+        **thread_config,
+        "metadata": langchain_metadata(metadata),
+        "recursion_limit": 20,
+    }
+
+    graph = get_main_graph()
+    latest_user_msg = _latest_user_message(payload)
+    user_key = (payload.auth_context.org_id, payload.auth_context.user_id)
+    user_context = _build_user_context(payload, auth_token=auth_token)
+
+    with span("chat.graph", metadata):
+        runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
+
+        # Convert messages to proper types
+        converted_messages = [
+            HumanMessage(content=message.content)
+            if message.role == "user"
+            else AIMessage(content=message.content)
+            for message in payload.messages
+        ]
+
+        # Get current user memories
+        user_memories = runtime_state.user_memories.get(user_key, [])
+
+        # Trim context window and extract new memories
+        trimmed_messages, updated_memories = runtime_state.context_manager.trim_messages(
+            converted_messages,
+            org_id=payload.auth_context.org_id,
+            user_id=payload.auth_context.user_id,
+            memories=user_memories,
+        )
+
+        # Update stored memories if they changed
+        if updated_memories:
+            runtime_state.user_memories[user_key] = updated_memories
+
+        # Build final messages with memory context
+        final_messages = runtime_state.context_manager.build_context_with_memories(
+            trimmed_messages, memories=updated_memories
+        )
+        # Check if this thread has a pending interrupt waiting for user input
+        current_state = await graph.aget_state(thread_config)
+        has_pending_interrupt = bool(current_state.next)
+
+        if has_pending_interrupt:
+            # Resume the interrupted graph with the user's answer
+            final_state = await graph.ainvoke(
+                Command(resume=latest_user_msg),
+                config=run_config,
+            )
+        else:
+            # Fresh graph invocation
+            final_state = await graph.ainvoke(
+                {
+                    "org_id": payload.auth_context.org_id,
+                    "user_id": payload.auth_context.user_id,
+                    "session_id": payload.session_id,
+                    "role": payload.auth_context.role,
+                    "thread_id": thread_id,
+                    "auth_token": auth_token,
+                    "context": {
+                        **payload.context.model_dump(by_alias=True, exclude_none=True),
+                        "userContext": user_context,
+                    },
+                    "messages": final_messages,
+                },
+                config=run_config,
+            )
+
+    # Check if the graph is now paused waiting for more user input
+    state_after = await graph.aget_state(thread_config)
+    if state_after.next:
+        interrupt_question = _extract_interrupt_question(state_after)
+        return ChatResponse(
+            answer=interrupt_question,
+            thread_id=thread_id,
+            trace_id=trace_id,
+        )
+
+    return ChatResponse(
+        answer=final_state.get("answer", _fallback_answer()),
+        thread_id=thread_id,
+        proposed_actions=final_state.get("proposed_actions", []),
+        trace_id=trace_id,
+    )
+
+
+def _extract_interrupt_question(state) -> str:
+    """Pull the interrupt value (clarifying question) from a paused graph state."""
+    for task in getattr(state, "tasks", []):
+        for it in getattr(task, "interrupts", []):
+            val = it.value
+            if isinstance(val, str):
+                return val
+            if isinstance(val, dict):
+                return val.get("question", str(val))
+    return "Could you provide a bit more detail so I can help?"
+
+
+def _fallback_answer() -> str:
+    return "Serenity AI is connected. Send a workspace question to begin."
+
+
+def _latest_user_message(payload: ChatRequest) -> str:
+    for message in reversed(payload.messages):
+        if message.role == "user":
+            return message.content.strip()
+    return ""
+
+
+def _build_user_context(payload: ChatRequest, *, auth_token: str | None) -> dict:
+    member = None
+    if auth_token:
+        from src.services.workspace_service import get_current_member
+
+        member = get_current_member(
+            auth_token,
+            payload.auth_context.org_id,
+            payload.auth_context.user_id,
+        )
+
+    return {
+        "user": {
+            "id": payload.auth_context.user_id,
+            "displayName": (member or {}).get("displayName") or payload.auth_context.display_name,
+            "email": (member or {}).get("email") or payload.auth_context.email,
+            "role": (member or {}).get("role") or payload.auth_context.role,
+            "departmentId": (member or {}).get("departmentId"),
+            "departmentName": (member or {}).get("departmentName"),
+        },
+        "organization": {
+            "id": payload.auth_context.org_id,
+            "name": payload.auth_context.org_name,
+            "slug": payload.auth_context.org_slug,
+        },
+        "timeZone": payload.context.time_zone or "UTC",
+    }

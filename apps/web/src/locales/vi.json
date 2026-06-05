@@ -1,0 +1,31 @@
+{
+  "auth": {
+    "signIn": "Đăng nhập",
+    "signUp": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "displayName": "Tên hiển thị",
+    "workspaceName": "Tên không gian làm việc",
+    "workspaceSlug": "Slug không gian làm việc",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "createWorkspace": "Tạo không gian làm việc",
+    "selectWorkspace": "Chọn một không gian làm việc",
+    "dontHaveAccount": "Chưa có tài khoản?",
+    "haveAccount": "Đã có tài khoản?",
+    "createOne": "Tạo một cái",
+    "back": "← Quay lại",
+    "continue": "Tiếp tục →",
+    "welcome": "Chào mừng quay trở lại không gian làm việc của bạn"
+  },
+  "common": {
+    "logout": "Đăng xuất",
+    "loading": "Đang tải…",
+    "error": "Có lỗi xảy ra",
+    "success": "Thành công"
+  },
+  "workspace": {
+    "name": "Không gian làm việc",
+    "members": "Thành viên",
+    "settings": "Cài đặt"
+  }
+}

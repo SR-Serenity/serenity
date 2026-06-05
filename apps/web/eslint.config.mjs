@@ -1,12 +1,19 @@
-import nextEslintPluginNext from '@next/eslint-plugin-next';
 import nx from '@nx/eslint-plugin';
-import baseConfig from '../../eslint.config.mjs';
 
 export default [
-  { plugins: { '@next/next': nextEslintPluginNext } },
-  ...nx.configs['flat/react-typescript'],
-  ...baseConfig,
+  ...nx.configs['flat/base'],
+  ...nx.configs['flat/typescript'],
+  ...nx.configs['flat/javascript'],
   {
-    ignores: ['.next/**/*', '**/out-tsc'],
+    ignores: ['**/dist', '**/out-tsc', '**/test-output', '**/.next', '**/node_modules'],
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-mixed-spaces-and-tabs': 'error',
+    },
   },
 ];

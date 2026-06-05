@@ -1,0 +1,255 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { authApi } from '@serenity/api'
+import { Button } from '@/app/shared/components/ui/button'
+import { Input } from '@/app/shared/components/ui/input'
+import { Label } from '@/app/shared/components/ui/label'
+import { Progress } from '@/app/shared/components/ui/progress'
+import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth-store'
+
+interface JoinOrgFormProps {
+  onSuccess: (orgSlug: string) => void
+  prefillEmail: string
+  inviteToken: string
+  orgName: string
+}
+
+type Step = 1 | 2 | 3
+
+const TOTAL_STEPS = 2
+
+const stepMeta: Record<Exclude<Step, 3>, { title: string; subtitle: string }> = {
+  1: { title: 'Create your account', subtitle: 'Tell us a bit about yourself.' },
+  2: { title: 'Joining organization', subtitle: "You're about to join" },
+}
+
+export function JoinOrgForm({
+  onSuccess,
+  prefillEmail,
+  inviteToken,
+  orgName,
+}: JoinOrgFormProps) {
+  const setSession = useAuthStore((state) => state.setSession)
+  const [step, setStep] = useState<Step>(1)
+  const [displayName, setDisplayName] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [orgSlug, setOrgSlug] = useState('')
+  const onSuccessRef = useRef(onSuccess)
+
+  async function submitAccountDetails(e: React.SubmitEvent) {
+    e.preventDefault()
+    setError('')
+    if (!displayName.trim()) {
+      setError('Display name is required')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    setStep(2)
+  }
+
+  async function submitInviteRegistration(e: React.SubmitEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const registerResponse = await authApi.registerWithInvite({
+        email: prefillEmail.toLowerCase().trim(),
+        password,
+        displayName: displayName.trim(),
+        inviteToken,
+      })
+
+      if ('accessToken' in registerResponse && registerResponse.organization) {
+        setSession(registerResponse.accessToken, registerResponse.organization, displayName)
+
+        sessionStorage.removeItem('invite_token')
+        sessionStorage.removeItem('invite_email')
+        sessionStorage.removeItem('invite_orgName')
+        sessionStorage.removeItem('invite_role')
+        sessionStorage.removeItem('invite_departmentId')
+
+        sessionStorage.setItem(
+          'invite_notification',
+          `You've been added to ${registerResponse.organization.name}`
+        )
+
+        setOrgSlug(registerResponse.organization.slug)
+        setStep(3)
+        return
+      }
+
+      throw new Error('Failed to join organization')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess
+  }, [onSuccess])
+
+  useEffect(() => {
+    if (step !== 3) {
+      return
+    }
+    const timer = setTimeout(() => {
+      onSuccessRef.current(orgSlug)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [step, orgSlug])
+
+  if (step === 3) {
+    return (
+      <div className="space-y-8 text-center">
+        <div className="flex justify-center">
+          <CheckCircle2 className="h-14 w-14 text-blue-600" strokeWidth={1.5} />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">You&apos;re all set!</h1>
+          <p className="text-sm text-[var(--theme-darker-color)]">
+            You've been added to <span className="font-medium text-[var(--theme-caption-color)]">{orgName}</span>
+          </p>
+        </div>
+        <Button
+          onClick={() => onSuccessRef.current(orgSlug)}
+          className="h-10 w-full cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
+        >
+          Open workspace →
+        </Button>
+      </div>
+    )
+  }
+
+  const meta = stepMeta[step]
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs text-[var(--theme-darker-color)]">
+          <span>Step {step} of {TOTAL_STEPS}</span>
+          <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
+        </div>
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1 [&_[data-slot=progress-indicator]]:bg-blue-600 [&_[data-slot=progress-track]]:bg-slate-100" />
+      </div>
+
+      <div className="space-y-1.5">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--theme-caption-color)]">{meta.title}</h1>
+        <p className="text-sm text-[var(--theme-darker-color)]">
+          {meta.subtitle}
+          {step === 2 && <span className="font-medium"> {orgName}</span>}
+        </p>
+      </div>
+
+      <form
+        onSubmit={step === 1 ? submitAccountDetails : submitInviteRegistration}
+        className="space-y-4"
+      >
+        {step === 1 && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Work email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={prefillEmail}
+                disabled
+                className="bg-slate-50 text-[var(--theme-darker-color)]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="displayName">Full name</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="Jane Smith"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={loading}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Min. 8 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+            <p className="text-sm text-blue-900">
+              Click &quot;Join organization&quot; to confirm and join{' '}
+              <span className="font-semibold">{orgName}</span>.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-md px-3 py-2">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          {step > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setError('')
+                setStep((s) => (s - 1) as Step)
+              }}
+              disabled={loading}
+              className="flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-10 flex-1 cursor-pointer bg-blue-600 font-medium text-white hover:bg-blue-500"
+          >
+            {loading ? 'Joining…' : step === 2 ? 'Join organization' : 'Continue →'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}

@@ -1,0 +1,186 @@
+# Single-VM production stack for Serenity (core services), registry-based.
+#
+# Images are built & pushed by CI to Artifact Registry; the VM only PULLS them.
+# This file + Caddyfile + .env live together in one directory on the VM
+# (e.g. ~/serenity). CI ships this file + Caddyfile; you create .env once.
+#
+#   docker compose pull          # fetch latest images
+#   docker compose up -d         # (re)start the stack
+#
+# Requires in .env:  REGISTRY, IMAGE_TAG (optional), POSTGRES_*, PUBLIC_URL, secrets.
+# REGISTRY example:  us-central1-docker.pkg.dev/<PROJECT_ID>/serenity
+
+name: serenity
+
+services:
+  # ---------------- data ----------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: serenity-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [serenity]
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: serenity-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks: [serenity]
+    restart: always
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------- backend services (pulled from Artifact Registry) -------
+  gateway:
+    image: ${REGISTRY}/gateway:${IMAGE_TAG:-latest}
+    container_name: serenity-gateway
+    env_file: [.env.shared]
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      AUTH_SERVICE_URL: http://auth-service:3000/api
+      API_SERVICE_URL: http://core-service:3000/api
+    depends_on:
+      auth-service: { condition: service_started }
+      core-service: { condition: service_started }
+    networks: [serenity]
+    restart: always
+
+  auth-service:
+    image: ${REGISTRY}/auth-service:${IMAGE_TAG:-latest}
+    container_name: serenity-auth-service
+    env_file: [.env.shared, .env.auth]
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [serenity]
+    restart: always
+
+  core-service:
+    image: ${REGISTRY}/core-service:${IMAGE_TAG:-latest}
+    container_name: serenity-core-service
+    env_file: [.env.shared, .env.core]
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:3000/api
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [serenity]
+    restart: always
+
+  realtime-service:
+    image: ${REGISTRY}/realtime-service:${IMAGE_TAG:-latest}
+    container_name: serenity-realtime-service
+    env_file: [.env.shared]
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+    networks: [serenity]
+    restart: always
+
+  web:
+    # NEXT_PUBLIC_* are baked into this image at BUILD time in CI (from PUBLIC_URL).
+    image: ${REGISTRY}/web:${IMAGE_TAG:-latest}
+    container_name: serenity-web
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      gateway: { condition: service_started }
+    networks: [serenity]
+    restart: always
+
+  # ---------------- edge / proxy ----------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: serenity-caddy
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - gateway
+      - realtime-service
+    networks: [serenity]
+    restart: always
+
+  # ---------------- Docker management UI (Arcane) ----------------
+  # docker.sock => root-equivalent on the host, so published to 127.0.0.1 only.
+  # Reach it via SSH tunnel:  gcloud compute ssh <vm> -- -L 3552:localhost:3552
+  arcane:
+    image: ghcr.io/getarcaneapp/arcane:latest
+    container_name: serenity-arcane
+    ports:
+      - '127.0.0.1:3552:3552'
+    environment:
+      APP_URL: ${ARCANE_APP_URL:-http://localhost:3552}
+      PUID: '1000'
+      PGID: '1000'
+      ENCRYPTION_KEY: ${ARCANE_ENCRYPTION_KEY}
+      JWT_SECRET: ${ARCANE_JWT_SECRET}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - arcane_data:/app/data
+    networks: [serenity]
+    restart: unless-stopped
+
+  # ---------------- one-shot: DB migrations (profile) ----------------
+  # Reuses the core-service image (it ships the prisma CLI + schema).
+  #   docker compose --profile tools run --rm migrate
+  migrate:
+    image: ${REGISTRY}/core-service:${IMAGE_TAG:-latest}
+    profiles: ['tools']
+    env_file: [.env.shared]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    entrypoint: ['node_modules/.bin/prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [serenity]
+    restart: 'no'
+
+networks:
+  serenity:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  arcane_data:
