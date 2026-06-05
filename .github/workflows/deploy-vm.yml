@@ -22,13 +22,13 @@ name: Build & Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [staging]
   workflow_dispatch:
     inputs:
       services:
-        description: 'Services to deploy: space-separated list, or "all". Empty = auto-detect.'
+        description: 'Services to deploy: space-separated list, or "all".'
         required: false
-        default: ''
+        default: 'all'
 
 env:
   PROJECT_ID: project-f65bf900-efde-4dae-af2
