@@ -166,6 +166,10 @@ jobs:
           script: |
             set -eu
             cd ~/serenity
+            echo "==> Reclaiming disk before pull (dangling images + build cache)"
+            docker image prune -f || true
+            docker builder prune -f || true
+            df -h / || true
             echo "==> Pulling: $SERVICES"
             docker compose pull $SERVICES
             echo "==> Ensuring data + edge layer is up"
@@ -176,5 +180,8 @@ jobs:
             echo "==> Restarting services"
             docker compose up -d $SERVICES
             docker compose up -d
+            echo "==> Reloading Caddy to apply the latest Caddyfile"
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
+              || docker compose restart caddy
             docker image prune -f || true
             docker compose ps

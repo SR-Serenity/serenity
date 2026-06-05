@@ -57,6 +57,6 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 \
 USER nodejs
 
 EXPOSE 3000
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 # Locate the standalone server.js wherever Next placed it, then run it.
 CMD ["sh", "-c", "node \"$(find . -name server.js -not -path '*/node_modules/*' | head -n1)\""]

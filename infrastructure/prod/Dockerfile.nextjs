@@ -50,7 +50,7 @@ USER nodejs
 EXPOSE 3000
 
 # Use dumb-init to handle signals properly (graceful shutdown)
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start the production Next.js server
 # With standalone mode, server.js is self-contained with only required dependencies
