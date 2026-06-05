@@ -63,7 +63,7 @@ jobs:
         run: |
           MANUAL='${{ github.event.inputs.services }}'
           if [ "$MANUAL" = "all" ]; then
-            SVCS="gateway auth-service core-service realtime-service web"
+            SVCS="gateway auth-service core-service realtime-service ai-service web"
           elif [ -n "$MANUAL" ]; then
             SVCS="$MANUAL"
           else
@@ -73,7 +73,7 @@ jobs:
             for p in $AFFECTED; do
               case "$p" in
                 @org/web) SVCS="$SVCS web" ;;
-                gateway|auth-service|core-service|realtime-service) SVCS="$SVCS $p" ;;
+                gateway|auth-service|core-service|realtime-service|ai-service) SVCS="$SVCS $p" ;;
               esac
             done
           fi
@@ -116,6 +116,9 @@ jobs:
               BUILD_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.PUBLIC_URL }} \
                           --build-arg NEXT_PUBLIC_REALTIME_URL=${{ vars.PUBLIC_URL }} \
                           --build-arg NEXT_PUBLIC_LIVEKIT_WS_URL=${{ vars.NEXT_PUBLIC_LIVEKIT_WS_URL }}"
+            elif [ "$svc" = "ai-service" ]; then
+              DOCKERFILE=infrastructure/vm/Dockerfile.ai
+              BUILD_ARGS=""
             else
               DOCKERFILE=infrastructure/vm/Dockerfile.nestjs
               BUILD_ARGS="--build-arg SERVICE_NAME=$svc"
