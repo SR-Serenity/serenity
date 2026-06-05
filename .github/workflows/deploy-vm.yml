@@ -22,7 +22,7 @@ name: Build & Deploy
 
 on:
   push:
-    branches: [staging]
+    branches: [main]
   workflow_dispatch:
     inputs:
       services:
