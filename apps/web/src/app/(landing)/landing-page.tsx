@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { motion, useInView, useScroll } from 'framer-motion'
+import { motion, useInView, useScroll, type Variants } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
 
 /* ─── Animation helpers ──────────────────────────────────────── */
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 }
@@ -86,8 +86,6 @@ function Navbar() {
 }
 
 /* ─── Hero ───────────────────────────────────────────────────── */
-const HEADLINE_WORDS = ['Where teams', 'do their', 'best work.']
-
 function Hero() {
   return (
     <section className="relative overflow-hidden pb-28 pt-36">
