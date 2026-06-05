@@ -11,7 +11,9 @@ RUN pnpm prisma generate
 
 ARG SERVICE_NAME
 RUN pnpm nx build ${SERVICE_NAME}
-RUN pnpm prune --prod && pnpm prisma generate
+# CI=true avoids pnpm's interactive "confirm modules purge" prompt (no TTY here)
+RUN CI=true pnpm prune --prod --config.confirmModulesPurge=false \
+  && pnpm prisma generate
 
 # ---------- runtime stage ----------
 FROM node:20-alpine
