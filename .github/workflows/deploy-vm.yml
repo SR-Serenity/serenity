@@ -148,7 +148,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          source: 'infrastructure/vm/docker-compose.yml,infrastructure/vm/Caddyfile'
+          source: 'infrastructure/vm/docker-compose.yml,infrastructure/vm/Caddyfile,infrastructure/vm/livekit.yaml'
           target: '~/serenity'
           strip_components: 2
 
