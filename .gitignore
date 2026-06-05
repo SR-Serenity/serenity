@@ -115,11 +115,6 @@ lerna-debug.log*
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 
-# Package manager
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
 # Jest/Testing
 .jest-cache
 .jest_cache/
