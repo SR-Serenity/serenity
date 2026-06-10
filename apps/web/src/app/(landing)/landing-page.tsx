@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { motion, useInView, useScroll, type Variants } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
 
@@ -65,19 +64,19 @@ function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
+          <a
+            href="https://app.guix.tech/login"
             className="rounded-lg px-4 py-2 text-sm font-medium text-[#5a667e] transition-colors hover:text-[#0f121a]"
           >
             Sign in
-          </Link>
+          </a>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <Link
-              href="/register"
+            <a
+              href="https://app.guix.tech/register"
               className="rounded-lg bg-[#070738] px-4 py-2 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(7,7,56,0.3)] transition-colors hover:bg-[#0d0d60]"
             >
               Get started
-            </Link>
+            </a>
           </motion.div>
         </div>
       </div>
@@ -129,21 +128,21 @@ function Hero() {
           {/* CTAs */}
           <motion.div variants={fadeUp} className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link
-                href="/register"
+              <a
+                href="https://app.guix.tech/register"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#070738] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(7,7,56,0.3)] transition-colors hover:bg-[#0d0d60]"
               >
                 Start for free
                 <ArrowRight />
-              </Link>
+              </a>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Link
-                href="/login"
+              <a
+                href="https://app.guix.tech/login"
                 className="inline-flex items-center gap-2 rounded-xl border border-[#dde1e9] bg-white px-7 py-3.5 text-sm font-semibold text-[#0f121a] shadow-sm transition-colors hover:bg-[#f8f9fa]"
               >
                 Sign in to workspace
-              </Link>
+              </a>
             </motion.div>
           </motion.div>
 
@@ -554,13 +553,13 @@ function FinalCTA() {
               Create your workspace in minutes. Free forever for small teams, no credit card needed.
             </p>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="inline-block">
-              <Link
-                href="/register"
+              <a
+                href="https://app.guix.tech/register"
                 className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-[#070738] shadow-lg transition-colors hover:bg-[#f0f2f5]"
               >
                 Get started for free
                 <ArrowRight />
-              </Link>
+              </a>
             </motion.div>
           </div>
         </div>
