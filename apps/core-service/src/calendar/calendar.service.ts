@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   BadRequestException,
   ForbiddenException,
@@ -69,7 +68,9 @@ export class CalendarService {
 
     if (query.from && query.to) {
       await this.syncGoogleEvents(orgId, userId, query.from, query.to).catch((err) =>
-        this.logger.warn(`Google Calendar sync skipped: ${err instanceof Error ? err.message : err}`),
+        this.logger.warn(
+          `Google Calendar sync skipped: ${err instanceof Error ? err.message : err}`,
+        ),
       );
     }
 
@@ -182,7 +183,7 @@ export class CalendarService {
     };
     this.validateItem(merged);
 
-    const data: Prisma.CalendarItemUpdateInput = {};
+    const data: Prisma.CalendarItemUncheckedUpdateInput = {};
     if (input.type !== undefined) {
       data.type = input.type;
     }
@@ -457,9 +458,13 @@ export class CalendarService {
   }
 
   private async pushCreateToGoogle(orgId: string, userId: string, item: ReturnType<CalendarService['toDto']>) {
-    if (!this.shouldSyncToGoogle(item.type as CalendarItemType) || !item.startAt || !item.endAt) return;
+    if (!this.shouldSyncToGoogle(item.type as CalendarItemType) || !item.startAt || !item.endAt) {
+      return;
+    }
     const creds = await this.getRefreshToken(orgId, userId);
-    if (!creds) return;
+    if (!creds) {
+      return;
+    }
     try {
       const googleEventId = await this.gcal.createEvent(creds.refreshToken, {
         title: item.title,
@@ -475,14 +480,29 @@ export class CalendarService {
       });
       item.googleEventId = googleEventId;
     } catch (err: unknown) {
-      this.logger.warn(`Google Calendar create failed: ${err instanceof Error ? err.message : err}`);
+      this.logger.warn(
+        `Google Calendar create failed: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 
-  private async pushUpdateToGoogle(orgId: string, userId: string, item: ReturnType<CalendarService['toDto']>) {
-    if (!this.shouldSyncToGoogle(item.type as CalendarItemType) || !item.googleEventId || !item.startAt || !item.endAt) return;
+  private async pushUpdateToGoogle(
+    orgId: string,
+    userId: string,
+    item: ReturnType<CalendarService['toDto']>,
+  ) {
+    if (
+      !this.shouldSyncToGoogle(item.type as CalendarItemType) ||
+      !item.googleEventId ||
+      !item.startAt ||
+      !item.endAt
+    ) {
+      return;
+    }
     const creds = await this.getRefreshToken(orgId, userId);
-    if (!creds) return;
+    if (!creds) {
+      return;
+    }
     try {
       await this.gcal.updateEvent(creds.refreshToken, item.googleEventId, {
         title: item.title,
@@ -493,18 +513,26 @@ export class CalendarService {
         allDay: item.allDay,
       });
     } catch (err: unknown) {
-      this.logger.warn(`Google Calendar update failed: ${err instanceof Error ? err.message : err}`);
+      this.logger.warn(
+        `Google Calendar update failed: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 
   private async pushDeleteToGoogle(orgId: string, userId: string, googleEventId: string | null) {
-    if (!googleEventId) return;
+    if (!googleEventId) {
+      return;
+    }
     const creds = await this.getRefreshToken(orgId, userId);
-    if (!creds) return;
+    if (!creds) {
+      return;
+    }
     try {
       await this.gcal.deleteEvent(creds.refreshToken, googleEventId);
     } catch (err: unknown) {
-      this.logger.warn(`Google Calendar delete failed: ${err instanceof Error ? err.message : err}`);
+      this.logger.warn(
+        `Google Calendar delete failed: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 
@@ -513,13 +541,20 @@ export class CalendarService {
       where: { orgId, userId, status: MailAccountStatus.CONNECTED },
       select: { id: true, encryptedRefreshToken: true },
     });
-    if (!account?.encryptedRefreshToken) return null;
-    return { accountId: account.id, refreshToken: this.tokenService.decrypt(account.encryptedRefreshToken) };
+    if (!account?.encryptedRefreshToken) {
+      return null;
+    }
+    return {
+      accountId: account.id,
+      refreshToken: this.tokenService.decrypt(account.encryptedRefreshToken),
+    };
   }
 
   private async syncGoogleEvents(orgId: string, userId: string, from: string, to: string) {
     const creds = await this.getRefreshToken(orgId, userId);
-    if (!creds) return;
+    if (!creds) {
+      return;
+    }
     const { accountId, refreshToken } = creds;
     const googleEvents = await this.gcal.listEvents(refreshToken, from, to);
     const fetchedIds = new Set(googleEvents.map((e) => e.id).filter(Boolean) as string[]);
@@ -536,7 +571,9 @@ export class CalendarService {
     });
 
     for (const event of googleEvents) {
-      if (!event.id || !event.summary) continue;
+      if (!event.id || !event.summary) {
+        continue;
+      }
 
       const allDay = !event.start?.dateTime;
       const startAt = event.start?.dateTime

@@ -110,7 +110,9 @@ export class GmailClient {
           ...(history.labelsAdded ?? []).map((entry) => entry.message),
           ...(history.labelsRemoved ?? []).map((entry) => entry.message),
         ]) {
-          if (item?.id) ids.add(item.id);
+          if (item?.id) {
+            ids.add(item.id);
+          }
         }
       }
       pageToken = response.data.nextPageToken ?? undefined;

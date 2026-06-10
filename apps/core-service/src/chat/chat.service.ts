@@ -833,7 +833,9 @@ export class ChatService {
     messages: MessageWithInclude[],
   ): Promise<MessageWithInclude[]> {
     const allAttachments = messages.flatMap((m) => m.attachments);
-    if (allAttachments.length === 0) return messages;
+    if (allAttachments.length === 0) {
+      return messages;
+    }
     const resolved = await this.uploads.resolveAttachmentUrls(allAttachments);
     const urlMap = new Map(resolved.map((a) => [a.id, a.url]));
     return messages.map((m) => ({
