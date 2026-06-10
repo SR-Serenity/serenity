@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { WorkspaceRole } from '@prisma/client';
@@ -11,7 +12,6 @@ import { JwtPayload, type SignOptions, sign, verify } from 'jsonwebtoken';
 import { PrismaService } from '../database/prisma.service';
 import { seedOrganizationData } from './auth.seed';
 import axios from 'axios';
-
 
 type RegisterInput = {
   email: string;
@@ -42,6 +42,8 @@ type AuthTokenPayload = JwtPayload & {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async register(input: RegisterInput) {
@@ -94,8 +96,10 @@ export class AuthService {
       return { user, organization, seedResult };
     });
 
-    this.indexSeededWikiPages(created.organization.id, created.user.id, created.seedResult?.wikiPages);
-
+    this.indexSeededWikiPages(
+      created.organization.id,
+      created.user.id, created.seedResult?.wikiPages
+    );
 
     return this.authResponse(
       created.user.id,
@@ -256,7 +260,11 @@ export class AuthService {
         },
       });
 
-      const seedResult = await seedOrganizationData(tx, organization.id, organization.slug, member.user);
+      const seedResult = await seedOrganizationData(
+        tx, organization.id,
+        organization.slug,
+        member.user
+      );
 
       return { organization, member, seedResult };
     });
@@ -264,7 +272,6 @@ export class AuthService {
     const { organization, member, seedResult } = created;
 
     this.indexSeededWikiPages(organization.id, member.user.id, seedResult?.wikiPages);
-
 
     return this.authResponse(
       member.user.id,
@@ -463,7 +470,9 @@ export class AuthService {
     createdById: string,
     wikiPages?: Array<{ id: string; title: string; contentMarkdown: string; contentJson: any }>
   ) {
-    if (!wikiPages || wikiPages.length === 0) return;
+    if (!wikiPages || wikiPages.length === 0) {
+      return;
+    }
 
     const rawUrl = process.env.AI_SERVICE_URL || 'http://localhost:8001';
     let aiBaseUrl = rawUrl.trim();
@@ -499,11 +508,11 @@ export class AuthService {
             }
           );
         } catch (err: any) {
-          console.warn(`[Seed Indexing] Failed to index wiki page ${page.title}: ${err.message}`);
+          this.logger.warn(`Seed indexing: failed to index wiki page "${page.title}": ${err.message}`);
         }
       })
     ).catch((err) => {
-      console.error('[Seed Indexing] Error indexing wiki pages:', err);
+      this.logger.error('Seed indexing: error indexing wiki pages', err);
     });
   }
 }
