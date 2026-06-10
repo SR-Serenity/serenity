@@ -1,15 +1,20 @@
 # Reverse proxy + automatic HTTPS for the single-VM stack.
 #
-# SITE_ADDRESS controls the entrypoint:
-#   - A domain (e.g. app.example.com)  -> Caddy gets a free Let's Encrypt cert.
-#   - ":80"                            -> plain HTTP (use when you only have an IP).
+# Domain split:
+#   guix.tech / www.guix.tech  -> marketing landing page only (Next.js)
+#   app.guix.tech              -> full app: Next.js + API gateway + realtime
 #
-# Routing (most-specific path wins):
-#   /api/realtime/*  -> realtime-service  (Server-Sent Events; buffering off)
-#   /api/*           -> gateway
-#   everything else  -> web (Next.js)
+# DNS: both domains must have A records pointing to this VM (grey-cloud /
+# DNS-only in Cloudflare) so Caddy can provision Let's Encrypt certs.
 
-{$SITE_ADDRESS} {
+# Landing page — marketing site only, no API surface.
+guix.tech, www.guix.tech {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+# App — full routing: SSE realtime, REST API gateway, and Next.js frontend.
+app.guix.tech {
 	encode zstd gzip
 
 	# Realtime SSE stream. flush_interval -1 disables response buffering so
