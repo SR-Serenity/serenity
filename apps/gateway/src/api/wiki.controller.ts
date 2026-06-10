@@ -242,7 +242,11 @@ export class WikiController {
     @Body() body: UpdateShareBodyDto,
   ) {
     const authorization = req.headers.authorization as string;
-    return this.apiProxy.forwardPatchRequest(`wiki/pages/${id}/shares/${userId}`, body, authorization);
+    return this.apiProxy.forwardPatchRequest(
+      `wiki/pages/${id}/shares/${userId}`,
+      body,
+      authorization,
+    );
   }
 
   @Delete(':id/shares/:userId')

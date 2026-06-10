@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import type { Job } from 'bullmq';
@@ -106,7 +105,7 @@ export class MailQueueService implements OnModuleInit, OnModuleDestroy {
     const job = await this.queue?.getJob(jobId);
     const state = await job?.getState();
     if (state === 'failed' || state === 'completed') {
-      await job.remove();
+      await job?.remove();
     }
   }
 

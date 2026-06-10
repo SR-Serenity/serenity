@@ -410,7 +410,8 @@ export class WikiService {
         throw new NotFoundException('Department not found');
       }
       const isMemberOfDept = membership.departmentId === departmentId;
-      const isPrivileged = membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
+      const isPrivileged =
+        membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
       if (!isPrivileged && !isMemberOfDept) {
         throw new ForbiddenException('You can only create pages in your own department');
       }

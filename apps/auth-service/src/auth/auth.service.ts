@@ -508,7 +508,9 @@ export class AuthService {
             }
           );
         } catch (err: any) {
-          this.logger.warn(`Seed indexing: failed to index wiki page "${page.title}": ${err.message}`);
+          this.logger.warn(
+            `Seed indexing: failed to index wiki page "${page.title}": ${err.message}`,
+          );
         }
       })
     ).catch((err) => {
