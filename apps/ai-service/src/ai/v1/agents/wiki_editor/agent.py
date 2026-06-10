@@ -24,12 +24,21 @@ class WikiEditorAgent:
 
     name = "WikiEditorAgent"
 
-    def _make_llm(self, temperature: float = 0.7) -> ChatOpenAI:
-        return ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
-            temperature=temperature,
-        )
+    def __init__(self) -> None:
+        if settings.OPENAI_API_KEY:
+            self._llm_edit = ChatOpenAI(
+                model=settings.OPENAI_MODEL,
+                api_key=settings.OPENAI_API_KEY,
+                temperature=0.7,
+            )
+            self._llm_explain = ChatOpenAI(
+                model=settings.OPENAI_MODEL,
+                api_key=settings.OPENAI_API_KEY,
+                temperature=0.3,
+            )
+        else:
+            self._llm_edit = None
+            self._llm_explain = None
 
     def health(self) -> dict[str, str]:
         return {"agent": self.name, "status": "ready"}
@@ -42,13 +51,7 @@ class WikiEditorAgent:
         page_content_markdown: str,
         prompt: str,
     ) -> tuple[str, str]:
-        """
-        Apply the user's inline prompt to the wiki page.
-
-        Returns:
-            (explanation, updated_content_markdown) — both strings.
-        """
-        if not settings.OPENAI_API_KEY:
+        if not self._llm_edit:
             logger.warning("wiki_editor: OPENAI_API_KEY not set — returning original content")
             return "No AI available.", page_content_markdown
 
@@ -60,14 +63,12 @@ class WikiEditorAgent:
         human_message = WIKI_EDITOR_HUMAN_TEMPLATE.format(prompt=prompt)
 
         try:
-            llm = self._make_llm(temperature=0.7)
-            response = llm.invoke([
+            response = self._llm_edit.invoke([
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=human_message),
             ])
             updated = str(response.content).strip()
 
-            # Strip accidental code fences the model may add
             if updated.startswith("```"):
                 lines = updated.split("\n")
                 inner = lines[1:] if len(lines) > 1 else lines
@@ -86,10 +87,10 @@ class WikiEditorAgent:
             return f"Error: {exc}", page_content_markdown
 
     def _generate_explanation(self, *, prompt: str) -> str:
-        """Generate a one-sentence human-readable summary of what was done."""
+        if not self._llm_explain:
+            return f'Applied: "{prompt.strip()}"'
         try:
-            llm = self._make_llm(temperature=0.3)
-            response = llm.invoke([
+            response = self._llm_explain.invoke([
                 SystemMessage(content=WIKI_EDITOR_EXPLAIN_SYSTEM),
                 HumanMessage(content=WIKI_EDITOR_EXPLAIN_HUMAN.format(prompt=prompt)),
             ])

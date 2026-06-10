@@ -188,3 +188,24 @@ class ChatAssistRequest(CamelModel):
 class ChatAssistResponse(CamelModel):
     """Response from the /ai/chat/assist endpoint."""
     suggested_content: str
+
+
+# ── Automation Execute ────────────────────────────────────────────────────────
+
+class AutomationContext(CamelModel):
+    trigger_type: str | None = None
+    user_id: str | None = None
+    display_name: str | None = None
+    org_name: str | None = None
+    message_content: str | None = None
+
+
+class AutomationExecuteRequest(CamelModel):
+    org_id: str
+    instruction: str
+    context: AutomationContext = Field(default_factory=AutomationContext)
+
+
+class AutomationExecuteResponse(CamelModel):
+    content: str
+    execution_id: str

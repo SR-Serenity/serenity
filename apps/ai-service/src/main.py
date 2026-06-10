@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from src.ai.v1.memory.postgres import create_checkpointer, create_store
+from src.ai.v1.agents.automation_agent.store import ensure_table as ensure_automation_table
 from src.api.routes import router as public_router
 from src.api.internal.v1.router import router as internal_v1_router
 from src.core.config import settings
@@ -14,6 +15,7 @@ from src.core.config import settings
 async def lifespan(app: FastAPI):
     app.state.checkpointer = create_checkpointer()
     app.state.store = create_store()
+    ensure_automation_table()
     yield
 
 
