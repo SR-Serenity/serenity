@@ -1,22 +1,21 @@
-// @ts-nocheck
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateAiSessionDto {
   @ApiProperty()
   @IsString()
-  title: string;
+    title!: string;
 }
 
 export class UpdateAiSessionDto {
   @ApiProperty()
   @IsString()
-  title: string;
+    title!: string;
 }
 
 export class AiMessageSourceDto {
   @ApiProperty()
-  type: string;
+    type!: string;
   @ApiPropertyOptional() fileId?: string | null;
   @ApiPropertyOptional() page?: number | null;
   @ApiPropertyOptional() title?: string | null;
@@ -26,44 +25,44 @@ export class AiMessageSourceDto {
 
 export class AiProposedActionDto {
   @ApiProperty()
-  type: string;
+    type!: string;
   @ApiProperty()
-  payload: Record<string, unknown>;
+    payload!: Record<string, unknown>;
   @ApiProperty()
-  confidence: number;
+    confidence!: number;
   @ApiProperty()
-  requiresConfirmation: boolean;
+    requiresConfirmation!: boolean;
 }
 
 export class AppendAiMessageDto {
   @ApiProperty({ enum: ['user', 'assistant'] })
   @IsString()
-  role: 'user' | 'assistant';
+    role!: 'user' | 'assistant';
 
   @ApiProperty()
   @IsString()
-  content: string;
+    content!: string;
 
   @ApiPropertyOptional({ type: [AiMessageSourceDto] })
   @IsOptional()
   @IsArray()
-  sources?: AiMessageSourceDto[];
+    sources?: AiMessageSourceDto[];
 
   @ApiPropertyOptional({ type: [AiProposedActionDto] })
   @IsOptional()
   @IsArray()
-  proposedActions?: AiProposedActionDto[];
+    proposedActions?: AiProposedActionDto[];
 }
 
 export class AppendAiMessagesDto {
   @ApiProperty({ type: [AppendAiMessageDto] })
   @IsArray()
-  messages: AppendAiMessageDto[];
+    messages!: AppendAiMessageDto[];
 }
 
 export class UpdateAiMessageDto {
   @ApiPropertyOptional({ type: [AiProposedActionDto] })
   @IsOptional()
   @IsArray()
-  proposedActions?: AiProposedActionDto[];
+    proposedActions?: AiProposedActionDto[];
 }
