@@ -1,6 +1,4 @@
-// @ts-nocheck
-import { Body, Controller, Delete, Get, Param, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Delete, Get, Param, Post, Query, Redirect, StreamableFile, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -50,13 +48,13 @@ export class MailController {
 
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth callback' })
+  @Redirect()
   async googleCallback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() response: Response,
   ) {
     const redirectTo = await this.mailService.handleGoogleCallback(code, state);
-    return response.redirect(redirectTo);
+    return { url: redirectTo };
   }
 
   @Delete('accounts/:accountId')
@@ -93,16 +91,18 @@ export class MailController {
   async downloadAttachment(
     @CurrentUser() user: AuthUser,
     @Param('attachmentId') attachmentId: string,
-    @Res({ passthrough: true }) response: Response,
   ) {
-    const attachment = await this.mailService.downloadAttachment(user.orgId, user.userId, attachmentId);
+    const attachment = await this.mailService.downloadAttachment(
+      user.orgId,
+      user.userId,
+      attachmentId
+    );
     const filename = attachment.filename.replace(/["\r\n]/g, '_');
-    response.set({
-      'Content-Type': attachment.mimeType,
-      'Content-Length': attachment.buffer.length.toString(),
-      'Content-Disposition': `attachment; filename="${filename}"`,
+    return new StreamableFile(attachment.buffer, {
+      type: attachment.mimeType,
+      length: attachment.buffer.length,
+      disposition: `attachment; filename="${filename}"`,
     });
-    return new StreamableFile(attachment.buffer);
   }
 
   @Post('messages/send')

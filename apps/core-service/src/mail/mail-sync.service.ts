@@ -1,7 +1,5 @@
-// @ts-nocheck
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { MailAccountStatus, MailMessageDirection, MailProvider, Prisma } from '@prisma/client';
-import type { gmail_v1 } from 'googleapis';
+import { MailAccountStatus, MailMessageDirection, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { GmailClient, type GmailMessage, type GmailMessagePart } from './gmail/gmail.client';
 import { MailTokenService } from './mail-token.service';
@@ -41,7 +39,9 @@ export class MailSyncService {
 
   async syncAccount(accountId: string, mode: 'initial' | 'incremental' | 'fallback' = 'incremental') {
     const account = await this.prisma.mailAccount.findUnique({ where: { id: accountId } });
-    if (!account) return;
+    if (!account) {
+      return;
+    }
 
     try {
       if (!account.encryptedRefreshToken) {
@@ -86,11 +86,17 @@ export class MailSyncService {
 
   async renewWatch(accountId: string) {
     const account = await this.prisma.mailAccount.findUnique({ where: { id: accountId } });
-    if (!account) return;
-    if (!account.encryptedRefreshToken) return;
+    if (!account) {
+      return;
+    }
+    if (!account.encryptedRefreshToken) {
+      return;
+    }
     const refreshToken = this.tokenService.decrypt(account.encryptedRefreshToken);
     const watch = await this.gmail.watch(refreshToken);
-    if (!watch) return;
+    if (!watch) {
+      return;
+    }
     await this.prisma.mailAccount.update({
       where: { id: account.id },
       data: {
@@ -102,7 +108,9 @@ export class MailSyncService {
 
   async upsertGmailMessage(accountId: string, message: GmailMessage) {
     const account = await this.prisma.mailAccount.findUnique({ where: { id: accountId } });
-    if (!account || !message.id || !message.threadId) return;
+    if (!account || !message.id || !message.threadId) {
+      return;
+    }
 
     const parsed = this.parseMessage(message);
     const unread = parsed.labelIds.includes('UNREAD');
@@ -269,14 +277,22 @@ export class MailSyncService {
   }
 
   private extractBody(part?: GmailMessagePart): { text: string | null; html: string | null } {
-    if (!part) return { text: null, html: null };
+    if (!part) {
+      return { text: null, html: null };
+    }
     let text: string | null = null;
     let html: string | null = null;
     const visit = (node: GmailMessagePart) => {
       const data = node.body?.data;
-      if (data && node.mimeType === 'text/plain' && !text) text = this.decodeBase64Url(data);
-      if (data && node.mimeType === 'text/html' && !html) html = this.decodeBase64Url(data);
-      for (const child of node.parts ?? []) visit(child);
+      if (data && node.mimeType === 'text/plain' && !text) {
+        text = this.decodeBase64Url(data);
+      }
+      if (data && node.mimeType === 'text/html' && !html) {
+        html = this.decodeBase64Url(data);
+      }
+      for (const child of node.parts ?? []) {
+        visit(child);
+      }
     };
     visit(part);
     return { text, html };
@@ -284,7 +300,9 @@ export class MailSyncService {
 
   private extractAttachments(part?: GmailMessagePart) {
     const attachments: ParsedMessage['attachments'] = [];
-    if (!part) return attachments;
+    if (!part) {
+      return attachments;
+    }
     const visit = (node: GmailMessagePart) => {
       if (node.filename && node.body?.attachmentId) {
         attachments.push({
@@ -294,7 +312,9 @@ export class MailSyncService {
           size: node.body.size ?? null,
         });
       }
-      for (const child of node.parts ?? []) visit(child);
+      for (const child of node.parts ?? []) {
+        visit(child);
+      }
     };
     visit(part);
     return attachments;
@@ -305,14 +325,18 @@ export class MailSyncService {
   }
 
   private dateFromHeader(value?: string) {
-    if (!value) return null;
+    if (!value) {
+      return null;
+    }
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
   private parseAddress(value: string) {
     const match = value.match(/^(?:"?([^"<]*)"?\s)?<?([^<>\s]+@[^<>\s]+)>?$/);
-    if (!match) return { name: null, email: value || null };
+    if (!match) {
+      return { name: null, email: value || null };
+    }
     return {
       name: match[1]?.trim() || null,
       email: match[2]?.trim() || null,
@@ -320,7 +344,9 @@ export class MailSyncService {
   }
 
   private parseAddressList(value?: string) {
-    if (!value) return [];
+    if (!value) {
+      return [];
+    }
     return value
       .split(',')
       .map((item) => this.parseAddress(item.trim()).email)
