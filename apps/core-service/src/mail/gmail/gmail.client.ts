@@ -83,7 +83,8 @@ export class GmailClient {
         maxResults: 500,
         pageToken,
       });
-      ids.push(...((response.data.messages?.map((message) => message.id).filter(Boolean) as string[]) ?? []));
+      const msgIds = (response.data.messages?.map((m) => m.id).filter(Boolean) as string[]) ?? [];
+      ids.push(...msgIds);
       pageToken = response.data.nextPageToken ?? undefined;
     } while (pageToken);
 
@@ -130,7 +131,12 @@ export class GmailClient {
     return response.data;
   }
 
-  async modifyThread(refreshToken: string, threadId: string, addLabelIds: string[], removeLabelIds: string[]) {
+  async modifyThread(
+    refreshToken: string,
+    threadId: string,
+    addLabelIds: string[],
+    removeLabelIds: string[],
+  ) {
     await this.gmail(refreshToken).users.threads.modify({
       userId: 'me',
       id: threadId,

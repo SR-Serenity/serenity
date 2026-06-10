@@ -25,7 +25,11 @@ export class OfficeController {
   @Patch('rooms/:roomId')
   @ApiOperation({ summary: 'Update an office room' })
   updateRoom(@Param('roomId') roomId: string, @Req() req: RequestWithAuth, @Body() body: unknown) {
-    return this.apiProxy.forwardPatchRequest(`office/rooms/${roomId}`, body, req.headers.authorization);
+    return this.apiProxy.forwardPatchRequest(
+      `office/rooms/${roomId}`,
+      body,
+      req.headers.authorization,
+    );
   }
 
   @Delete('rooms/:roomId')
@@ -37,30 +41,49 @@ export class OfficeController {
   @Post('rooms/:roomId/join')
   @ApiOperation({ summary: 'Join an office room' })
   joinRoom(@Param('roomId') roomId: string, @Req() req: RequestWithAuth) {
-    return this.apiProxy.forwardPostRequest(`office/rooms/${roomId}/join`, {}, req.headers.authorization);
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/join`,
+      {},
+      req.headers.authorization,
+    );
   }
 
   @Post('rooms/:roomId/leave')
   @ApiOperation({ summary: 'Leave an office room' })
   leaveRoom(@Param('roomId') roomId: string, @Req() req: RequestWithAuth) {
-    return this.apiProxy.forwardPostRequest(`office/rooms/${roomId}/leave`, {}, req.headers.authorization);
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/leave`,
+      {},
+      req.headers.authorization,
+    );
   }
 
   @Get('rooms/:roomId/note')
   @ApiOperation({ summary: 'Get active meeting note' })
   getMeetingNote(@Param('roomId') roomId: string, @Req() req: RequestWithAuth) {
-    return this.apiProxy.forwardGetRequest(`office/rooms/${roomId}/note`, req.headers.authorization);
+    return this.apiProxy.forwardGetRequest(
+      `office/rooms/${roomId}/note`,
+      req.headers.authorization,
+    );
   }
 
   @Patch('rooms/:roomId/note')
   @ApiOperation({ summary: 'Update meeting note' })
   updateMeetingNote(@Param('roomId') roomId: string, @Req() req: RequestWithAuth, @Body() body: unknown) {
-    return this.apiProxy.forwardPatchRequest(`office/rooms/${roomId}/note`, body, req.headers.authorization);
+    return this.apiProxy.forwardPatchRequest(
+      `office/rooms/${roomId}/note`,
+      body,
+      req.headers.authorization,
+    );
   }
 
   @Post('rooms/:roomId/token')
   @ApiOperation({ summary: 'Generate LiveKit token for a room' })
   generateToken(@Param('roomId') roomId: string, @Req() req: RequestWithAuth) {
-    return this.apiProxy.forwardPostRequest(`office/rooms/${roomId}/token`, {}, req.headers.authorization);
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/token`,
+      {},
+      req.headers.authorization,
+    );
   }
 }

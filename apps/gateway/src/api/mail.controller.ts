@@ -140,7 +140,10 @@ export class MailController {
   @ApiOperation({ summary: 'Disconnect mail account' })
   @ApiOkResponse({ description: 'Mail account disconnected' })
   disconnect(@Req() req: RequestWithAuth, @Param('accountId') accountId: string) {
-    return this.apiProxy.forwardDeleteRequest(`mail/accounts/${accountId}`, req.headers.authorization);
+    return this.apiProxy.forwardDeleteRequest(
+      `mail/accounts/${accountId}`,
+      req.headers.authorization,
+    );
   }
 
   @Get('threads')
@@ -169,22 +172,46 @@ export class MailController {
   @ApiOperation({ summary: 'Reply to email thread' })
   @ApiBody({ type: ReplyMailBodyDto })
   @ApiOkResponse({ description: 'Reply sent' })
-  reply(@Req() req: RequestWithAuth, @Param('threadId') threadId: string, @Body() body: ReplyMailBodyDto) {
-    return this.apiProxy.forwardPostRequest(`mail/threads/${threadId}/reply`, body, req.headers.authorization);
+  reply(
+    @Req() req: RequestWithAuth,
+    @Param('threadId') threadId: string,
+    @Body() body: ReplyMailBodyDto,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `mail/threads/${threadId}/reply`,
+      body,
+      req.headers.authorization,
+    );
   }
 
   @Post('threads/:threadId/forward')
   @ApiOperation({ summary: 'Forward email thread' })
   @ApiBody({ type: ForwardMailBodyDto })
   @ApiOkResponse({ description: 'Thread forwarded' })
-  forward(@Req() req: RequestWithAuth, @Param('threadId') threadId: string, @Body() body: ForwardMailBodyDto) {
-    return this.apiProxy.forwardPostRequest(`mail/threads/${threadId}/forward`, body, req.headers.authorization);
+  forward(
+    @Req() req: RequestWithAuth,
+    @Param('threadId') threadId: string,
+    @Body() body: ForwardMailBodyDto,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `mail/threads/${threadId}/forward`,
+      body,
+      req.headers.authorization,
+    );
   }
 
   @Post('threads/:threadId/:action')
   @ApiOperation({ summary: 'Run mail thread action' })
   @ApiOkResponse({ description: 'Mail action applied' })
-  action(@Req() req: RequestWithAuth, @Param('threadId') threadId: string, @Param('action') action: string) {
-    return this.apiProxy.forwardPostRequest(`mail/threads/${threadId}/${action}`, {}, req.headers.authorization);
+  action(
+    @Req() req: RequestWithAuth,
+    @Param('threadId') threadId: string,
+    @Param('action') action: string,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `mail/threads/${threadId}/${action}`,
+      {},
+      req.headers.authorization,
+    );
   }
 }
