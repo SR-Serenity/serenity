@@ -2,11 +2,15 @@
 
 from typing import Annotated
 
-from langchain.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 
 from src.ai.v1.documents.index_store import get_index_store
 from src.services.workspace_service import get_wiki_page, list_wiki_pages
+
+
+def _get_agent_context(config: RunnableConfig) -> dict:
+    return config.get("configurable", {}).get("agent_context", {})
 
 
 @tool(
@@ -16,8 +20,9 @@ from src.services.workspace_service import get_wiki_page, list_wiki_pages
         "Use this to discover what knowledge articles exist before reading a specific one."
     )
 )
-def list_wiki_pages_tool(runtime: ToolRuntime) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+def list_wiki_pages_tool(config: RunnableConfig) -> str:
+    context = _get_agent_context(config)
+    auth_token: str = context.get("auth_token", "")
     if not auth_token:
         return "No auth token available."
     try:
@@ -44,10 +49,10 @@ def list_wiki_pages_tool(runtime: ToolRuntime) -> str:
     )
 )
 def get_wiki_page_tool(
-    runtime: ToolRuntime,
     page_id: Annotated[str, "The wiki page UUID to read"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token: str = _get_agent_context(config).get("auth_token", "")
     if not auth_token:
         return "No auth token available."
     try:
@@ -70,14 +75,15 @@ def get_wiki_page_tool(
     )
 )
 def search_wiki_pages_tool(
-    runtime: ToolRuntime,
     query: Annotated[str, "Keyword or phrase to search for in wiki pages"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    context = _get_agent_context(config)
+    auth_token: str = context.get("auth_token", "")
+    org_id: str = context.get("org_id", "")
     if not auth_token:
         return "No auth token available."
     try:
-        org_id = runtime.context.get("org_id") or runtime.context.get("orgId")
         store = get_index_store()
         if org_id:
             results = store.search(

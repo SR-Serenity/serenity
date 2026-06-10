@@ -2,10 +2,14 @@
 
 from typing import Annotated
 
-from langchain.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 
 from src.services.workspace_service import list_contacts
+
+
+def _get_auth_token(config: RunnableConfig) -> str:
+    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
 
 
 @tool(
@@ -15,8 +19,8 @@ from src.services.workspace_service import list_contacts
         "Use this to find people's contact info or to answer questions about the team."
     )
 )
-def list_contacts_tool(runtime: ToolRuntime) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+def list_contacts_tool(config: RunnableConfig) -> str:
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -48,10 +52,10 @@ def list_contacts_tool(runtime: ToolRuntime) -> str:
     )
 )
 def search_contacts_tool(
-    runtime: ToolRuntime,
     query: Annotated[str, "Name, email, company, or title to search for"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:

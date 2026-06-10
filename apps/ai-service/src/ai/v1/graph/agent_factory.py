@@ -79,20 +79,28 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
 
 
 def _run_workspace_qa(agent, state: PipelineState, run_config: RunnableConfig | None) -> dict:
+    from langchain_core.messages import SystemMessage
+    from src.ai.v1.agents.workspace_qa.prompts import build_system_prompt
+
     thread_id = (run_config or {}).get("configurable", {}).get("thread_id")
-    context = {
+    agent_context = {
         "org_id": state["org_id"],
         "user_id": state["user_id"],
         "auth_token": state.get("auth_token") or "",
         "user_context": state.get("context", {}).get("userContext", {}),
+        "timeZone": state.get("context", {}).get("timeZone", ""),
     }
+    system_message = SystemMessage(content=build_system_prompt(agent_context))
+    messages = [system_message] + list(state["messages"])
     result = agent.invoke(
-        {"messages": state["messages"]},
+        {"messages": messages},
         config={
             "recursion_limit": 15,
-            "configurable": {"thread_id": thread_id} if thread_id else {},
+            "configurable": {
+                **({"thread_id": thread_id} if thread_id else {}),
+                "agent_context": agent_context,
+            },
         },
-        context=context,
     )
     last_message = result["messages"][-1] if result.get("messages") else None
     content = (
