@@ -2,18 +2,17 @@
 
 from typing import Annotated
 
-from langchain.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 
 from src.services.workspace_service import list_conversations, list_messages
 
 
-def _sender_name(m: dict) -> str:
-    """Extract sender display name from a message dict.
+def _get_auth_token(config: RunnableConfig) -> str:
+    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
 
-    The API returns the author under the 'author' key with a 'displayName' field.
-    Fall back to legacy 'sender' and 'senderName' fields for compatibility.
-    """
+
+def _sender_name(m: dict) -> str:
     return (
         (m.get("author") or {}).get("displayName")
         or (m.get("sender") or {}).get("displayName")
@@ -23,10 +22,6 @@ def _sender_name(m: dict) -> str:
 
 
 def _conv_display_name(c: dict) -> str:
-    """Return a human-readable name for a conversation.
-
-    For DMs with no channel name, list the members' display names instead.
-    """
     name = c.get("name") or c.get("displayName")
     if name:
         return name
@@ -40,7 +35,6 @@ def _conv_display_name(c: dict) -> str:
 
 
 def _name_matches(display_name: str, query: str) -> bool:
-    """Case-insensitive substring match for person name lookup."""
     return query.lower() in display_name.lower()
 
 
@@ -51,8 +45,8 @@ def _name_matches(display_name: str, query: str) -> bool:
         "Use this to discover conversations before searching their messages."
     )
 )
-def list_conversations_tool(runtime: ToolRuntime) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+def list_conversations_tool(config: RunnableConfig) -> str:
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -85,11 +79,11 @@ def list_conversations_tool(runtime: ToolRuntime) -> str:
     )
 )
 def search_messages_tool(
-    runtime: ToolRuntime,
     conversation_id: Annotated[str, "The conversation UUID to search in"],
     query: Annotated[str, "Keyword or phrase to search for in messages"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -120,10 +114,10 @@ def search_messages_tool(
     )
 )
 def search_all_messages_tool(
-    runtime: ToolRuntime,
     query: Annotated[str, "Keyword or phrase to search for across all conversations"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -164,10 +158,10 @@ def search_all_messages_tool(
     )
 )
 def get_messages_from_person_tool(
-    runtime: ToolRuntime,
     person_name: Annotated[str, "Name or partial name of the person to find messages from"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -175,7 +169,6 @@ def get_messages_from_person_tool(
         if not convs:
             return "No conversations accessible."
 
-        # Find conversations that include a member whose name matches
         relevant_convs = []
         for c in convs:
             members = c.get("members") or []

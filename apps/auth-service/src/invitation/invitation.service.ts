@@ -194,7 +194,7 @@ export class InvitationService {
       throw new BadRequestException('Invitation has expired');
     }
 
-    let user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: invitation.email },
     });
 

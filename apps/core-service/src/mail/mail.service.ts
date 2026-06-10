@@ -171,7 +171,9 @@ export class MailService {
         },
       },
     });
-    if (!thread) throw new NotFoundException('Mail thread not found');
+    if (!thread) {
+      throw new NotFoundException('Mail thread not found');
+    }
     return {
       ...this.toThreadDto(thread),
       messages: thread.messages.map((message) => ({
@@ -204,7 +206,9 @@ export class MailService {
         message: true,
       },
     });
-    if (!attachment) throw new NotFoundException('Mail attachment not found');
+    if (!attachment) {
+      throw new NotFoundException('Mail attachment not found');
+    }
     if (!attachment.providerAttachmentId) {
       throw new BadRequestException('Attachment file is not available from Gmail');
     }
@@ -254,7 +258,9 @@ export class MailService {
     const recipients = input.replyAll
       ? Array.from(new Set([thread.fromEmail, ...thread.toEmails].filter(Boolean))) as string[]
       : thread.fromEmail ? [thread.fromEmail] : [];
-    if (!recipients.length) throw new BadRequestException('Thread has no reply recipient');
+    if (!recipients.length) {
+      throw new BadRequestException('Thread has no reply recipient');
+    }
     const sent = await this.gmail.send(refreshToken, {
       to: recipients,
       subject: thread.subject.startsWith('Re:') ? thread.subject : `Re: ${thread.subject}`,
@@ -289,7 +295,10 @@ export class MailService {
       throw new BadRequestException('Connect this account to Google before changing mail');
     }
     const refreshToken = this.tokenService.decrypt(thread.account.encryptedRefreshToken);
-    const actions: Record<string, { add: string[]; remove: string[]; local: Record<string, boolean> }> = {
+    const actions: Record<
+      string,
+      { add: string[]; remove: string[]; local: Record<string, boolean> }
+    > = {
       read: { add: [], remove: ['UNREAD'], local: { unread: false } },
       unread: { add: ['UNREAD'], remove: [], local: { unread: true } },
       star: { add: ['STARRED'], remove: [], local: { starred: true } },
@@ -304,8 +313,15 @@ export class MailService {
       await this.prisma.mailThread.update({ where: { id: thread.id }, data: { trashed: false } });
     } else {
       const config = actions[action];
-      if (!config) throw new BadRequestException('Unsupported mail action');
-      await this.gmail.modifyThread(refreshToken, thread.providerThreadId, config.add, config.remove);
+      if (!config) {
+        throw new BadRequestException('Unsupported mail action');
+      }
+      await this.gmail.modifyThread(
+        refreshToken,
+        thread.providerThreadId,
+        config.add,
+        config.remove,
+      );
       await this.prisma.mailThread.update({ where: { id: thread.id }, data: config.local });
     }
     await this.queue.enqueueSync(thread.accountId, 'incremental');
@@ -315,11 +331,15 @@ export class MailService {
   async handlePubSubPush(body: unknown) {
     const message = body as { message?: { data?: string } };
     const data = message.message?.data;
-    if (!data) return { success: true };
+    if (!data) {
+      return { success: true };
+    }
     const payload = JSON.parse(Buffer.from(data, 'base64').toString('utf8')) as {
       emailAddress?: string;
     };
-    if (!payload.emailAddress) return { success: true };
+    if (!payload.emailAddress) {
+      return { success: true };
+    }
     const accounts = await this.prisma.mailAccount.findMany({
       where: { provider: MailProvider.GOOGLE, email: payload.emailAddress },
       select: { id: true },
@@ -338,18 +358,34 @@ export class MailService {
     }
   }
 
-  private async saveSentMessage(accountId: string, refreshToken: string, messageId?: string | null) {
-    if (!messageId) return;
+  private async saveSentMessage(
+    accountId: string,
+    refreshToken: string,
+    messageId?: string | null,
+  ) {
+    if (!messageId) {
+      return;
+    }
     const message = await this.gmail.getMessage(refreshToken, messageId);
     await this.sync.upsertGmailMessage(accountId, message);
   }
 
   private labelWhere(label?: string) {
-    if (!label || label === 'inbox') return { archived: false, trashed: false };
-    if (label === 'starred') return { starred: true, trashed: false };
-    if (label === 'sent') return { labelIds: { has: 'SENT' }, trashed: false };
-    if (label === 'archive') return { archived: true, trashed: false };
-    if (label === 'trash') return { trashed: true };
+    if (!label || label === 'inbox') {
+      return { archived: false, trashed: false };
+    }
+    if (label === 'starred') {
+      return { starred: true, trashed: false };
+    }
+    if (label === 'sent') {
+      return { labelIds: { has: 'SENT' }, trashed: false };
+    }
+    if (label === 'archive') {
+      return { archived: true, trashed: false };
+    }
+    if (label === 'trash') {
+      return { trashed: true };
+    }
     return {};
   }
 

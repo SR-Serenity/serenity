@@ -121,15 +121,27 @@ export class WikiService {
     }
 
     const data: Prisma.WikiPageUpdateInput = {};
-    if (input.title !== undefined) data.title = input.title.trim();
+    if (input.title !== undefined) {
+      data.title = input.title.trim();
+    }
     if (input.parentId !== undefined) {
       data.parent = input.parentId ? { connect: { id: input.parentId } } : { disconnect: true };
     }
-    if (input.icon !== undefined) data.icon = this.nullableText(input.icon);
-    if (input.coverColor !== undefined) data.coverColor = this.nullableText(input.coverColor);
-    if (input.contentMarkdown !== undefined) data.contentMarkdown = input.contentMarkdown ?? '';
-    if (input.contentJson !== undefined) data.contentJson = input.contentJson ?? Prisma.JsonNull;
-    if (input.visibility !== undefined) data.visibility = input.visibility;
+    if (input.icon !== undefined) {
+      data.icon = this.nullableText(input.icon);
+    }
+    if (input.coverColor !== undefined) {
+      data.coverColor = this.nullableText(input.coverColor);
+    }
+    if (input.contentMarkdown !== undefined) {
+      data.contentMarkdown = input.contentMarkdown ?? '';
+    }
+    if (input.contentJson !== undefined) {
+      data.contentJson = input.contentJson ?? Prisma.JsonNull;
+    }
+    if (input.visibility !== undefined) {
+      data.visibility = input.visibility;
+    }
     if (input.visibility !== undefined || input.departmentId !== undefined) {
       data.department = nextVisibility === WikiPageVisibility.DEPARTMENT && nextDepartmentId
         ? { connect: { id: nextDepartmentId } }
@@ -398,7 +410,8 @@ export class WikiService {
         throw new NotFoundException('Department not found');
       }
       const isMemberOfDept = membership.departmentId === departmentId;
-      const isPrivileged = membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
+      const isPrivileged =
+        membership.role === WorkspaceRole.OWNER || membership.role === WorkspaceRole.ADMIN;
       if (!isPrivileged && !isMemberOfDept) {
         throw new ForbiddenException('You can only create pages in your own department');
       }
@@ -411,7 +424,9 @@ export class WikiService {
     membership: Membership,
     parentId?: string | null,
   ) {
-    if (!parentId) return;
+    if (!parentId) {
+      return;
+    }
     await this.findVisiblePage(orgId, userId, membership, parentId);
   }
 
@@ -446,7 +461,9 @@ export class WikiService {
   }
 
   private nullableText(value?: string | null) {
-    if (value === undefined || value === null) return null;
+    if (value === undefined || value === null) {
+      return null;
+    }
     const trimmed = value.trim();
     return trimmed.length ? trimmed : null;
   }

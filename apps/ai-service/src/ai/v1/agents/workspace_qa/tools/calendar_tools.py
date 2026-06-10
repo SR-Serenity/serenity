@@ -2,8 +2,8 @@
 
 from typing import Annotated
 
-from langchain.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 
 from src.services.workspace_service import (
     create_calendar_item,
@@ -11,6 +11,10 @@ from src.services.workspace_service import (
     list_calendar_items,
     update_calendar_item,
 )
+
+
+def _get_auth_token(config: RunnableConfig) -> str:
+    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
 
 
 @tool(
@@ -21,7 +25,7 @@ from src.services.workspace_service import (
     )
 )
 def list_calendar_events_tool(
-    runtime: ToolRuntime,
+    config: RunnableConfig,
     start_at: Annotated[
         str | None,
         "Optional start date filter in ISO 8601 format (e.g., 2025-06-01T00:00:00Z)",
@@ -31,7 +35,7 @@ def list_calendar_events_tool(
         "Optional end date filter in ISO 8601 format (e.g., 2025-06-30T23:59:59Z)",
     ] = None,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -71,10 +75,10 @@ def list_calendar_events_tool(
     )
 )
 def search_calendar_events_tool(
-    runtime: ToolRuntime,
     query: Annotated[str, "Keyword or phrase to search for in calendar events"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -138,9 +142,9 @@ def _remove_none_values(payload: dict) -> dict:
     )
 )
 def create_calendar_item_tool(
-    runtime: ToolRuntime,
     title: Annotated[str, "Calendar item title"],
     type: Annotated[str, "Calendar item type: EVENT, MEETING, or TASK"],
+    config: RunnableConfig,
     visibility: Annotated[str, "Calendar visibility: PERSONAL or COMPANY"] = "PERSONAL",
     description_markdown: Annotated[str | None, "Optional description or notes"] = None,
     location: Annotated[str | None, "Optional location"] = None,
@@ -153,7 +157,7 @@ def create_calendar_item_tool(
     room_id: Annotated[str | None, "Optional office room ID"] = None,
     wiki_page_id: Annotated[str | None, "Optional wiki page ID for notes"] = None,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     if not title.strip():
@@ -191,8 +195,8 @@ def create_calendar_item_tool(
     )
 )
 def update_calendar_item_tool(
-    runtime: ToolRuntime,
     item_id: Annotated[str, "Calendar item ID to update"],
+    config: RunnableConfig,
     title: Annotated[str | None, "New title"] = None,
     type: Annotated[str | None, "New item type: EVENT, MEETING, or TASK"] = None,
     visibility: Annotated[str | None, "New visibility: PERSONAL or COMPANY"] = None,
@@ -207,7 +211,7 @@ def update_calendar_item_tool(
     room_id: Annotated[str | None, "New office room ID"] = None,
     wiki_page_id: Annotated[str | None, "New wiki page ID"] = None,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     if not item_id.strip():
@@ -247,10 +251,10 @@ def update_calendar_item_tool(
     )
 )
 def delete_calendar_item_tool(
-    runtime: ToolRuntime,
     item_id: Annotated[str, "Calendar item ID to delete"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     if not item_id.strip():

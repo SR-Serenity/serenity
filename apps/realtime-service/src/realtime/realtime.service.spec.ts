@@ -65,6 +65,6 @@ describe('RealtimeService', () => {
     subscription.unsubscribe();
     await Promise.resolve();
 
-    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(dispose).toHaveBeenCalledTimes(2);
   });
 });

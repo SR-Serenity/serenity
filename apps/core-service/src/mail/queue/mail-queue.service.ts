@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import type { Job } from 'bullmq';
@@ -106,12 +105,14 @@ export class MailQueueService implements OnModuleInit, OnModuleDestroy {
     const job = await this.queue?.getJob(jobId);
     const state = await job?.getState();
     if (state === 'failed' || state === 'completed') {
-      await job.remove();
+      await job?.remove();
     }
   }
 
   private async scheduleMaintenanceJobs() {
-    if (!this.queue) return;
+    if (!this.queue) {
+      return;
+    }
     await this.queue.add(
       'fallback-sync',
       { type: 'sync', accountId: 'all', mode: 'fallback' },
@@ -127,14 +128,19 @@ export class MailQueueService implements OnModuleInit, OnModuleDestroy {
   private async processAll(type: 'sync' | 'renew-watch') {
     const accounts = await this.prisma.mailAccount.findMany({ select: { id: true } });
     for (const account of accounts) {
-      if (type === 'sync') await this.sync.syncAccount(account.id, 'fallback');
-      else await this.sync.renewWatch(account.id);
+      if (type === 'sync') {
+        await this.sync.syncAccount(account.id, 'fallback');
+      } else {
+        await this.sync.renewWatch(account.id);
+      }
     }
   }
 
   private connection() {
     const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) return null;
+    if (!redisUrl) {
+      return null;
+    }
     this.redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
     return this.redis;
   }

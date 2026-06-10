@@ -9,7 +9,11 @@ from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat
 from src.ai.v1.agents.wiki_editor import wiki_editor_agent
 from src.ai.v1.agents.chat_assistant.agent import chat_assistant_agent
+from src.ai.v1.agents.automation_agent.agent import automation_agent
+from src.ai.v1.agents.automation_agent.store import save_execution
 from src.api.internal.v1.schemas import (
+    AutomationExecuteRequest,
+    AutomationExecuteResponse,
     ChatAssistRequest,
     ChatAssistResponse,
     ChatRequest,
@@ -70,6 +74,32 @@ async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssis
     )
 
     return ChatAssistResponse(suggested_content=result)
+
+
+@router.post("/automation/execute", response_model=AutomationExecuteResponse)
+async def automation_execute(
+    payload: AutomationExecuteRequest,
+    request: Request,
+) -> AutomationExecuteResponse:
+    """Execute an automation rule: generate message content and log the run."""
+    _assert_internal_token(request)
+
+    content = automation_agent.execute(
+        instruction=payload.instruction,
+        org_name=payload.context.org_name,
+        trigger_type=payload.context.trigger_type,
+        display_name=payload.context.display_name,
+        message_content=payload.context.message_content,
+    )
+
+    execution_id = save_execution(
+        org_id=payload.org_id,
+        instruction=payload.instruction,
+        context=payload.context.model_dump(),
+        content=content,
+    )
+
+    return AutomationExecuteResponse(content=content, execution_id=execution_id)
 
 
 @router.post("/actions/execute", response_model=ExecuteActionResponse)

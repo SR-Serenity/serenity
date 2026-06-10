@@ -1,9 +1,7 @@
-"""Dynamic system prompt for workspace QA agent."""
+"""System prompt builder for the workspace QA agent."""
 
 import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-from langchain.agents.middleware import ModelRequest, dynamic_prompt
 
 WORKSPACE_QA_SYSTEM_PROMPT = """
 <ROLE>
@@ -74,9 +72,7 @@ MAIL:
 """
 
 
-@dynamic_prompt
-def build_workspace_qa_prompt(request: ModelRequest) -> str:
-    context = getattr(request.runtime, "context", {}) or {}
+def build_system_prompt(context: dict) -> str:
     profile = context.get("user_context", {}) if isinstance(context, dict) else {}
     time_zone = context.get("timeZone") if isinstance(context, dict) else None
     if not time_zone and isinstance(profile, dict):

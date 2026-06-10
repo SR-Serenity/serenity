@@ -39,17 +39,24 @@ export class AutomationSchedulerService implements OnModuleInit, OnModuleDestroy
   }
 
   registerJob(ruleId: string, cron: string): void {
-    if (!this.queue) return;
-    this.queue.add(
-      'run-scheduled',
-      { type: 'run-scheduled', ruleId },
-      { repeat: { pattern: cron }, jobId: `auto-sched-${ruleId}` },
+    if (!this.queue) {
+      return;
+    }
+    this.queue.upsertJobScheduler(
+      ruleId,
+      { pattern: cron },
+      {
+        name: 'run-scheduled',
+        data: { type: 'run-scheduled', ruleId },
+      },
     ).catch(err => this.logger.error(`Failed to register job for rule ${ruleId}: ${err}`));
   }
 
   unregisterJob(ruleId: string): void {
-    if (!this.queue) return;
-    this.queue.removeRepeatableByKey(`auto-sched-${ruleId}`)
+    if (!this.queue) {
+      return;
+    }
+    this.queue.removeJobScheduler(ruleId)
       .catch(err => this.logger.warn(`Failed to unregister job for rule ${ruleId}: ${err}`));
   }
 
@@ -61,7 +68,9 @@ export class AutomationSchedulerService implements OnModuleInit, OnModuleDestroy
 
   private buildConnection(): Redis | null {
     const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) return null;
+    if (!redisUrl) {
+      return null;
+    }
     this.redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
     return this.redis;
   }

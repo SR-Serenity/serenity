@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import {
   ChatConversationType,
   WorkspaceRole,
@@ -552,7 +553,6 @@ export async function seedOrganizationData(
       },
     });
   }
-
 
   // 11. Seed Document File (matches Workspace QA case 16)
   await tx.documentFile.create({

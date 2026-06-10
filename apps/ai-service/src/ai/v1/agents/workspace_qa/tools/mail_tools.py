@@ -2,8 +2,8 @@
 
 from typing import Annotated
 
-from langchain.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 
 from src.services.workspace_service import (
     get_mail_thread,
@@ -13,6 +13,10 @@ from src.services.workspace_service import (
 )
 
 
+def _get_auth_token(config: RunnableConfig) -> str:
+    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
+
+
 @tool(
     description=(
         "List connected mail accounts for this workspace. "
@@ -20,8 +24,8 @@ from src.services.workspace_service import (
         "Use this to see which mail accounts are available."
     )
 )
-def list_mail_accounts_tool(runtime: ToolRuntime) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+def list_mail_accounts_tool(config: RunnableConfig) -> str:
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -47,10 +51,10 @@ def list_mail_accounts_tool(runtime: ToolRuntime) -> str:
     )
 )
 def list_mail_threads_tool(
-    runtime: ToolRuntime,
+    config: RunnableConfig,
     limit: Annotated[int, "Maximum number of threads to return (default 20)"] = 20,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -78,10 +82,10 @@ def list_mail_threads_tool(
     )
 )
 def search_mail_threads_tool(
-    runtime: ToolRuntime,
     query: Annotated[str, "Keyword or phrase to search for in mail threads"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -126,10 +130,10 @@ def search_mail_threads_tool(
     )
 )
 def get_mail_thread_tool(
-    runtime: ToolRuntime,
     thread_id: Annotated[str, "The mail thread ID to read"],
+    config: RunnableConfig,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     try:
@@ -157,15 +161,15 @@ def get_mail_thread_tool(
     )
 )
 def send_email_tool(
-    runtime: ToolRuntime,
     to: Annotated[list[str], "Recipient email addresses"],
     subject: Annotated[str, "Email subject"],
     body: Annotated[str, "Plain text email body"],
+    config: RunnableConfig,
     cc: Annotated[list[str] | None, "Optional CC email addresses"] = None,
     bcc: Annotated[list[str] | None, "Optional BCC email addresses"] = None,
     account_id: Annotated[str | None, "Optional connected mail account ID to send from"] = None,
 ) -> str:
-    auth_token: str = runtime.context.get("auth_token", "")
+    auth_token = _get_auth_token(config)
     if not auth_token:
         return "No auth token available."
     if not to:
@@ -175,11 +179,7 @@ def send_email_tool(
     if not body.strip():
         return "Cannot send email without a body."
 
-    payload: dict = {
-        "to": to,
-        "subject": subject,
-        "body": body,
-    }
+    payload: dict = {"to": to, "subject": subject, "body": body}
     if cc:
         payload["cc"] = cc
     if bcc:

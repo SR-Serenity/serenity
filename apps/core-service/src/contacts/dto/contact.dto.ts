@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ContactStatus, ContactType } from '@prisma/client';
 import {
@@ -63,9 +62,9 @@ export class ListContactsResponseDto {
 }
 
 export class CreateContactDto {
-  @ApiProperty({ enum: [ContactType.GUEST, ContactType.AI_AGENT], enumName: 'ContactType' })
+  @ApiProperty({ enum: ['GUEST', 'AI_AGENT'], enumName: 'ContactType' })
   @IsEnum(ContactType)
-    type!: ContactType.GUEST | ContactType.AI_AGENT;
+    type!: Extract<ContactType, 'GUEST' | 'AI_AGENT'>;
 
   @ApiProperty()
   @IsString()

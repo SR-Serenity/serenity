@@ -1,58 +1,71 @@
-"""Selective long-term memory extraction agent."""
+"""LLM-powered long-term memory extraction agent."""
 
-from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+
+from src.ai.v1.agents.memory_writer.prompts import EXCHANGE_PROMPT, EXTRACT_PROMPT
+from src.core.config import settings
 
 
 class MemoryWriterAgent:
     name = "MemoryWriterAgent"
 
-    secret_markers = ("token", "password", "secret", "api key", "apikey")
-    memory_markers = ("remember", "prefer", "preference", "always", "important", "note that")
-    summary_markers = ("summarize", "summary", "recap", "recap of", "overview")
+    def __init__(self) -> None:
+        self._llm = (
+            ChatOpenAI(
+                model=settings.OPENAI_MODEL,
+                api_key=settings.OPENAI_API_KEY,
+                temperature=0,
+            )
+            if settings.OPENAI_API_KEY
+            else None
+        )
 
     def health(self) -> dict[str, str]:
         return {"agent": self.name, "status": "ready"}
 
     def extract(self, text: str) -> str | None:
-        """Extract explicit user memories from conversation."""
-        lowered = text.lower()
-        if not text or any(secret in lowered for secret in self.secret_markers):
+        """Extract an explicit user memory from a single message using LLM judgement."""
+        if not text or not self._llm:
             return None
-        if any(marker in lowered for marker in self.memory_markers):
-            return text
-        return None
+        try:
+            response = self._llm.invoke(EXTRACT_PROMPT.format(text=text))
+            result = str(response.content).strip()
+            return result if result else None
+        except Exception:
+            return None
 
     def summarize_conversation(self, messages: list[AnyMessage], window_size: int = 5) -> str | None:
-        """Summarize older messages being removed from context window."""
+        """Summarize older messages being removed from the context window."""
         if len(messages) <= window_size:
             return None
-
-        # Get messages being removed (older than window)
         old_messages = messages[:-window_size]
         if not old_messages:
             return None
-
-        # Extract key exchanges
         summary_parts = []
-        for i, msg in enumerate(old_messages):
+        for msg in old_messages:
             if isinstance(msg, HumanMessage):
-                content = msg.content[:200]  # Limit length
+                content = str(msg.content)[:200]
                 summary_parts.append(f"- User asked: {content}")
             elif isinstance(msg, AIMessage):
-                content = msg.content[:150]
+                content = str(msg.content)[:150]
                 summary_parts.append(f"  → Assistant responded about: {content}")
-
         if not summary_parts:
             return None
-
-        return "\n".join(summary_parts[:20])  # Keep last 20 interactions max
+        return "\n".join(summary_parts[:20])
 
     def extract_from_exchange(self, user_msg: str, assistant_msg: str) -> str | None:
-        """Extract implicit context from user-assistant exchanges."""
-        combined = f"{user_msg} {assistant_msg}".lower()
-
-        # Look for factual statements or preferences
-        keywords = ("my team", "my project", "our goal", "we use", "we prefer", "i prefer")
-        if any(kw in combined for kw in keywords):
-            return f"Context: {user_msg[:100]}"
-        return None
+        """Extract implicit context from a user–assistant exchange using LLM judgement."""
+        if not self._llm:
+            return None
+        try:
+            response = self._llm.invoke(
+                EXCHANGE_PROMPT.format(
+                    user_msg=user_msg[:500],
+                    assistant_msg=assistant_msg[:500],
+                )
+            )
+            result = str(response.content).strip()
+            return result if result else None
+        except Exception:
+            return None

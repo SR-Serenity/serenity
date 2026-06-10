@@ -28,7 +28,7 @@ on:
       services:
         description: 'Services to deploy: space-separated list, or "all".'
         required: false
-        default: 'all'
+        default: ''
 
 env:
   PROJECT_ID: project-f65bf900-efde-4dae-af2
