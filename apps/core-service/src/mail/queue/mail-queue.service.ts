@@ -111,7 +111,9 @@ export class MailQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async scheduleMaintenanceJobs() {
-    if (!this.queue) return;
+    if (!this.queue) {
+      return;
+    }
     await this.queue.add(
       'fallback-sync',
       { type: 'sync', accountId: 'all', mode: 'fallback' },
@@ -127,14 +129,19 @@ export class MailQueueService implements OnModuleInit, OnModuleDestroy {
   private async processAll(type: 'sync' | 'renew-watch') {
     const accounts = await this.prisma.mailAccount.findMany({ select: { id: true } });
     for (const account of accounts) {
-      if (type === 'sync') await this.sync.syncAccount(account.id, 'fallback');
-      else await this.sync.renewWatch(account.id);
+      if (type === 'sync') {
+        await this.sync.syncAccount(account.id, 'fallback');
+      } else {
+        await this.sync.renewWatch(account.id);
+      }
     }
   }
 
   private connection() {
     const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) return null;
+    if (!redisUrl) {
+      return null;
+    }
     this.redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
     return this.redis;
   }
