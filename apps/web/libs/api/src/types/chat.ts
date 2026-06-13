@@ -53,6 +53,7 @@ export type ChatMessage = {
   parentId?: string | null
   replyToId?: string | null
   content: string
+  isCopilot?: boolean
   createdAt: string
   updatedAt: string
   editedAt?: string | null

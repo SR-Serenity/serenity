@@ -36,6 +36,16 @@ def create_agent_node(domain: Domain) -> Callable[[PipelineState], dict]:
             if domain == Domain.WORKSPACE_QA:
                 return _run_workspace_qa(agent, state, config)
 
+            if domain == Domain.CHAT_ASSIST:
+                user_text = _latest_user_text(state)
+                result = agent.run(user_text)
+                return {
+                    "domain_agent_response": DomainAgentResponse(
+                        domain=domain,
+                        text=result,
+                    )
+                }
+
             if domain == Domain.SCHEDULE_AGENT:
                 from langgraph.types import interrupt
                 from src.api.internal.v1.schemas import ChatMessage as _ChatMessage

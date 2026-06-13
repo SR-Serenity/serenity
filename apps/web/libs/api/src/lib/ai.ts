@@ -10,6 +10,7 @@ import type {
   AiSessionMessage,
   AiSessionSummary,
 } from '../types/ai'
+import type { ExtractTasksInput, ExtractTasksResponse } from '../types/tasks'
 
 export const aiApi = {
   chat: async (token: string, input: AiChatRequest): Promise<AiChatResponse> => {
@@ -22,6 +23,13 @@ export const aiApi = {
 
   askFile: async (token: string, input: AiFileAskRequest): Promise<AiFileAskResponse> => {
     return api.post('ai/files/ask', { token, body: input })
+  },
+
+  extractTasks: async (
+    token: string,
+    input: ExtractTasksInput,
+  ): Promise<ExtractTasksResponse> => {
+    return api.post('ai/tasks/extract', { token, body: input })
   },
 
   listSessions: async (token: string): Promise<{ sessions: AiSessionSummary[] }> => {

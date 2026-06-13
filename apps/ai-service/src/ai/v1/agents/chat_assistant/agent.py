@@ -4,7 +4,7 @@ import logging
 
 from langchain_openai import ChatOpenAI
 
-from src.ai.v1.agents.chat_assistant.prompts import CHAT_ASSISTANT_SYSTEM_PROMPT
+from src.ai.v1.agents.chat_assistant.prompts import CHAT_ASSISTANT_SYSTEM_PROMPT, COPILOT_SYSTEM_PROMPT
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class ChatAssistantAgent:
         *,
         conversation_context: list[dict[str, str]],
         prompt: str,
+        copilot_mode: bool = False,
     ) -> str:
         if not self._llm:
             logger.warning("chat_assistant: OPENAI_API_KEY not set")
@@ -44,7 +45,8 @@ class ChatAssistantAgent:
             for msg in conversation_context
         ]
         context_str = "\n".join(context_lines) if context_lines else "(No prior conversation)"
-        system_prompt = CHAT_ASSISTANT_SYSTEM_PROMPT.format(
+        template = COPILOT_SYSTEM_PROMPT if copilot_mode else CHAT_ASSISTANT_SYSTEM_PROMPT
+        system_prompt = template.format(
             conversation_context=context_str,
             prompt=prompt,
         )

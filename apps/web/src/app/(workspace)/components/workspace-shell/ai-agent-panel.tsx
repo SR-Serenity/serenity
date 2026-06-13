@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { aiApi, calendarApi, wikiApi } from '@serenity/api'
+import { aiApi, calendarApi, tasksApi, wikiApi } from '@serenity/api'
 import type { AiProposedAction, AiSessionMessage } from '@serenity/api'
 import {
   Bot,
@@ -256,14 +256,15 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
         roomId: p.roomId as string | undefined,
       })
     } else if (action.type === 'CREATE_TASK') {
-      const assigneeIds = p.assigneeId ? [p.assigneeId as string] : (p.attendeeIds as string[] | undefined) ?? []
-      await calendarApi.createItem(token, {
-        type: 'TASK',
-        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
+      await tasksApi.createTask(token, {
         title: String(p.title ?? 'New task'),
-        descriptionMarkdown: (p.description as string | undefined) ?? undefined,
-        dueDate: p.dueDate as string | undefined,
-        attendeeIds: assigneeIds,
+        description: (p.description as string | undefined) ?? null,
+        assigneeId: (p.assigneeId as string | undefined) ?? null,
+        dueDate: (p.dueDate as string | undefined) ?? null,
+        sourceType: 'AI',
+        createdByAi: true,
+        aiReason:
+          (p.reason as string | undefined) ?? (p.aiReason as string | undefined) ?? null,
       })
     } else if (action.type === 'CREATE_WIKI_PAGE') {
       await wikiApi.createPage(token, {

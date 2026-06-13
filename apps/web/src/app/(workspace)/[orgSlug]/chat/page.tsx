@@ -100,6 +100,8 @@ export default function ChatPage() {
   )
   const realtime = useRealtime(token, isAuthenticated)
   const loadWorkspaceMembers = useWorkspaceStore((state) => state.loadMembers)
+  const membersByOrgId = useWorkspaceStore((state) => state.membersByOrgId)
+  const workspaceMembers = currentOrg ? (membersByOrgId[currentOrg.id] ?? []) : []
   const router = useRouter()
   const { orgSlug, conversationId: routeConversationId } = useParams<{
     orgSlug: string
@@ -147,6 +149,12 @@ export default function ChatPage() {
     }
     setActiveTab('messages')
   }, [loadMessages, selectedConversationId, setActiveConversation, token])
+
+  useEffect(() => {
+    if (token && currentOrg?.id) {
+      void loadWorkspaceMembers(currentOrg.id, token)
+    }
+  }, [token, currentOrg?.id, loadWorkspaceMembers])
 
   useEffect(() => {
     const openDialog = (event: Event) => {
@@ -461,7 +469,8 @@ export default function ChatPage() {
                     onUploadFile={uploadChatFile}
                     replyingTo={replyingTo}
                     onCancelReply={() => setReplyingTo(null)}
-                    placeholder={`Message ${selectedConversationName}`}
+                    placeholder={`Message ${selectedConversationName} · type @ to mention`}
+                    members={workspaceMembers}
                     conversationContext={messages.slice(-10).map((m) => ({
                       role: m.author.displayName,
                       content: m.content || '(Attachment)',
@@ -522,6 +531,7 @@ export default function ChatPage() {
           onAddMembers={handleAddMembers}
         />
       )}
+
     </div>
   )
 }

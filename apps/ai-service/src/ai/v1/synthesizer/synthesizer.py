@@ -30,6 +30,12 @@ def synthesizer_node(state: PipelineState) -> dict:
     if proposed_actions:
         return {"answer": _summarize_proposals(proposed_actions, language)}
 
+    chat_assist_response = next(
+        (r for r in responses if r.domain == Domain.CHAT_ASSIST), None
+    )
+    if chat_assist_response and chat_assist_response.text:
+        return {"answer": chat_assist_response.text}
+
     workspace_response = next(
         (r for r in responses if r.domain == Domain.WORKSPACE_QA), None
     )

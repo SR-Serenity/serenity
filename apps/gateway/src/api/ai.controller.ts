@@ -36,6 +36,16 @@ export class AiController {
     );
   }
 
+  @Post('tasks/extract')
+  @ApiOperation({ summary: 'Extract follow-up task proposals from a conversation' })
+  extractTasks(@Req() req: RequestWithAuth, @Body() body: unknown) {
+    return this.apiProxy.forwardAiPostRequest(
+      'ai/tasks/extract',
+      body,
+      req.headers.authorization,
+    );
+  }
+
   @Post('files/index')
   @ApiOperation({ summary: 'Index an uploaded file for Serenity AI' })
   indexFile(@Req() req: RequestWithAuth, @Body() body: unknown) {

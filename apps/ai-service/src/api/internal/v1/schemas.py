@@ -183,11 +183,35 @@ class ChatAssistRequest(CamelModel):
     auth_context: AuthContext
     conversation_context: list[ChatAssistMessage]
     prompt: str
+    copilot_mode: bool = False
 
 
 class ChatAssistResponse(CamelModel):
     """Response from the /ai/chat/assist endpoint."""
     suggested_content: str
+
+
+# ── Task Extraction ───────────────────────────────────────────────────────────
+
+class TaskExtractRequest(CamelModel):
+    """Request for the /ai/tasks/extract endpoint."""
+    auth_context: AuthContext
+    conversation_context: list[ChatAssistMessage]
+    source_title: str | None = None
+
+
+class ProposedTask(CamelModel):
+    title: str
+    description: str | None = None
+    assignee_name: str | None = None
+    due_date: str | None = None
+    priority: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"
+    reason: str
+
+
+class TaskExtractResponse(CamelModel):
+    """Response from the /ai/tasks/extract endpoint."""
+    proposed_tasks: list[ProposedTask] = Field(default_factory=list)
 
 
 # ── Automation Execute ────────────────────────────────────────────────────────

@@ -20,11 +20,14 @@ Available intents (pick ALL that apply, or just one):
 including questions, lookups, summaries, chat history, contacts, wiki pages, calendar queries, \
 and all email/mail operations (reading, searching, sending, replying, forwarding).
 - SCHEDULE_AGENT   : Creating or scheduling new calendar items — tasks, events, meetings, or room bookings.
+- CHAT_ASSIST      : Writing help, improving messages, translation between languages, summarizing text, \
+extracting action items or tasks from conversation, general Q&A not requiring workspace data.
 - GREETING         : Greetings, small talk, or chitchat with no workspace action required.
 
 Rules:
 - Work for any language — detect intent from meaning, not keywords.
 - A message can have multiple intents; include all that apply.
+- Prefer CHAT_ASSIST over WORKSPACE_QA for translation, writing, and summarization requests.
 - When unsure, include WORKSPACE_QA.
 - Respond ONLY with the JSON object, no markdown, no explanation.
 
@@ -57,6 +60,7 @@ def classify_intent(state: PipelineState) -> IntentClassification:
         "SCHEDULE_AGENT": Domain.SCHEDULE_AGENT,
         "TASK_CREATOR": Domain.SCHEDULE_AGENT,
         "MEETING_SCHEDULER": Domain.SCHEDULE_AGENT,
+        "CHAT_ASSIST": Domain.CHAT_ASSIST,
         "GREETING": None,  # handled in synthesizer directly
     }
 

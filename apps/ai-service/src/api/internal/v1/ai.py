@@ -11,6 +11,7 @@ from src.ai.v1.agents.wiki_editor import wiki_editor_agent
 from src.ai.v1.agents.chat_assistant.agent import chat_assistant_agent
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
+from src.ai.v1.agents.task_extractor import task_extractor_agent
 from src.api.internal.v1.schemas import (
     AutomationExecuteRequest,
     AutomationExecuteResponse,
@@ -25,6 +26,9 @@ from src.api.internal.v1.schemas import (
     FileIndexRequest,
     FileIndexResponse,
     FileSource,
+    ProposedTask,
+    TaskExtractRequest,
+    TaskExtractResponse,
     WikiDeleteRequest,
     WikiEditorRequest,
     WikiEditorResponse,
@@ -71,9 +75,40 @@ async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssis
     result = chat_assistant_agent.assist(
         conversation_context=conversation_context,
         prompt=payload.prompt,
+        copilot_mode=payload.copilot_mode,
     )
 
     return ChatAssistResponse(suggested_content=result)
+
+
+@router.post("/tasks/extract", response_model=TaskExtractResponse)
+async def extract_tasks(payload: TaskExtractRequest, request: Request) -> TaskExtractResponse:
+    """Extract structured follow-up task proposals from a conversation."""
+    _assert_internal_token(request)
+
+    conversation_context = [
+        {"role": msg.role, "content": msg.content}
+        for msg in payload.conversation_context
+    ]
+
+    extracted = task_extractor_agent.extract(
+        conversation_context=conversation_context,
+        source_title=payload.source_title,
+    )
+
+    proposed = [
+        ProposedTask(
+            title=task.title,
+            description=task.description,
+            assignee_name=task.assignee_name,
+            due_date=task.due_date,
+            priority=task.priority.upper(),  # type: ignore[arg-type]
+            reason=task.reason,
+        )
+        for task in extracted
+    ]
+
+    return TaskExtractResponse(proposed_tasks=proposed)
 
 
 @router.post("/automation/execute", response_model=AutomationExecuteResponse)
