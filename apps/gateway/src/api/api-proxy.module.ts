@@ -10,6 +10,7 @@ import { MailController } from './mail.controller';
 import { OfficeController } from './office.controller';
 import { AiController } from './ai.controller';
 import { AutomationController } from './automation.controller';
+import { TasksController } from './tasks.controller';
 
 @Module({
   providers: [ApiProxyService],
@@ -24,6 +25,7 @@ import { AutomationController } from './automation.controller';
     OfficeController,
     AiController,
     AutomationController,
+    TasksController,
   ],
 })
 export class ApiProxyModule {}
