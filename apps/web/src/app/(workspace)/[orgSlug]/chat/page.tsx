@@ -16,6 +16,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 import { useRealtime } from '@/hooks/use-realtime'
 import { chatApi } from '@serenity/api'
 import type {
@@ -149,6 +150,22 @@ export default function ChatPage() {
     }
     setActiveTab('messages')
   }, [loadMessages, selectedConversationId, setActiveConversation, token])
+
+  // Register copilot insert action: populate message input (not send directly)
+  useEffect(() => {
+    if (!selectedConversation) {
+      useCopilotContextStore.getState().setInsertAction(null)
+      return
+    }
+    useCopilotContextStore.getState().setInsertAction({
+      label: 'Add to message input',
+      type: 'chat',
+      execute: async (content: string) => {
+        useCopilotContextStore.getState().setPendingChatInsert(content)
+      },
+    })
+    return () => { useCopilotContextStore.getState().setInsertAction(null) }
+  }, [selectedConversation?.id])
 
   useEffect(() => {
     if (token && currentOrg?.id) {

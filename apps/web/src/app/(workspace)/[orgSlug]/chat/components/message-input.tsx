@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { AlertCircle, FileText, Loader2, Paperclip, Send, Sparkles, X } from 'lucide-react'
-import type { ChatAttachmentDraft, ChatAssistMessage, ChatMessage, Member } from '@serenity/api'
+import type { ChatAssistMessage, ChatAttachmentDraft, ChatMessage, Member } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
-import { ChatAiCommandBar } from './chat-ai-command-bar'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 
 type UploadState = 'uploading' | 'ready' | 'error'
 
@@ -32,8 +31,8 @@ type MessageInputProps = {
   onCancelReply?: () => void
   disabled?: boolean
   placeholder?: string
-  conversationContext?: ChatAssistMessage[]
   members?: Member[]
+  conversationContext?: ChatAssistMessage[]
 }
 
 function formatBytes(size?: number | null) {
@@ -42,16 +41,12 @@ function formatBytes(size?: number | null) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
-// Highlight @Copilot mentions in text for the mirror overlay
 function renderHighlighted(text: string) {
   const parts = text.split(/(@\w+)/g)
   return parts.map((part, i) => {
     if (/^@\w+$/i.test(part)) {
       return (
-        <mark
-          key={i}
-          className="rounded bg-violet-100 text-violet-700 not-italic"
-        >
+        <mark key={i} className="rounded bg-violet-100 text-violet-700 not-italic">
           {part}
         </mark>
       )
@@ -60,24 +55,21 @@ function renderHighlighted(text: string) {
   })
 }
 
-export function MessageInput({
-  onSend,
-  onUploadFile,
-  replyingTo,
-  onCancelReply,
-  disabled,
-  placeholder = 'Message',
-  conversationContext = [],
-  members = [],
-}: MessageInputProps) {
-  const { token, user, currentOrg } = useAuthStore()
+export function MessageInput(props: MessageInputProps) {
+  const {
+    onSend,
+    onUploadFile,
+    replyingTo,
+    onCancelReply,
+    disabled,
+    placeholder = 'Message',
+    members = [],
+  } = props
   const [content, setContent] = useState('')
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [aiBarOpen, setAiBarOpen] = useState(false)
 
-  // Mention picker state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionIndex, setMentionIndex] = useState(0)
 
@@ -85,9 +77,22 @@ export function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
 
+  const pendingChatInsert = useCopilotContextStore(s => s.pendingChatInsert)
+  const setPendingChatInsert = useCopilotContextStore(s => s.setPendingChatInsert)
+
+  // Consume pending insert from copilot sidebar
+  useEffect(() => {
+    if (!pendingChatInsert) return
+    setContent(pendingChatInsert)
+    setPendingChatInsert(null)
+    setTimeout(() => {
+      resizeTextarea()
+      textareaRef.current?.focus()
+    }, 0)
+  }, [pendingChatInsert])
+
   const copilotMentioned = /@copilot\b/i.test(content)
 
-  // Build mention options: Copilot first, then members
   const allOptions: MentionOption[] = [
     { id: 'copilot', display: 'Copilot', isCopilot: true },
     ...members.map(m => ({ id: m.id, display: m.displayName })),
@@ -96,9 +101,7 @@ export function MessageInput({
   const filteredOptions =
     mentionQuery === null
       ? []
-      : allOptions.filter(o =>
-          o.display.toLowerCase().startsWith(mentionQuery.toLowerCase()),
-        )
+      : allOptions.filter(o => o.display.toLowerCase().startsWith(mentionQuery.toLowerCase()))
 
   const hasPendingUploads = attachments.some(item => item.state === 'uploading')
   const hasFailedUploads = attachments.some(item => item.state === 'error')
@@ -117,13 +120,9 @@ export function MessageInput({
     if (!textarea) return
     textarea.style.height = '0px'
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`
-    // Keep mirror in sync
-    if (mirrorRef.current) {
-      mirrorRef.current.style.height = textarea.style.height
-    }
+    if (mirrorRef.current) mirrorRef.current.style.height = textarea.style.height
   }
 
-  // Sync mirror scroll with textarea scroll
   const syncMirrorScroll = () => {
     if (mirrorRef.current && textareaRef.current) {
       mirrorRef.current.scrollTop = textareaRef.current.scrollTop
@@ -185,7 +184,6 @@ export function MessageInput({
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Navigate / confirm mention picker
     if (mentionQuery !== null && filteredOptions.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault()
@@ -208,11 +206,6 @@ export function MessageInput({
       }
     }
 
-    if (event.key === '/' && content === '') {
-      event.preventDefault()
-      setAiBarOpen(true)
-      return
-    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       void handleSend()
@@ -245,11 +238,7 @@ export function MessageInput({
       setAttachments(prev =>
         prev.map(item =>
           item.localId === localId
-            ? {
-                ...item,
-                state: 'error',
-                error: uploadError instanceof Error ? uploadError.message : 'Upload failed',
-              }
+            ? { ...item, state: 'error', error: uploadError instanceof Error ? uploadError.message : 'Upload failed' }
             : item,
         ),
       )
@@ -266,7 +255,6 @@ export function MessageInput({
     setAttachments(prev => prev.filter(item => item.localId !== localId))
   }
 
-  // Close mention dropdown on outside click
   useEffect(() => {
     const handler = () => setMentionQuery(null)
     document.addEventListener('mousedown', handler)
@@ -283,7 +271,7 @@ export function MessageInput({
               <div className="text-xs font-medium text-blue-700">
                 Replying to {replyingTo.author.displayName}
               </div>
-              <div className="mt-0.5 line-clamp-2 break-words text-gray-600">
+              <div className="mt-0.5 line-clamp-2 wrap-break-word text-gray-600">
                 {replyingTo.unsentAt ? 'Message unsent' : replyingTo.content || 'Attachment'}
               </div>
             </div>
@@ -341,7 +329,6 @@ export function MessageInput({
           </div>
         )}
 
-        {/* Mention dropdown — floats above the input */}
         {mentionQuery !== null && filteredOptions.length > 0 && (
           <div className="mb-1.5 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-150">
             <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -393,17 +380,14 @@ export function MessageInput({
               : 'border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
           )}
         >
-          {/* Mirror + textarea wrapper */}
           <div className="relative px-3 py-2.5">
-            {/* Mirror div — renders highlighted text behind the transparent textarea */}
             <div
               ref={mirrorRef}
               aria-hidden
-              className="pointer-events-none absolute inset-x-3 inset-y-2.5 overflow-hidden whitespace-pre-wrap break-words text-sm leading-5 text-gray-900"
+              className="pointer-events-none absolute inset-x-3 inset-y-2.5 overflow-hidden whitespace-pre-wrap wrap-break-word text-sm leading-5 text-gray-900"
               style={{ minHeight: '1.25rem' }}
             >
               {renderHighlighted(content)}
-              {/* trailing space so mirror height matches textarea */}
               {'​'}
             </div>
 
@@ -431,7 +415,6 @@ export function MessageInput({
               className={cn(
                 'relative block min-h-5 w-full resize-none bg-transparent text-sm leading-5 outline-none',
                 'caret-gray-900 placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50',
-                // transparent text so mirror shows through, but caret stays visible
                 content ? 'text-transparent' : 'text-gray-900',
               )}
             />
@@ -449,16 +432,6 @@ export function MessageInput({
                 title="Attach file"
               >
                 <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setAiBarOpen(true)}
-                disabled={disabled || isSending}
-                title="Ask AI (or type /)"
-              >
-                <Sparkles className="h-4 w-4 text-violet-600" />
               </Button>
             </div>
 
@@ -482,22 +455,6 @@ export function MessageInput({
           </div>
         )}
       </div>
-
-      {token && user && currentOrg && (
-        <ChatAiCommandBar
-          open={aiBarOpen}
-          token={token}
-          conversationContext={conversationContext}
-          authContext={{ orgId: currentOrg.id, userId: user.id, displayName: user.displayName }}
-          onAccept={suggestedText => {
-            setContent(suggestedText)
-            setAiBarOpen(false)
-            setTimeout(resizeTextarea, 0)
-            setTimeout(() => textareaRef.current?.focus(), 10)
-          }}
-          onClose={() => setAiBarOpen(false)}
-        />
-      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -21,8 +21,9 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useWikiStore } from '@/stores/wiki-store'
 import { NotionBlockEditor } from './notion-block-editor'
-import type { AiCommandBarContext } from './notion-block-editor'
+import type { AiCommandBarContext, NotionBlockEditorHandle } from './notion-block-editor'
 import { WikiSharePanel } from './wiki-share-panel'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 
 const EMPTY_DEPARTMENTS: Department[] = []
 
@@ -47,6 +48,7 @@ export function WikiEditorPanel() {
   const params = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [sharePanelOpen, setSharePanelOpen] = useState(false)
+  const editorRef = useRef<NotionBlockEditorHandle>(null)
   const { token, currentOrg, user } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg, user: state.user })))
   const isAdmin = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN'
   const orgId = currentOrg?.id
@@ -89,6 +91,23 @@ export function WikiEditorPanel() {
   useEffect(() => {
     if (dirty && token) scheduleSave(token)
   }, [dirty, token, scheduleSave])
+
+  // Register copilot insert action so the sidebar can apply AI edits directly to this editor
+  useEffect(() => {
+    if (!selectedPage?.canEdit) {
+      useCopilotContextStore.getState().setInsertAction(null)
+      return
+    }
+    useCopilotContextStore.getState().setInsertAction({
+      label: 'Apply to wiki page',
+      type: 'wiki',
+      pageId: selectedPage.id,
+      execute: async (markdown: string) => {
+        await editorRef.current?.replaceMarkdown(markdown, 'Copilot suggestion')
+      },
+    })
+    return () => { useCopilotContextStore.getState().setInsertAction(null) }
+  }, [selectedPage?.id, selectedPage?.canEdit])
 
   const navigate = useCallback((path: string) => router.replace(path), [router])
 
@@ -297,6 +316,7 @@ export function WikiEditorPanel() {
 
           {/* Block editor */}
           <NotionBlockEditor
+            ref={editorRef}
             key={selectedPage.id}
             content={draft.contentJson}
             markdownFallback={draft.contentMarkdown}

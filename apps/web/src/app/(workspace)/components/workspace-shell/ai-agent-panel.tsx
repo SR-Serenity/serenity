@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useAiContext } from '@/hooks/use-ai-context'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 import { browserTimezone, unixToIso } from '@/lib/time'
 import { ChatComposer } from './chat-composer'
 import { ChatMessageList } from './chat-message-list'
@@ -275,10 +276,20 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     } else if (action.type === 'EDIT_WIKI_PAGE') {
       const pageId = String(p.pageId ?? '')
       if (!pageId) throw new Error('No page ID')
-      await wikiApi.updatePage(token, pageId, {
-        title: p.title as string | undefined,
-        contentMarkdown: p.contentMarkdown as string | undefined,
-      })
+      // If the target page is currently open in the editor, apply the change live with preview
+      const insertAction = useCopilotContextStore.getState().insertAction
+      if (
+        insertAction?.type === 'wiki' &&
+        insertAction.pageId === pageId &&
+        p.contentMarkdown
+      ) {
+        await insertAction.execute(p.contentMarkdown as string)
+      } else {
+        await wikiApi.updatePage(token, pageId, {
+          title: p.title as string | undefined,
+          contentMarkdown: p.contentMarkdown as string | undefined,
+        })
+      }
     }
   }
 
