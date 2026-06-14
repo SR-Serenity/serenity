@@ -36,12 +36,11 @@ def synthesizer_node(state: PipelineState) -> dict:
     if chat_assist_response and chat_assist_response.text:
         return {"answer": chat_assist_response.text}
 
-    workspace_response = next(
-        (r for r in responses if r.domain == Domain.WORKSPACE_QA), None
-    )
-    if workspace_response and workspace_response.text:
-        suffix = _localize(" I also found relevant workspace context.", language) if state.get("memories") else ""
-        return {"answer": workspace_response.text + suffix}
+    _agent_domains = {Domain.WIKI_AGENT, Domain.CHAT_AGENT, Domain.CALENDAR_AGENT, Domain.CONTACTS_AGENT, Domain.MAIL_AGENT}
+    agent_responses = [r for r in responses if r.domain in _agent_domains and r.text]
+    if agent_responses:
+        combined = "\n\n".join(r.text for r in agent_responses)
+        return {"answer": combined}
 
     if state.get("input_guardrail") and not state["input_guardrail"].is_safe:
         return {"answer": _localize("I cannot process that request safely.", language)}

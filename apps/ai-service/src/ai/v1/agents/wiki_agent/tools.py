@@ -1,10 +1,11 @@
-"""Wiki tools for workspace QA agent."""
+"""Wiki tools for the wiki sub-agent."""
 
 from typing import Annotated
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from src.ai.v1.agents.wiki_agent.editor import wiki_editor_logic
 from src.ai.v1.documents.index_store import get_index_store
 from src.services.workspace_service import get_wiki_page, list_wiki_pages
 
@@ -126,3 +127,43 @@ def search_wiki_pages_tool(
         return "\n".join(lines)
     except Exception as e:
         return f"Error searching wiki pages: {e}"
+
+
+@tool(
+    description=(
+        "Edit the currently open wiki page based on an instruction. "
+        "Call get_wiki_page_tool first to read the current content, then call this tool "
+        "with your edit instruction. Makes targeted changes — preserves everything else. "
+        "Use for: adding sections, rewriting paragraphs, adding TL;DR, fixing content."
+    )
+)
+def edit_wiki_page_tool(
+    instruction: Annotated[str, "What to change — be specific about the section and what to do"],
+    config: RunnableConfig,
+) -> str:
+    context = _get_agent_context(config)
+    auth_token: str = context.get("auth_token", "")
+    page_id: str = context.get("wiki_page_id", "")
+    if not auth_token:
+        return "No auth token available."
+    if not page_id:
+        return "No wiki page is currently open. Cannot edit."
+    try:
+        page = get_wiki_page(auth_token, page_id)
+        if not page:
+            return f"Wiki page {page_id} not found."
+        page_title = page.get("title", "Untitled")
+        page_content = page.get("contentMarkdown") or ""
+        explanation, updated_content = wiki_editor_logic.edit(
+            page_title=page_title,
+            page_content_markdown=page_content,
+            prompt=instruction,
+        )
+        context["_pending_edit"] = {
+            "pageId": page_id,
+            "title": page_title,
+            "contentMarkdown": updated_content,
+        }
+        return explanation
+    except Exception as e:
+        return f"Error editing wiki page: {e}"
