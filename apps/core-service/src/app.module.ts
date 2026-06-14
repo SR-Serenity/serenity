@@ -11,6 +11,7 @@ import { MailModule } from './mail/mail.module';
 import { OfficeModule } from './office/office.module';
 import { AiModule } from './ai/ai.module';
 import { AutomationModule } from './automation/automation.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AutomationModule } from './automation/automation.module';
     MailModule,
     OfficeModule,
     AiModule,
-    AutomationModule],
+    AutomationModule,
+    TasksModule],
 })
 export class AppModule {}

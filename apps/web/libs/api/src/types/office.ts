@@ -38,6 +38,42 @@ export type MeetingNote = {
   updatedAt: string
 }
 
+export type MeetingNotesSummary = {
+  summary: string[]
+}
+
+export type SummarizeMeetingNoteResponse = MeetingNotesSummary & {
+  note: MeetingNote
+}
+
+export type MeetingTranscriptSegment = {
+  text: string
+  speaker: string | null
+  start: number | null
+  end: number | null
+}
+
+export type TranscribeMeetingRecordingInput = {
+  audioUrl: string
+  model?: string
+  language?: string
+  prompt?: string
+}
+
+export type TranscribeMeetingRecordingResponse = MeetingNotesSummary & {
+  note: MeetingNote
+  text: string
+  transcriptMarkdown: string
+  segments: MeetingTranscriptSegment[]
+  model: string
+}
+
+export type LiveTranscriptionStatus = {
+  roomId: string
+  status: string
+  model?: string
+}
+
 export type GenerateLiveKitTokenResponse = {
   token: string
   wsUrl: string

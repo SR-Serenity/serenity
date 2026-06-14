@@ -61,6 +61,7 @@ interface NavSection {
 function buildApps(basePath: string): WorkspaceRailItem[] {
   return [
     { id: 'planner', icon: Calendar, label: 'Planner', href: `${basePath}/calendar` },
+    { id: 'tasks', icon: CheckSquare, label: 'Tasks', href: `${basePath}/tasks` },
     { id: 'office', icon: Building2, label: 'Office', href: `${basePath}/office` },
     { id: 'contact', icon: UserSquare, label: 'Contact', href: `${basePath}/contact` },
     { id: 'mail', icon: Mail, label: 'Mail', href: `${basePath}/mail` },
@@ -864,7 +865,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
         <div
           className={cn(
             'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border',
-            activeApp?.id === 'chat' ? 'border-gray-200 bg-white' : 'border-divider bg-surface',
+            activeApp?.id === 'chat' || activeApp?.id === 'tasks' ? 'border-gray-200 bg-white' : 'border-divider bg-surface',
           )}
         >
           <main className="min-h-0 flex-1 overflow-hidden">

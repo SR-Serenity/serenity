@@ -69,10 +69,66 @@ export class OfficeController {
 
   @Patch('rooms/:roomId/note')
   @ApiOperation({ summary: 'Update meeting note' })
-  updateMeetingNote(@Param('roomId') roomId: string, @Req() req: RequestWithAuth, @Body() body: unknown) {
+  updateMeetingNote(
+    @Param('roomId') roomId: string,
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+  ) {
     return this.apiProxy.forwardPatchRequest(
       `office/rooms/${roomId}/note`,
       body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('rooms/:roomId/note/summarize')
+  @ApiOperation({ summary: 'Generate AI meeting notes from room transcript' })
+  summarizeMeetingNote(
+    @Param('roomId') roomId: string,
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/note/summarize`,
+      body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('rooms/:roomId/note/transcribe')
+  @ApiOperation({ summary: 'Transcribe a final meeting recording' })
+  transcribeMeetingRecording(
+    @Param('roomId') roomId: string,
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/note/transcribe`,
+      body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('rooms/:roomId/live-transcription/start')
+  @ApiOperation({ summary: 'Start all-speaker live transcription for a room' })
+  startLiveTranscription(
+    @Param('roomId') roomId: string,
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+  ) {
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/live-transcription/start`,
+      body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('rooms/:roomId/live-transcription/stop')
+  @ApiOperation({ summary: 'Stop all-speaker live transcription for a room' })
+  stopLiveTranscription(@Param('roomId') roomId: string, @Req() req: RequestWithAuth) {
+    return this.apiProxy.forwardPostRequest(
+      `office/rooms/${roomId}/live-transcription/stop`,
+      {},
       req.headers.authorization,
     );
   }

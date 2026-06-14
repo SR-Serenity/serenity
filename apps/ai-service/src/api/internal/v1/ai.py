@@ -7,15 +7,17 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat
-from src.ai.v1.agents.wiki_editor import wiki_editor_agent
-from src.ai.v1.agents.chat_assistant.agent import chat_assistant_agent
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
+from src.ai.v1.agents.meeting_notes import meeting_notes_agent
+from src.ai.v1.agents.meeting_live_transcription import (
+    live_meeting_transcription_manager,
+)
+from src.ai.v1.agents.meeting_transcription import meeting_transcription_agent
+from src.ai.v1.agents.task_extractor import task_extractor_agent
 from src.api.internal.v1.schemas import (
     AutomationExecuteRequest,
     AutomationExecuteResponse,
-    ChatAssistRequest,
-    ChatAssistResponse,
     ChatRequest,
     ChatResponse,
     ExecuteActionRequest,
@@ -25,9 +27,18 @@ from src.api.internal.v1.schemas import (
     FileIndexRequest,
     FileIndexResponse,
     FileSource,
+    LiveMeetingStartRequest,
+    LiveMeetingStatusResponse,
+    LiveMeetingStopRequest,
+    MeetingNotesRequest,
+    MeetingNotesResponse,
+    MeetingTranscriptSegment,
+    MeetingTranscriptionRequest,
+    MeetingTranscriptionResponse,
+    ProposedTask,
+    TaskExtractRequest,
+    TaskExtractResponse,
     WikiDeleteRequest,
-    WikiEditorRequest,
-    WikiEditorResponse,
     WikiIndexRequest,
     WikiIndexResponse,
     WikiSearchRequest,
@@ -35,6 +46,7 @@ from src.api.internal.v1.schemas import (
     WikiSearchResult,
 )
 from src.core.config import settings
+from src.ai.v1.agents.meeting_live_transcription.agent import LiveMeetingStart
 
 router = APIRouter(prefix="/ai")
 
@@ -57,23 +69,129 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     return await run_chat(payload, auth_token=auth_token)
 
 
-@router.post("/chat/assist", response_model=ChatAssistResponse)
-async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssistResponse:
-    """Inline AI command in messaging: suggest a reply or translate."""
+@router.post("/tasks/extract", response_model=TaskExtractResponse)
+async def extract_tasks(payload: TaskExtractRequest, request: Request) -> TaskExtractResponse:
+    """Extract structured follow-up task proposals from a conversation."""
     _assert_internal_token(request)
-    
-    # Convert Pydantic models to dicts for the agent
+
     conversation_context = [
         {"role": msg.role, "content": msg.content}
         for msg in payload.conversation_context
     ]
 
-    result = chat_assistant_agent.assist(
+    extracted = task_extractor_agent.extract(
         conversation_context=conversation_context,
-        prompt=payload.prompt,
+        source_title=payload.source_title,
     )
 
-    return ChatAssistResponse(suggested_content=result)
+    proposed = [
+        ProposedTask(
+            title=task.title,
+            description=task.description,
+            assignee_name=task.assignee_name,
+            due_date=task.due_date,
+            priority=task.priority.upper(),  # type: ignore[arg-type]
+            reason=task.reason,
+        )
+        for task in extracted
+    ]
+
+    return TaskExtractResponse(proposed_tasks=proposed)
+
+
+@router.post("/meetings/notes", response_model=MeetingNotesResponse)
+async def summarize_meeting_notes(
+    payload: MeetingNotesRequest,
+    request: Request,
+) -> MeetingNotesResponse:
+    """Summarize a live meeting transcript into structured meeting notes."""
+    _assert_internal_token(request)
+
+    result = meeting_notes_agent.summarize(
+        transcript_markdown=payload.transcript_markdown,
+        existing_notes_markdown=payload.existing_notes_markdown,
+    )
+
+    return MeetingNotesResponse(
+        summary=result.summary,
+        markdown=meeting_notes_agent.to_markdown(result),
+    )
+
+
+@router.post("/meetings/transcribe", response_model=MeetingTranscriptionResponse)
+async def transcribe_meeting_recording(
+    payload: MeetingTranscriptionRequest,
+    request: Request,
+) -> MeetingTranscriptionResponse:
+    """Transcribe a final meeting recording from a signed audio URL."""
+    _assert_internal_token(request)
+
+    try:
+        result = await meeting_transcription_agent.transcribe_url(
+            audio_url=payload.audio_url,
+            model=payload.model,
+            language=payload.language,
+            prompt=payload.prompt,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Meeting transcription failed: {exc}",
+        ) from exc
+
+    return MeetingTranscriptionResponse(
+        text=result.text,
+        transcript_markdown=meeting_transcription_agent.to_markdown(result),
+        segments=[
+            MeetingTranscriptSegment(
+                text=segment.text,
+                speaker=segment.speaker,
+                start=segment.start,
+                end=segment.end,
+            )
+            for segment in result.segments
+        ],
+        model=result.model,
+    )
+
+
+@router.post("/meetings/live/start", response_model=LiveMeetingStatusResponse)
+async def start_live_meeting_transcription(
+    payload: LiveMeetingStartRequest,
+    request: Request,
+) -> LiveMeetingStatusResponse:
+    """Start a LiveKit room worker that streams all speaker tracks to Realtime."""
+    _assert_internal_token(request)
+
+    try:
+        result = await live_meeting_transcription_manager.start(
+            LiveMeetingStart(
+                org_id=payload.org_id,
+                room_id=payload.room_id,
+                room_name=payload.room_name,
+                livekit_ws_url=payload.livekit_ws_url,
+                livekit_token=payload.livekit_token,
+                model=payload.model,
+            ),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Live meeting transcription failed to start: {exc}",
+        ) from exc
+
+    return LiveMeetingStatusResponse(**result)
+
+
+@router.post("/meetings/live/stop", response_model=LiveMeetingStatusResponse)
+async def stop_live_meeting_transcription(
+    payload: LiveMeetingStopRequest,
+    request: Request,
+) -> LiveMeetingStatusResponse:
+    """Stop a LiveKit room transcription worker."""
+    _assert_internal_token(request)
+    result = await live_meeting_transcription_manager.stop(payload.room_id)
+    return LiveMeetingStatusResponse(**result)
 
 
 @router.post("/automation/execute", response_model=AutomationExecuteResponse)
@@ -215,31 +333,6 @@ async def search_wiki(payload: WikiSearchRequest, request: Request) -> WikiSearc
             )
             for result in results
         ]
-    )
-
-
-@router.post("/wiki/edit", response_model=WikiEditorResponse)
-async def edit_wiki(payload: WikiEditorRequest, request: Request) -> WikiEditorResponse:
-    """Inline wiki AI command: apply a user prompt to the current page content."""
-    _assert_internal_token(request)
-
-    explanation, updated_markdown = wiki_editor_agent.edit(
-        page_id=payload.page_id,
-        page_title=payload.page_title,
-        page_content_markdown=payload.page_content_markdown,
-        prompt=payload.prompt,
-    )
-
-    proposed_action = wiki_editor_agent.build_proposed_action(
-        page_id=payload.page_id,
-        page_title=payload.page_title,
-        updated_content_markdown=updated_markdown,
-    )
-
-    return WikiEditorResponse(
-        answer=explanation,
-        updated_content_markdown=updated_markdown,
-        proposed_action=proposed_action,
     )
 
 

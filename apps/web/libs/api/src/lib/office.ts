@@ -2,8 +2,12 @@ import { api } from './client'
 import type {
   CreateRoomInput,
   GenerateLiveKitTokenResponse,
+  LiveTranscriptionStatus,
   MeetingNote,
   OfficeRoom,
+  SummarizeMeetingNoteResponse,
+  TranscribeMeetingRecordingInput,
+  TranscribeMeetingRecordingResponse,
   UpdateRoomInput,
 } from '../types/office'
 
@@ -16,7 +20,11 @@ export const officeApi = {
     return api.post('office/rooms', { token, body: input })
   },
 
-  updateRoom: async (token: string, roomId: string, input: UpdateRoomInput): Promise<OfficeRoom> => {
+  updateRoom: async (
+    token: string,
+    roomId: string,
+    input: UpdateRoomInput,
+  ): Promise<OfficeRoom> => {
     return api.patch(`office/rooms/${roomId}`, { token, body: input })
   },
 
@@ -42,6 +50,48 @@ export const officeApi = {
     contentMarkdown: string,
   ): Promise<MeetingNote> => {
     return api.patch(`office/rooms/${roomId}/note`, { token, body: { contentMarkdown } })
+  },
+
+  summarizeMeetingNote: async (
+    token: string,
+    roomId: string,
+    transcriptMarkdown: string,
+  ): Promise<SummarizeMeetingNoteResponse> => {
+    return api.post(`office/rooms/${roomId}/note/summarize`, {
+      token,
+      body: { transcriptMarkdown },
+    })
+  },
+
+  transcribeMeetingRecording: async (
+    token: string,
+    roomId: string,
+    input: TranscribeMeetingRecordingInput,
+  ): Promise<TranscribeMeetingRecordingResponse> => {
+    return api.post(`office/rooms/${roomId}/note/transcribe`, {
+      token,
+      body: input,
+    })
+  },
+
+  startLiveTranscription: async (
+    token: string,
+    roomId: string,
+  ): Promise<LiveTranscriptionStatus> => {
+    return api.post(`office/rooms/${roomId}/live-transcription/start`, {
+      token,
+      body: {},
+    })
+  },
+
+  stopLiveTranscription: async (
+    token: string,
+    roomId: string,
+  ): Promise<LiveTranscriptionStatus> => {
+    return api.post(`office/rooms/${roomId}/live-transcription/stop`, {
+      token,
+      body: {},
+    })
   },
 
   generateLiveKitToken: async (

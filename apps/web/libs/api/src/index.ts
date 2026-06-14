@@ -1,4 +1,18 @@
-export { authApi, orgApi, chatApi, aiApi, contactsApi, calendarApi, wikiApi, mailApi, officeApi, automationApi } from './lib'
+export { authApi, orgApi, chatApi, aiApi, contactsApi, calendarApi, wikiApi, mailApi, officeApi, automationApi, tasksApi } from './lib'
+export type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskSourceType,
+  ListTasksFilters,
+  ListTasksResponse,
+  CreateTaskInput,
+  UpdateTaskInput,
+  DeleteTaskResponse,
+  ProposedTask,
+  ExtractTasksInput,
+  ExtractTasksResponse,
+} from './types/tasks'
 export { api, API_BASE } from './lib/client'
 export type { User, OrgSummary, AuthResponse, LoginResult, AcceptInvitationResponse } from './types'
 export type {
@@ -123,6 +137,12 @@ export type {
   OfficeRoomType,
   OfficeParticipant,
   MeetingNote,
+  MeetingNotesSummary,
+  MeetingTranscriptSegment,
+  SummarizeMeetingNoteResponse,
+  TranscribeMeetingRecordingInput,
+  TranscribeMeetingRecordingResponse,
+  LiveTranscriptionStatus,
   GenerateLiveKitTokenResponse,
   CreateRoomInput,
   UpdateRoomInput,

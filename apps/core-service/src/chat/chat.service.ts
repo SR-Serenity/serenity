@@ -379,7 +379,72 @@ export class ChatService {
       });
     }
 
+    if (message.content) {
+      const copilotMatch = message.content.match(/@copilot\s+([\s\S]+)/i);
+      if (copilotMatch) {
+        void this.postCopilotReply(auth, conversationId, copilotMatch[1].trim());
+      }
+    }
+
     return { message };
+  }
+
+  private async postCopilotReply(
+    auth: AuthContext,
+    conversationId: string,
+    instruction: string,
+  ): Promise<void> {
+    const aiBaseUrl =
+      process.env.AI_SERVICE_URL ?? 'http://localhost:2998/api/internal/v1';
+
+    const recent = await this.prisma.chatMessage.findMany({
+      where: { conversationId, unsentAt: null, parentId: null },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: { author: { select: { displayName: true } } },
+    });
+
+    // Build conversation context as prior messages, then user's instruction as the final message
+    const priorMessages = recent
+      .reverse()
+      .filter((m) => m.content)
+      .map((m) => ({ role: 'user' as const, content: `${m.author.displayName}: ${m.content}` }));
+
+    const messages = [
+      ...priorMessages,
+      { role: 'user' as const, content: instruction },
+    ];
+
+    try {
+      const res = await fetch(`${aiBaseUrl}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: `copilot-${conversationId}`,
+          messages,
+          authContext: { orgId: auth.orgId, userId: auth.userId },
+        }),
+      });
+
+      if (!res.ok) return;
+      const data = (await res.json()) as { answer?: string };
+      const replyContent = (data.answer ?? '').trim();
+      if (!replyContent) return;
+
+      const botMessage = await this.prisma.chatMessage.create({
+        data: { conversationId, authorId: auth.userId, content: replyContent, isCopilot: true },
+        include: messageInclude,
+      });
+
+      await this.events.publish({
+        event: ChatRealtimeEvent.MESSAGE_CREATED,
+        orgId: auth.orgId,
+        conversationId,
+        payload: botMessage,
+      });
+    } catch {
+      // silently fail — don't break the original message flow
+    }
   }
 
   async addConversationMembers(
