@@ -184,6 +184,62 @@ class TaskExtractResponse(CamelModel):
     proposed_tasks: list[ProposedTask] = Field(default_factory=list)
 
 
+# ── Meeting Notes ─────────────────────────────────────────────────────────────
+
+class MeetingNotesRequest(CamelModel):
+    auth_context: AuthContext
+    room_id: str
+    transcript_markdown: str
+    existing_notes_markdown: str | None = None
+
+
+class MeetingNotesResponse(CamelModel):
+    summary: list[str] = Field(default_factory=list)
+    markdown: str
+
+
+class MeetingTranscriptionRequest(CamelModel):
+    auth_context: AuthContext
+    room_id: str
+    audio_url: str
+    model: str | None = None
+    language: str | None = None
+    prompt: str | None = None
+
+
+class MeetingTranscriptSegment(CamelModel):
+    text: str
+    speaker: str | None = None
+    start: float | None = None
+    end: float | None = None
+
+
+class MeetingTranscriptionResponse(CamelModel):
+    text: str
+    transcript_markdown: str
+    segments: list[MeetingTranscriptSegment] = Field(default_factory=list)
+    model: str
+
+
+class LiveMeetingStartRequest(CamelModel):
+    org_id: str
+    room_id: str
+    room_name: str
+    livekit_ws_url: str
+    livekit_token: str
+    model: str | None = None
+
+
+class LiveMeetingStopRequest(CamelModel):
+    room_id: str
+
+
+class LiveMeetingStatusResponse(CamelModel):
+    room_id: str
+    status: str
+    model: str | None = None
+
+
 # ── Automation Execute ────────────────────────────────────────────────────────
 
 class AutomationContext(CamelModel):

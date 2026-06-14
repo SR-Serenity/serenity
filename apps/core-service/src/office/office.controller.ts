@@ -13,7 +13,14 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/auth.types';
 import type { AuthUser } from '../auth/auth.types';
 import { OfficeService } from './office.service';
-import { CreateRoomDto, UpdateMeetingNoteDto, UpdateRoomDto } from './dto/office.dto';
+import {
+  CreateRoomDto,
+  StartLiveTranscriptionDto,
+  SummarizeMeetingNoteDto,
+  TranscribeMeetingRecordingDto,
+  UpdateMeetingNoteDto,
+  UpdateRoomDto,
+} from './dto/office.dto';
 
 @ApiTags('office')
 @ApiBearerAuth()
@@ -76,6 +83,42 @@ export class OfficeController {
     @Body() body: UpdateMeetingNoteDto,
   ) {
     return this.officeService.updateMeetingNote(user, roomId, body);
+  }
+
+  @Post('rooms/:roomId/note/summarize')
+  @ApiOperation({ summary: 'Generate AI meeting notes from the active room transcript' })
+  summarizeMeetingNote(
+    @CurrentUser() user: AuthUser,
+    @Param('roomId') roomId: string,
+    @Body() body: SummarizeMeetingNoteDto,
+  ) {
+    return this.officeService.summarizeMeetingNote(user, roomId, body);
+  }
+
+  @Post('rooms/:roomId/note/transcribe')
+  @ApiOperation({ summary: 'Transcribe a final meeting recording and update meeting notes' })
+  transcribeMeetingRecording(
+    @CurrentUser() user: AuthUser,
+    @Param('roomId') roomId: string,
+    @Body() body: TranscribeMeetingRecordingDto,
+  ) {
+    return this.officeService.transcribeMeetingRecording(user, roomId, body);
+  }
+
+  @Post('rooms/:roomId/live-transcription/start')
+  @ApiOperation({ summary: 'Start all-speaker live transcription for a room' })
+  startLiveTranscription(
+    @CurrentUser() user: AuthUser,
+    @Param('roomId') roomId: string,
+    @Body() body: StartLiveTranscriptionDto,
+  ) {
+    return this.officeService.startLiveTranscription(user, roomId, body);
+  }
+
+  @Post('rooms/:roomId/live-transcription/stop')
+  @ApiOperation({ summary: 'Stop all-speaker live transcription for a room' })
+  stopLiveTranscription(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string) {
+    return this.officeService.stopLiveTranscription(user, roomId);
   }
 
   @Post('rooms/:roomId/token')

@@ -471,20 +471,48 @@ body {
 /* default [data-lk-theme=default] selector (0,1,0).              */
 /* Real button vars: --lk-control-bg, NOT --lk-button-bg.         */
 .meeting-room-wrapper[data-lk-theme=default] {
-  --lk-bg:                      #070738;
+  --lk-bg:                      #202124;
   --lk-bg2:                     rgba(255, 255, 255, 0.08);
   --lk-bg3:                     rgba(255, 255, 255, 0.12);
   --lk-bg4:                     rgba(255, 255, 255, 0.18);
   --lk-bg5:                     rgba(255, 255, 255, 0.24);
   --lk-border-color:            rgba(255, 255, 255, 0.08);
-  --lk-control-bg:              rgba(255, 255, 255, 0.08);
+  --lk-control-bg:              rgba(255, 255, 255, 0.1);
   --lk-control-hover-bg:        rgba(255, 255, 255, 0.14);
   --lk-control-active-bg:       rgba(255, 255, 255, 0.2);
   --lk-control-active-hover-bg: rgba(255, 255, 255, 0.26);
-  --lk-accent-bg:               #205DC2;
-  --lk-accent2:                 #3575de;
-  --lk-accent3:                 #4a88e8;
-  --lk-accent4:                 #5f9bf0;
+  --lk-accent-bg:               #0ea5e9;
+  --lk-accent2:                 #38bdf8;
+  --lk-accent3:                 #7dd3fc;
+  --lk-accent4:                 #bae6fd;
+}
+
+.meeting-room-wrapper .lk-participant-tile {
+  color: white;
+}
+
+.meeting-room-wrapper .lk-participant-placeholder {
+  background: #303134;
+}
+
+.meeting-room-wrapper .lk-control-bar {
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.meeting-room-wrapper .lk-button {
+  border-radius: 9999px;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.meeting-room-wrapper .lk-disconnect-button {
+  background: #dc2626;
+  color: white;
+}
+
+.meeting-room-wrapper .lk-disconnect-button:hover {
+  background: #ef4444;
 }
 
 /* ─── Copilot Sparkle animations ──────────────────────────────── */
@@ -559,4 +587,3 @@ body {
 .copilot-sparkle-btn:active {
   transform: translateY(0);
 }
-
