@@ -73,9 +73,41 @@ def list_conversations_tool(config: RunnableConfig) -> str:
 
 @tool(
     description=(
+        "Get recent messages from a specific conversation. "
+        "Use this to read, summarize, or understand what was discussed — "
+        "no keyword needed. Returns the latest messages with sender and timestamp. "
+        "Use this when the user asks to summarize, recap, or read a conversation."
+    )
+)
+def get_conversation_messages_tool(
+    conversation_id: Annotated[str, "The conversation UUID to read messages from"],
+    limit: Annotated[int, "Max number of messages to fetch (default 50, max 100)"] = 50,
+    config: RunnableConfig = None,
+) -> str:
+    auth_token = _get_auth_token(config)
+    if not auth_token:
+        return "No auth token available."
+    try:
+        messages = list_messages(auth_token, conversation_id, limit=min(limit, 100))
+        if not messages:
+            return f"No messages found in conversation {conversation_id}."
+        lines = [f"Messages in conversation {conversation_id} ({len(messages)} messages):"]
+        for m in messages:
+            ts = m.get("createdAt") or m.get("sentAt") or ""
+            text = (m.get("content") or m.get("text") or "(attachment)").strip()
+            if text:
+                lines.append(f"  [{ts}] {_sender_name(m)}: {text[:400]}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error fetching messages: {e}"
+
+
+@tool(
+    description=(
         "Search messages across a specific conversation by keyword. "
         "Fetches recent messages and filters by the query term. "
-        "Returns matching messages with sender and timestamp."
+        "Returns matching messages with sender and timestamp. "
+        "Use get_conversation_messages_tool instead when you need all messages (e.g. to summarize)."
     )
 )
 def search_messages_tool(

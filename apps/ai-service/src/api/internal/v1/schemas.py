@@ -35,6 +35,8 @@ class AuthContext(CamelModel):
 
 class RequestContext(CamelModel):
     conversation_id: str | None = None
+    wiki_page_id: str | None = None
+    task_id: str | None = None
     meeting_id: str | None = None
     selected_text: str | None = None
     entrypoint: str | None = None
@@ -154,40 +156,88 @@ class WikiSearchResponse(CamelModel):
     results: list[WikiSearchResult]
 
 
-# ── Wiki Editor (inline AI command) ──────────────────────────────────────────
+# ── Task Extraction ───────────────────────────────────────────────────────────
 
-class WikiEditorRequest(CamelModel):
-    """Request for the /ai/wiki/edit endpoint (inline slash-command agent)."""
-    auth_context: AuthContext
-    page_id: str
-    page_title: str
-    page_content_markdown: str
-    prompt: str
-    org_slug: str | None = None
-
-
-class WikiEditorResponse(CamelModel):
-    """Response from the /ai/wiki/edit endpoint."""
-    answer: str
-    updated_content_markdown: str
-    proposed_action: ProposedAction | None = None
-# ── Chat Assistant (inline AI in messages) ─────────────────────────────────
-
-class ChatAssistMessage(CamelModel):
+class ConversationMessage(CamelModel):
     role: str
     content: str
 
 
-class ChatAssistRequest(CamelModel):
-    """Request for the /ai/chat/assist endpoint."""
+class TaskExtractRequest(CamelModel):
+    """Request for the /ai/tasks/extract endpoint."""
     auth_context: AuthContext
-    conversation_context: list[ChatAssistMessage]
-    prompt: str
+    conversation_context: list[ConversationMessage]
+    source_title: str | None = None
 
 
-class ChatAssistResponse(CamelModel):
-    """Response from the /ai/chat/assist endpoint."""
-    suggested_content: str
+class ProposedTask(CamelModel):
+    title: str
+    description: str | None = None
+    assignee_name: str | None = None
+    due_date: str | None = None
+    priority: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"
+    reason: str
+
+
+class TaskExtractResponse(CamelModel):
+    """Response from the /ai/tasks/extract endpoint."""
+    proposed_tasks: list[ProposedTask] = Field(default_factory=list)
+
+
+# ── Meeting Notes ─────────────────────────────────────────────────────────────
+
+class MeetingNotesRequest(CamelModel):
+    auth_context: AuthContext
+    room_id: str
+    transcript_markdown: str
+    existing_notes_markdown: str | None = None
+
+
+class MeetingNotesResponse(CamelModel):
+    summary: list[str] = Field(default_factory=list)
+    markdown: str
+
+
+class MeetingTranscriptionRequest(CamelModel):
+    auth_context: AuthContext
+    room_id: str
+    audio_url: str
+    model: str | None = None
+    language: str | None = None
+    prompt: str | None = None
+
+
+class MeetingTranscriptSegment(CamelModel):
+    text: str
+    speaker: str | None = None
+    start: float | None = None
+    end: float | None = None
+
+
+class MeetingTranscriptionResponse(CamelModel):
+    text: str
+    transcript_markdown: str
+    segments: list[MeetingTranscriptSegment] = Field(default_factory=list)
+    model: str
+
+
+class LiveMeetingStartRequest(CamelModel):
+    org_id: str
+    room_id: str
+    room_name: str
+    livekit_ws_url: str
+    livekit_token: str
+    model: str | None = None
+
+
+class LiveMeetingStopRequest(CamelModel):
+    room_id: str
+
+
+class LiveMeetingStatusResponse(CamelModel):
+    room_id: str
+    status: str
+    model: str | None = None
 
 
 # ── Automation Execute ────────────────────────────────────────────────────────

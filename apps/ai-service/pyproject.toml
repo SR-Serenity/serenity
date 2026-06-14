@@ -23,6 +23,8 @@ langgraph-checkpoint-postgres = "^3.0.1"
 langfuse = "^4.0.0"
 psycopg = { extras = ["pool"], version = "^3.3.2" }
 pypdf = "^6.4.0"
+livekit = "^1.1.10"
+websockets = "^16.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"

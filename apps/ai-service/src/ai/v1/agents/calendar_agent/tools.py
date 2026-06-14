@@ -69,9 +69,53 @@ def list_calendar_events_tool(
 
 @tool(
     description=(
+        "Get a specific calendar event or task by its ID. "
+        "Returns full details including title, type, times, description, attendees, and status. "
+        "Use this when you already have the item ID from context or a previous tool call."
+    )
+)
+def get_calendar_item_tool(
+    item_id: Annotated[str, "The calendar item UUID to fetch"],
+    config: RunnableConfig,
+) -> str:
+    auth_token = _get_auth_token(config)
+    if not auth_token:
+        return "No auth token available."
+    try:
+        items = list_calendar_items(auth_token)
+        item = next((i for i in items if i.get("id") == item_id), None)
+        if not item:
+            return f"Calendar item {item_id} not found."
+        title = item.get("title", "Untitled")
+        itype = item.get("type", "")
+        start = item.get("startAt") or item.get("dueDate") or "—"
+        end = item.get("endAt") or ""
+        location = item.get("location") or "—"
+        status = item.get("taskStatus") or item.get("status") or "—"
+        desc = (item.get("descriptionMarkdown") or "").strip()
+        attendees = [
+            a.get("displayName") or a.get("email") or ""
+            for a in (item.get("attendees") or [])
+        ]
+        attendee_str = ", ".join(attendees) if attendees else "—"
+        lines = [
+            f"[{item_id}] {title} ({itype})",
+            f"  Start: {start}  End: {end}",
+            f"  Location: {location} | Status: {status}",
+            f"  Attendees: {attendee_str}",
+        ]
+        if desc:
+            lines.append(f"  Description:\n{desc[:500]}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error fetching calendar item {item_id}: {e}"
+
+
+@tool(
+    description=(
         "Search calendar events and tasks by keyword. "
         "Scans titles, descriptions, and locations for the query term. "
-        "Use this to find meetings or tasks related to a specific topic."
+        "Returns matching items with their IDs — use the ID with update or delete tools."
     )
 )
 def search_calendar_events_tool(
@@ -102,6 +146,7 @@ def search_calendar_events_tool(
             return f"No calendar items found matching '{query}'."
         lines = [f"Calendar items matching '{query}':"]
         for item in matches:
+            item_id = item.get("id", "")
             title = item.get("title", "Untitled")
             itype = item.get("type", "")
             start = item.get("startAt") or item.get("dueDate") or "—"
@@ -112,7 +157,7 @@ def search_calendar_events_tool(
             ]
             attendee_str = ", ".join(attendees) if attendees else "—"
             lines.append(
-                f"  {title} ({itype}) — {start}\n"
+                f"  [{item_id}] {title} ({itype}) — {start}\n"
                 f"    Attendees: {attendee_str}\n"
                 f"    {desc}"
             )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Block, PartialBlock } from '@blocknote/core'
 import { BlockNoteSchema, defaultBlockSpecs } from '@blocknote/core'
@@ -52,6 +52,7 @@ const customSchema = BlockNoteSchema.create({
 export type WikiBlockContent = PartialBlock[]
 export type WikiPageRef = { id: string; title: string; url: string }
 
+/** Auth + page context required by the AI command bar. */
 export type AiCommandBarContext = {
   token: string
   pageId: string
@@ -65,6 +66,21 @@ export type AiCommandBarContext = {
     orgName?: string | null
     orgSlug?: string | null
   }
+}
+
+export type NotionBlockEditorHandle = {
+  /**
+   * Insert markdown content after the current cursor block (or at the end).
+   * Existing content is preserved — only the new blocks are added.
+   * Shows the Accept/Discard bar so the user can review the insertion.
+   */
+  insertMarkdown: (markdown: string, explanation?: string) => Promise<void>
+  /**
+   * Replace the entire document with new markdown content.
+   * Original content is saved so the user can discard the change.
+   * Shows the Accept/Discard bar.
+   */
+  replaceMarkdown: (markdown: string, explanation?: string) => Promise<void>
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -150,15 +166,7 @@ function AiAcceptBar({
 
 // ── Editor ────────────────────────────────────────────────────────────────────
 
-export function NotionBlockEditor({
-  content,
-  markdownFallback,
-  editable,
-  onChange,
-  onCreateSubPage,
-  pages = [],
-  aiContext,
-}: {
+export const NotionBlockEditor = forwardRef<NotionBlockEditorHandle, {
   content: unknown
   markdownFallback: string
   editable: boolean
@@ -166,7 +174,15 @@ export function NotionBlockEditor({
   onCreateSubPage?: () => Promise<{ id: string; title: string; url: string } | null>
   pages?: WikiPageRef[]
   aiContext?: AiCommandBarContext
-}) {
+}>(function NotionBlockEditor({
+  content,
+  markdownFallback,
+  editable,
+  onChange,
+  onCreateSubPage,
+  pages = [],
+  aiContext,
+}, ref) {
   const initialContent = useMemo(
     () => normalizeBlocks(content, markdownFallback),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,22 +191,78 @@ export function NotionBlockEditor({
   const editor = useCreateBlockNote({
     schema: customSchema,
     initialContent,
-    domAttributes: {
-      editor: {
-        spellcheck: 'false',
-      },
-    },
+    domAttributes: { editor: { spellcheck: 'false' } },
   })
   const lastPageContent = useRef(content)
   const isProgrammaticUpdate = useRef(false)
 
-  // AI state
-  const [aiBarOpen, setAiBarOpen] = useState(false)
-  const [currentMarkdown, setCurrentMarkdown] = useState(markdownFallback)
   const [aiPending, setAiPending] = useState<{
     originalBlocks: Block[]
+    /** Empty array = full-replace mode; non-empty = insert mode */
+    insertedBlockIds: string[]
     explanation: string
   } | null>(null)
+  const [aiCommandBarOpen, setAiCommandBarOpen] = useState(false)
+
+  // Keyboard shortcut: Ctrl+Shift+K opens the AI command bar
+  useEffect(() => {
+    if (!aiContext || !editable) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        e.preventDefault()
+        setAiCommandBarOpen(v => !v)
+      }
+      if (e.key === 'Escape' && aiCommandBarOpen) {
+        setAiCommandBarOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [aiContext, editable, aiCommandBarOpen])
+
+  // Expose imperative handle
+  useImperativeHandle(ref, () => ({
+    insertMarkdown: async (markdown: string, explanation?: string) => {
+      const originalBlocks = editor.document as Block[]
+
+      // Find insertion point: current cursor block or last block
+      let anchorBlock: Block
+      try {
+        anchorBlock = editor.getTextCursorPosition().block as Block
+      } catch {
+        anchorBlock = originalBlocks[originalBlocks.length - 1] as Block
+      }
+
+      isProgrammaticUpdate.current = true
+      const newBlocks = await editor.tryParseMarkdownToBlocks(markdown)
+
+      // Insert after the anchor block without touching anything else
+      editor.insertBlocks(newBlocks, anchorBlock, 'after')
+
+      // Capture the IDs of inserted blocks so discard can remove exactly them
+      const afterBlocks = editor.document as Block[]
+      const originalIds = new Set(originalBlocks.map(b => b.id))
+      const insertedBlockIds = afterBlocks.filter(b => !originalIds.has(b.id)).map(b => b.id)
+
+      setAiPending({
+        originalBlocks,
+        insertedBlockIds,
+        explanation: explanation ?? 'Copilot suggestion — accept or discard',
+      })
+    },
+
+    replaceMarkdown: async (markdown: string, explanation?: string) => {
+      const originalBlocks = editor.document as Block[]
+      isProgrammaticUpdate.current = true
+      const newBlocks = await editor.tryParseMarkdownToBlocks(markdown)
+      editor.replaceBlocks(editor.document, newBlocks)
+      setAiPending({
+        originalBlocks,
+        insertedBlockIds: [],
+        explanation: explanation ?? 'Copilot suggestion — accept or discard',
+      })
+    },
+  }))
 
   // ── Sync external content changes ─────────────────────────────────────────
   useEffect(() => {
@@ -217,20 +289,6 @@ export function NotionBlockEditor({
   const slashMenuItems = useMemo(() => {
     const defaultItems = getDefaultReactSlashMenuItems(editor)
     const extra = []
-    if (editable && aiContext) {
-      extra.push({
-        key: 'ask-ai',
-        group: 'AI',
-        title: 'Ask AI',
-        aliases: ['ai', 'assistant', 'edit', 'generate', 'write', 'rewrite', 'suggest'],
-        icon: <Sparkles className="h-4 w-4 text-violet-500" />,
-        onItemClick: async () => {
-          const md = await editor.blocksToMarkdownLossy(editor.document)
-          setCurrentMarkdown(md)
-          setAiBarOpen(true)
-        },
-      })
-    }
     if (editable && onCreateSubPage) {
       extra.push({
         key: 'sub-page',
@@ -242,7 +300,7 @@ export function NotionBlockEditor({
       })
     }
     return [...extra, ...defaultItems]
-  }, [editable, editor, handleCreateSubPage, onCreateSubPage, aiContext])
+  }, [editable, editor, handleCreateSubPage, onCreateSubPage])
 
   const getSlashMenuItems = useCallback(async (query: string) => {
     const q = query.trim().toLowerCase()
@@ -271,28 +329,29 @@ export function NotionBlockEditor({
     }))
   }, [editor, pages])
 
-  // ── AI preview: apply to editor, store originals for revert ───────────────
-  const handleAiPreview = useCallback(async (updatedMarkdown: string, explanation: string) => {
-    const originalBlocks = editor.document as Block[]
-    isProgrammaticUpdate.current = true
-    const newBlocks = await editor.tryParseMarkdownToBlocks(updatedMarkdown)
-    editor.replaceBlocks(editor.document, newBlocks)
-    setAiPending({ originalBlocks, explanation })
-    setAiBarOpen(false)
-  }, [editor])
-
-  // ── Accept: commit the previewed content ───────────────────────────────────
+  // ── Accept: commit the inserted blocks ────────────────────────────────────
   const handleAiAccept = useCallback(() => {
     const blocks = editor.document as WikiBlockContent
     onChange(blocks, blocksToText(blocks))
     setAiPending(null)
   }, [editor, onChange])
 
-  // ── Discard: revert to original blocks ────────────────────────────────────
+  // ── Discard: restore original state (insert = remove added blocks; replace = restore all) ─
   const handleAiDiscard = useCallback(() => {
     if (!aiPending) return
     isProgrammaticUpdate.current = true
-    editor.replaceBlocks(editor.document, aiPending.originalBlocks)
+    if (aiPending.insertedBlockIds.length > 0) {
+      // Insert mode: remove only the blocks that were added
+      const idsToRemove = new Set(aiPending.insertedBlockIds)
+      const currentBlocks = editor.document as Block[]
+      const blocksToRemove = currentBlocks.filter(b => idsToRemove.has(b.id))
+      if (blocksToRemove.length > 0) {
+        editor.removeBlocks(blocksToRemove)
+      }
+    } else {
+      // Replace mode: restore the original document
+      editor.replaceBlocks(editor.document, aiPending.originalBlocks)
+    }
     setAiPending(null)
   }, [editor, aiPending])
 
@@ -302,16 +361,22 @@ export function NotionBlockEditor({
       isProgrammaticUpdate.current = false
       return
     }
-    // If there's a pending AI change, user edited manually → discard pending
     if (aiPending) setAiPending(null)
-
     const blocks = editor.document as WikiBlockContent
     onChange(blocks, blocksToText(blocks))
   }, [editor, onChange, aiPending])
 
+  const handleAiPreview = useCallback(async (updatedMarkdown: string, explanation: string) => {
+    const originalBlocks = editor.document as Block[]
+    isProgrammaticUpdate.current = true
+    const newBlocks = await editor.tryParseMarkdownToBlocks(updatedMarkdown)
+    editor.replaceBlocks(editor.document, newBlocks)
+    setAiPending({ originalBlocks, insertedBlockIds: [], explanation })
+    setAiCommandBarOpen(false)
+  }, [editor])
+
   return (
     <div className="relative flex flex-col pb-[30vh]">
-      {/* Accept / Discard strip */}
       {aiPending && (
         <AiAcceptBar
           explanation={aiPending.explanation}
@@ -320,7 +385,18 @@ export function NotionBlockEditor({
         />
       )}
 
-      {/* BlockNote editor */}
+      {aiContext && editable && !aiPending && (
+        <button
+          type="button"
+          onClick={() => setAiCommandBarOpen(v => !v)}
+          className="absolute right-4 top-2 z-10 flex items-center gap-1 rounded-md border border-violet-200 bg-white px-2 py-1 text-xs font-medium text-violet-600 shadow-sm hover:bg-violet-50"
+          title="Ask AI to edit (Ctrl+Shift+K)"
+        >
+          <Sparkles className="h-3 w-3" />
+          Ask AI
+        </button>
+      )}
+
       <BlockNoteView
         editor={editor}
         editable={editable}
@@ -342,19 +418,18 @@ export function NotionBlockEditor({
         />
       </BlockNoteView>
 
-      {/* Inline AI prompt bar — no modal, no backdrop */}
       {aiContext && (
         <WikiAiCommandBar
-          open={aiBarOpen}
+          open={aiCommandBarOpen}
           token={aiContext.token}
           pageId={aiContext.pageId}
           pageTitle={aiContext.pageTitle}
-          pageContentMarkdown={currentMarkdown}
+          pageContentMarkdown={markdownFallback}
           authContext={aiContext.authContext}
           onPreview={handleAiPreview}
-          onClose={() => setAiBarOpen(false)}
+          onClose={() => setAiCommandBarOpen(false)}
         />
       )}
     </div>
   )
-}
+})

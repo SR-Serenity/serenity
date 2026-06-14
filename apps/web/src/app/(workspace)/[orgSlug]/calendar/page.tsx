@@ -5,12 +5,13 @@ import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import { Loader2 } from 'lucide-react'
-import { calendarApi, wikiApi } from '@serenity/api'
+import { calendarApi, tasksApi, wikiApi } from '@serenity/api'
 import type {
   CalendarItem,
   CalendarItemType,
   UpdateCalendarItemInput,
 } from '@serenity/api'
+import type { TaskDeadline } from './components/month-calendar'
 import { parseDateKey } from '@/app/(workspace)/components/calendar-date-helpers'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
@@ -60,6 +61,7 @@ export default function CalendarPage() {
   )
 
   const [items, setItems] = useState<CalendarItem[]>([])
+  const [taskDeadlines, setTaskDeadlines] = useState<TaskDeadline[]>([])
   const [view, setView] = useState<CalendarView>('week')
   const [anchorDate, setAnchorDate] = useState(() => new Date())
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
@@ -150,16 +152,27 @@ export default function CalendarPage() {
     setError(null)
 
     try {
-      const [response] = await Promise.all([
+      const [response, tasksResponse] = await Promise.all([
         calendarApi.listItems(token, {
           from: visibleRange.from.toISOString(),
           to: visibleRange.to.toISOString(),
           type: typeFilter === 'ALL' ? undefined : typeFilter,
           visibility: visibilityFilter === 'ALL' ? undefined : visibilityFilter,
         }),
+        tasksApi.listTasks(token),
         loadMembers(currentOrg.id, token),
       ])
       setItems(response.items)
+      setTaskDeadlines(
+        tasksResponse.tasks
+          .filter((task) => task.dueDate && task.status !== 'CANCELLED')
+          .map((task) => ({
+            id: task.id,
+            title: task.title,
+            dueDate: task.dueDate as string,
+            done: task.status === 'DONE',
+          })),
+      )
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load calendar')
     } finally {
@@ -257,6 +270,7 @@ export default function CalendarPage() {
                 selectedDate={anchorDate}
                 days={monthDays}
                 items={sortedItems}
+                taskDeadlines={taskDeadlines}
                 onCreate={openCreate}
                 onEdit={openEdit}
               />

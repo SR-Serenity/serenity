@@ -6,6 +6,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -80,4 +81,78 @@ export class UpdateMeetingNoteDto {
   @IsString()
   @MaxLength(50000)
     contentMarkdown!: string;
+}
+
+export class SummarizeMeetingNoteDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(50000)
+    transcriptMarkdown!: string;
+}
+
+export class TranscribeMeetingRecordingDto {
+  @ApiProperty()
+  @IsUrl({ require_tld: false })
+  @MaxLength(2000)
+    audioUrl!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+    model?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+    language?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+    prompt?: string;
+}
+
+export class StartLiveTranscriptionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+    model?: string;
+}
+
+export class LiveTranscriptSegmentDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+    orgId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+    roomId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(120)
+    speaker!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(5000)
+    text!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+    startedAtMs?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+    endedAtMs?: number;
 }

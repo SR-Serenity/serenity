@@ -9,5 +9,6 @@ import { WikiService } from './wiki.service';
   imports: [DatabaseModule],
   controllers: [WikiController],
   providers: [WikiService, WikiIndexService, WikiIndexQueueService],
+  exports: [WikiService],
 })
 export class WikiModule {}

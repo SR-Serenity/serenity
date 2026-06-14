@@ -16,6 +16,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 import { useRealtime } from '@/hooks/use-realtime'
 import { chatApi } from '@serenity/api'
 import type {
@@ -100,6 +101,8 @@ export default function ChatPage() {
   )
   const realtime = useRealtime(token, isAuthenticated)
   const loadWorkspaceMembers = useWorkspaceStore((state) => state.loadMembers)
+  const membersByOrgId = useWorkspaceStore((state) => state.membersByOrgId)
+  const workspaceMembers = currentOrg ? (membersByOrgId[currentOrg.id] ?? []) : []
   const router = useRouter()
   const { orgSlug, conversationId: routeConversationId } = useParams<{
     orgSlug: string
@@ -147,6 +150,28 @@ export default function ChatPage() {
     }
     setActiveTab('messages')
   }, [loadMessages, selectedConversationId, setActiveConversation, token])
+
+  // Register copilot insert action: populate message input (not send directly)
+  useEffect(() => {
+    if (!selectedConversation) {
+      useCopilotContextStore.getState().setInsertAction(null)
+      return
+    }
+    useCopilotContextStore.getState().setInsertAction({
+      label: 'Add to message input',
+      type: 'chat',
+      execute: async (content: string) => {
+        useCopilotContextStore.getState().setPendingChatInsert(content)
+      },
+    })
+    return () => { useCopilotContextStore.getState().setInsertAction(null) }
+  }, [selectedConversation?.id])
+
+  useEffect(() => {
+    if (token && currentOrg?.id) {
+      void loadWorkspaceMembers(currentOrg.id, token)
+    }
+  }, [token, currentOrg?.id, loadWorkspaceMembers])
 
   useEffect(() => {
     const openDialog = (event: Event) => {
@@ -461,7 +486,8 @@ export default function ChatPage() {
                     onUploadFile={uploadChatFile}
                     replyingTo={replyingTo}
                     onCancelReply={() => setReplyingTo(null)}
-                    placeholder={`Message ${selectedConversationName}`}
+                    placeholder={`Message ${selectedConversationName} · type @ to mention`}
+                    members={workspaceMembers}
                     conversationContext={messages.slice(-10).map((m) => ({
                       role: m.author.displayName,
                       content: m.content || '(Attachment)',
@@ -522,6 +548,7 @@ export default function ChatPage() {
           onAddMembers={handleAddMembers}
         />
       )}
+
     </div>
   )
 }

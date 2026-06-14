@@ -1,4 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import type { CalendarItem, CalendarItemType } from '@serenity/api'
 import { cn } from '@/lib/utils'
 import {
@@ -9,11 +10,19 @@ import {
 import { itemDate } from './calendar-utils'
 import { EventChip } from './event-chip'
 
+export type TaskDeadline = {
+  id: string
+  title: string
+  dueDate: string
+  done: boolean
+}
+
 export function MonthCalendar({
   anchorDate,
   selectedDate,
   days,
   items,
+  taskDeadlines = [],
   onCreate,
   onEdit,
 }: {
@@ -21,6 +30,7 @@ export function MonthCalendar({
   selectedDate: Date
   days: Date[]
   items: CalendarItem[]
+  taskDeadlines?: TaskDeadline[]
   onCreate: (type: CalendarItemType, date?: Date, event?: ReactMouseEvent<HTMLElement>) => void
   onEdit: (item: CalendarItem, event?: ReactMouseEvent<HTMLElement>) => void
 }) {
@@ -36,6 +46,9 @@ export function MonthCalendar({
       <div className="grid min-h-0 grid-cols-7 grid-rows-6 overflow-auto">
         {days.map(day => {
           const dayItems = items.filter(item => sameCalendarDay(itemDate(item), day))
+          const dayTasks = taskDeadlines.filter(task =>
+            sameCalendarDay(new Date(task.dueDate), day),
+          )
           const inMonth = day.getMonth() === anchorDate.getMonth()
           const { selected, current } = calendarDateTone({ date: day, selectedDate })
           return (
@@ -54,6 +67,24 @@ export function MonthCalendar({
               <div className="space-y-1">
                 {dayItems.slice(0, 4).map(item => <EventChip key={item.id} item={item} compact onEdit={onEdit} />)}
                 {dayItems.length > 4 && <p className="text-xs font-medium text-slate-500">+{dayItems.length - 4} more</p>}
+                {dayTasks.slice(0, 2).map(task => (
+                  <div
+                    key={task.id}
+                    title={`Task due: ${task.title}`}
+                    className={cn(
+                      'flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-xs',
+                      task.done
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-amber-50 text-amber-700',
+                    )}
+                  >
+                    <CheckCircle2 className="size-3 shrink-0" />
+                    <span className={cn('truncate', task.done && 'line-through')}>{task.title}</span>
+                  </div>
+                ))}
+                {dayTasks.length > 2 && (
+                  <p className="text-xs font-medium text-amber-600">+{dayTasks.length - 2} task(s)</p>
+                )}
               </div>
             </button>
           )
