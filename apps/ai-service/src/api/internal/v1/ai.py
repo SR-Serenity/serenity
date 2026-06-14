@@ -7,16 +7,12 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat
-from src.ai.v1.agents.wiki_editor import wiki_editor_agent
-from src.ai.v1.agents.chat_assistant.agent import chat_assistant_agent
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
 from src.ai.v1.agents.task_extractor import task_extractor_agent
 from src.api.internal.v1.schemas import (
     AutomationExecuteRequest,
     AutomationExecuteResponse,
-    ChatAssistRequest,
-    ChatAssistResponse,
     ChatRequest,
     ChatResponse,
     ExecuteActionRequest,
@@ -30,8 +26,6 @@ from src.api.internal.v1.schemas import (
     TaskExtractRequest,
     TaskExtractResponse,
     WikiDeleteRequest,
-    WikiEditorRequest,
-    WikiEditorResponse,
     WikiIndexRequest,
     WikiIndexResponse,
     WikiSearchRequest,
@@ -59,26 +53,6 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     _assert_internal_token(request)
     auth_token = request.headers.get("authorization")
     return await run_chat(payload, auth_token=auth_token)
-
-
-@router.post("/chat/assist", response_model=ChatAssistResponse)
-async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssistResponse:
-    """Inline AI command in messaging: suggest a reply or translate."""
-    _assert_internal_token(request)
-    
-    # Convert Pydantic models to dicts for the agent
-    conversation_context = [
-        {"role": msg.role, "content": msg.content}
-        for msg in payload.conversation_context
-    ]
-
-    result = chat_assistant_agent.assist(
-        conversation_context=conversation_context,
-        prompt=payload.prompt,
-        copilot_mode=payload.copilot_mode,
-    )
-
-    return ChatAssistResponse(suggested_content=result)
 
 
 @router.post("/tasks/extract", response_model=TaskExtractResponse)
@@ -250,31 +224,6 @@ async def search_wiki(payload: WikiSearchRequest, request: Request) -> WikiSearc
             )
             for result in results
         ]
-    )
-
-
-@router.post("/wiki/edit", response_model=WikiEditorResponse)
-async def edit_wiki(payload: WikiEditorRequest, request: Request) -> WikiEditorResponse:
-    """Inline wiki AI command: apply a user prompt to the current page content."""
-    _assert_internal_token(request)
-
-    explanation, updated_markdown = wiki_editor_agent.edit(
-        page_id=payload.page_id,
-        page_title=payload.page_title,
-        page_content_markdown=payload.page_content_markdown,
-        prompt=payload.prompt,
-    )
-
-    proposed_action = wiki_editor_agent.build_proposed_action(
-        page_id=payload.page_id,
-        page_title=payload.page_title,
-        updated_content_markdown=updated_markdown,
-    )
-
-    return WikiEditorResponse(
-        answer=explanation,
-        updated_content_markdown=updated_markdown,
-        proposed_action=proposed_action,
     )
 
 

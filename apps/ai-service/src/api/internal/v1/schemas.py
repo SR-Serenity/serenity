@@ -35,6 +35,8 @@ class AuthContext(CamelModel):
 
 class RequestContext(CamelModel):
     conversation_id: str | None = None
+    wiki_page_id: str | None = None
+    task_id: str | None = None
     meeting_id: str | None = None
     selected_text: str | None = None
     entrypoint: str | None = None
@@ -154,49 +156,17 @@ class WikiSearchResponse(CamelModel):
     results: list[WikiSearchResult]
 
 
-# ── Wiki Editor (inline AI command) ──────────────────────────────────────────
+# ── Task Extraction ───────────────────────────────────────────────────────────
 
-class WikiEditorRequest(CamelModel):
-    """Request for the /ai/wiki/edit endpoint (inline slash-command agent)."""
-    auth_context: AuthContext
-    page_id: str
-    page_title: str
-    page_content_markdown: str
-    prompt: str
-    org_slug: str | None = None
-
-
-class WikiEditorResponse(CamelModel):
-    """Response from the /ai/wiki/edit endpoint."""
-    answer: str
-    updated_content_markdown: str
-    proposed_action: ProposedAction | None = None
-# ── Chat Assistant (inline AI in messages) ─────────────────────────────────
-
-class ChatAssistMessage(CamelModel):
+class ConversationMessage(CamelModel):
     role: str
     content: str
 
 
-class ChatAssistRequest(CamelModel):
-    """Request for the /ai/chat/assist endpoint."""
-    auth_context: AuthContext
-    conversation_context: list[ChatAssistMessage]
-    prompt: str
-    copilot_mode: bool = False
-
-
-class ChatAssistResponse(CamelModel):
-    """Response from the /ai/chat/assist endpoint."""
-    suggested_content: str
-
-
-# ── Task Extraction ───────────────────────────────────────────────────────────
-
 class TaskExtractRequest(CamelModel):
     """Request for the /ai/tasks/extract endpoint."""
     auth_context: AuthContext
-    conversation_context: list[ChatAssistMessage]
+    conversation_context: list[ConversationMessage]
     source_title: str | None = None
 
 

@@ -102,6 +102,15 @@ def update_wiki_page(auth_token: str, page_id: str, body: dict) -> dict | None:
         return None
 
 
+# ── Tasks ─────────────────────────────────────────────────────────────────────
+
+def get_workspace_task(auth_token: str, task_id: str) -> dict | None:
+    try:
+        return _get(f"tasks/{task_id}", auth_token)
+    except Exception:
+        return None
+
+
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 def list_conversations(auth_token: str) -> list[dict]:

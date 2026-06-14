@@ -16,6 +16,7 @@ export type AiAuthContext = {
 export type AiRequestContext = {
   conversationId?: string
   wikiPageId?: string
+  taskId?: string
   meetingId?: string
   fileIds?: string[]
   selectedText?: string
