@@ -45,7 +45,9 @@ def build_wiki_prompt(context: dict) -> str:
     wiki_page_id = context.get("wiki_page_id")
     if wiki_page_id:
         prompt += (
-            f"\n\n<ACTIVE_CONTEXT>Wiki page ID {wiki_page_id} is currently open. "
-            f"Call get_wiki_page_tool(page_id='{wiki_page_id}') FIRST before responding.</ACTIVE_CONTEXT>"
+            f"\n\n<ACTIVE_CONTEXT>Wiki page ID {wiki_page_id} is currently open in the user's browser. "
+            f"If the user refers to 'this page', 'this document', or is clearly asking about this content, "
+            f"call get_wiki_page_tool(page_id='{wiki_page_id}') first. "
+            f"For broader searches or unrelated questions, use search_wiki_pages_tool or list_wiki_pages_tool instead.</ACTIVE_CONTEXT>"
         )
     return prompt

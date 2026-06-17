@@ -4,9 +4,11 @@ import hashlib
 import json
 
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 
 from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
-from src.ai.v1.graph.runtime import run_chat
+from src.ai.v1.graph.runtime import run_chat, stream_chat
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
 from src.ai.v1.agents.meeting_notes import meeting_notes_agent
@@ -67,6 +69,25 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     _assert_internal_token(request)
     auth_token = request.headers.get("authorization")
     return await run_chat(payload, auth_token=auth_token)
+
+
+@router.post("/chat/stream")
+async def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
+    _assert_internal_token(request)
+    auth_token = request.headers.get("authorization")
+
+    async def generate():
+        async for event in stream_chat(payload, auth_token=auth_token):
+            yield json.dumps(jsonable_encoder(event), ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/tasks/extract", response_model=TaskExtractResponse)

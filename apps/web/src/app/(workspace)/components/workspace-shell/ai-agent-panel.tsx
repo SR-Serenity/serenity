@@ -10,8 +10,6 @@ import {
   MessageSquare,
   PanelRightClose,
   Plus,
-  Sparkles,
-  X,
 } from 'lucide-react'
 import type { AiSource } from '@serenity/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -26,7 +24,7 @@ import { ChatSessionList, type ChatSession } from './chat-session-list'
 import { DeleteConversationDialog } from './delete-conversation-dialog'
 
 const suggestions = [
-  { label: "What's new in my workspace?", icon: Sparkles },
+  { label: "What's new in my workspace?", icon: Bot },
   { label: 'Write meeting agenda', icon: MessageSquare },
   { label: 'Create a task tracker', icon: CheckCircle2 },
 ]
@@ -337,7 +335,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
       const history = messages.filter(m => !m.pending).map(m => ({ role: m.role, content: m.content }))
       history.push({ role: 'user', content })
 
-      const response = await aiApi.chat(token, {
+      const response = await aiApi.streamChat(token, {
         sessionId,
         messages: history,
         authContext: {
@@ -353,6 +351,17 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           entrypoint: compact ? 'mini_panel' : 'workspace_panel',
           timeZone: browserTimezone(),
           ...requestContext,
+        },
+      }, {
+        onToken: chunk => {
+          setMessages(prev => prev.map(m =>
+            m.id === pendingId ? { ...m, content: `${m.content}${chunk}` } : m,
+          ))
+        },
+        onAnswer: answer => {
+          setMessages(prev => prev.map(m =>
+            m.id === pendingId ? { ...m, content: answer } : m,
+          ))
         },
       })
 
@@ -473,33 +482,30 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
   if (compact) {
     if (view === 'history') {
       return (
-        <div className="flex h-full min-h-0 flex-col text-slate-900 scheme-light">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="mb-3 flex shrink-0 items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">Conversations</p>
+            <p className="text-sm font-semibold text-gray-900">Chats</p>
             <button
               type="button"
               onClick={startNewChat}
-              className="flex cursor-pointer h-7 items-center gap-1 rounded-lg px-2 text-xs text-blue-600 hover:bg-blue-50"
+              className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
-              New chat
+              New
             </button>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             {sessions.length === 0 ? (
-              <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                    <Sparkles className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">Serenity AI</p>
-                    <p className="mt-1 text-sm leading-5 text-slate-600">
-                      Start a conversation and your history will appear here.
-                    </p>
-                  </div>
-                </div>
+              <div className="py-6 text-center">
+                <p className="text-sm text-gray-400">No conversations yet.</p>
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="mt-3 text-sm font-medium text-gray-700 underline-offset-2 hover:underline"
+                >
+                  Start your first chat
+                </button>
               </div>
             ) : (
               <ChatSessionList
@@ -512,17 +518,6 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
             )}
           </div>
 
-          <div className="mt-3 shrink-0">
-            <button
-              type="button"
-              onClick={startNewChat}
-              className="flex cursor-pointer h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-            >
-              <Plus className="h-4 w-4" />
-              Start new chat
-            </button>
-          </div>
-
           <DeleteConversationDialog
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
@@ -533,29 +528,38 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     }
 
     return (
-      <div className="flex h-full min-h-0 flex-col text-slate-900 scheme-light">
-        <div className="mb-3 flex shrink-0 flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setView('history')}
-              className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-              title="Back to history"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
-              {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
-            </p>
-          </div>
-          {contextLabel && (
-            <p className="truncate pl-9 text-xs text-blue-600" title={contextLabel}>Context: {contextLabel}</p>
-          )}
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="mb-3 flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setView('history')}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            title="All chats"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">
+            {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
+          </p>
+          <button
+            type="button"
+            onClick={startNewChat}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            title="New chat"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
+
+        {contextLabel && (
+          <p className="mb-2 truncate text-xs text-gray-400" title={contextLabel}>
+            Context: {contextLabel}
+          </p>
+        )}
 
         {loadingSession ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -570,16 +574,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 onOpenSource={handleOpenSource}
               />
             ) : (
-              <div className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                    <Sparkles className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">Serenity AI</p>
-                    <p className="mt-1 text-sm leading-5 text-slate-600">Ask anything about your workspace.</p>
-                  </div>
+              <div className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                  <Bot className="h-5 w-5" />
                 </div>
+                <p className="text-sm text-gray-400">Ask Copilot anything about your workspace.</p>
               </div>
             )}
           </div>
@@ -641,7 +640,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           </span>
           <span className="text-sm font-medium text-slate-700">Copilot</span>
           {contextLabel && (
-            <span className="text-xs text-blue-600">· {contextLabel}</span>
+            <span className="text-xs text-gray-400">· {contextLabel}</span>
           )}
           <div className="flex-1" />
           <button
@@ -664,7 +663,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
 
         {loadingSession ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : messages.length > 0 ? (
           <>
@@ -701,8 +700,8 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                   <Bot className="h-8 w-8 text-slate-600" />
                 </div>
               </div>
-              <h2 className="text-center text-3xl font-semibold tracking-normal text-slate-900">
-                How can I help you today?
+              <h2 className="text-center text-2xl font-semibold text-gray-900">
+                How can I help you?
               </h2>
               <div className="mt-7">
                 <ChatComposer
@@ -714,31 +713,18 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 />
               </div>
               {showSuggestions && (
-                <div className="mt-9">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm text-slate-500">Get started</p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  {suggestions.map(suggestion => (
                     <button
+                      key={suggestion.label}
                       type="button"
-                      onClick={() => setShowSuggestions(false)}
-                      className="cursor-pointer text-slate-400 hover:text-slate-600"
-                      title="Hide suggestions"
+                      onClick={() => setPrompt(suggestion.label)}
+                      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:text-gray-900"
                     >
-                      <X className="h-4 w-4" />
+                      <suggestion.icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      {suggestion.label}
                     </button>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {suggestions.map(suggestion => (
-                      <button
-                        key={suggestion.label}
-                        type="button"
-                        onClick={() => setPrompt(suggestion.label)}
-                        className="min-h-17 cursor-pointer rounded-xl bg-slate-50 px-3 py-3 text-left transition-colors hover:bg-blue-50"
-                      >
-                        <suggestion.icon className="h-4 w-4 text-slate-500" />
-                        <p className="mt-3 text-sm text-slate-700">{suggestion.label}</p>
-                      </button>
-                    ))}
-                  </div>
+                  ))}
                 </div>
               )}
             </div>

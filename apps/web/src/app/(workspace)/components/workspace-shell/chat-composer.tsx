@@ -1,6 +1,6 @@
 'use client'
 
-import { Mic, Paperclip, Send, Settings2 } from 'lucide-react'
+import { Paperclip, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function ChatComposer({
@@ -23,7 +23,7 @@ export function ChatComposer({
         onSubmit(prompt)
       }}
       className={cn(
-        'overflow-hidden border border-slate-200 bg-white shadow-sm focus-within:border-blue-400',
+        'overflow-hidden border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-gray-400',
         compact ? 'rounded-xl' : 'rounded-2xl',
       )}
     >
@@ -36,41 +36,28 @@ export function ChatComposer({
             onSubmit(prompt)
           }
         }}
-        placeholder={compact ? 'Ask Serenity AI...' : 'Do anything with AI...'}
+        placeholder={compact ? 'Ask Copilot...' : 'Ask anything...'}
         className={cn(
-          'w-full resize-none bg-transparent text-slate-900 outline-none placeholder:text-slate-400'
-          , compact ? 'h-20 px-3 py-3 text-sm' : 'min-h-24 px-5 py-4 text-base',
+          'w-full resize-none bg-transparent text-gray-900 outline-none placeholder:text-gray-400',
+          compact ? 'h-20 px-3 py-3 text-sm' : 'min-h-24 px-5 py-4 text-base',
         )}
       />
-      <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2">
-        <div className="flex items-center gap-1">
-          <button type="button" className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50" title="Attach file">
-            <Paperclip className="h-4 w-4" />
-          </button>
-          {!compact && (
-            <button type="button" className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50" title="Agent settings">
-              <Settings2 className="h-4 w-4" />
-            </button>
-          )}
-          <button type="button" className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50" title="Voice input">
-            <Mic className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex items-center gap-1">
-          {!compact && (
-            <button type="button" className="hidden cursor-pointer h-8 items-center rounded-lg px-2 text-sm text-slate-500 hover:bg-slate-50 sm:flex">
-              Auto
-            </button>
-          )}
-          <button
-            type="submit"
-            disabled={!prompt.trim() || sending}
-            className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:bg-slate-100 disabled:text-slate-300"
-            title="Send"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2">
+        <button
+          type="button"
+          className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+          title="Attach file"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
+        <button
+          type="submit"
+          disabled={!prompt.trim() || sending}
+          className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-white transition-colors hover:bg-gray-700 disabled:bg-gray-100 disabled:text-gray-300"
+          title="Send"
+        >
+          <Send className="h-4 w-4" />
+        </button>
       </div>
     </form>
   )

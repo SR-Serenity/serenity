@@ -2,14 +2,10 @@
 
 from typing import Annotated
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
+from langchain.tools import ToolRuntime, tool
 
+from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.services.workspace_service import list_conversations, list_messages
-
-
-def _get_auth_token(config: RunnableConfig) -> str:
-    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
 
 
 def _sender_name(m: dict) -> str:
@@ -45,8 +41,8 @@ def _name_matches(display_name: str, query: str) -> bool:
         "Use this to discover conversations before searching their messages."
     )
 )
-def list_conversations_tool(config: RunnableConfig) -> str:
-    auth_token = _get_auth_token(config)
+def list_conversations_tool(runtime: ToolRuntime[AgentContext]) -> str:
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -81,10 +77,10 @@ def list_conversations_tool(config: RunnableConfig) -> str:
 )
 def get_conversation_messages_tool(
     conversation_id: Annotated[str, "The conversation UUID to read messages from"],
+    runtime: ToolRuntime[AgentContext],
     limit: Annotated[int, "Max number of messages to fetch (default 50, max 100)"] = 50,
-    config: RunnableConfig = None,
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -113,9 +109,9 @@ def get_conversation_messages_tool(
 def search_messages_tool(
     conversation_id: Annotated[str, "The conversation UUID to search in"],
     query: Annotated[str, "Keyword or phrase to search for in messages"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -147,9 +143,9 @@ def search_messages_tool(
 )
 def search_all_messages_tool(
     query: Annotated[str, "Keyword or phrase to search for across all conversations"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -191,9 +187,9 @@ def search_all_messages_tool(
 )
 def get_messages_from_person_tool(
     person_name: Annotated[str, "Name or partial name of the person to find messages from"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -241,8 +237,7 @@ def get_messages_from_person_tool(
                 "but they have no recent messages in accessible conversations."
             )
 
-        header = f"Recent messages from '{person_name}':"
-        lines = [header] + all_results[:20]
+        lines = [f"Recent messages from '{person_name}':"] + all_results[:20]
         if len(all_results) > 20:
             lines.append(f"  … and {len(all_results) - 20} more messages")
         return "\n".join(lines)

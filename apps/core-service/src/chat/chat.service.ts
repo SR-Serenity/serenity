@@ -415,10 +415,14 @@ export class ChatService {
       { role: 'user' as const, content: instruction },
     ];
 
+    const internalToken = process.env.AI_INTERNAL_API_TOKEN;
     try {
       const res = await fetch(`${aiBaseUrl}/ai/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(internalToken ? { 'x-internal-api-token': internalToken } : {}),
+        },
         body: JSON.stringify({
           sessionId: `copilot-${conversationId}`,
           messages,

@@ -1,7 +1,9 @@
 """Serenity AI graph runtime adapter."""
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from langchain_core.messages import AIMessage, HumanMessage
+from typing import Any
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langgraph.types import Command
 
 from src.ai.v1.contexts.message_manager import ConversationContextManager
@@ -25,6 +27,116 @@ runtime_state = RuntimeState()
 
 
 async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> ChatResponse:
+    prepared = await _prepare_run(payload, auth_token=auth_token)
+
+    with span("chat.graph", prepared.metadata):
+        if prepared.has_pending_interrupt:
+            final_state = await prepared.graph.ainvoke(
+                Command(resume=prepared.latest_user_msg),
+                config=prepared.run_config,
+            )
+        else:
+            final_state = await prepared.graph.ainvoke(
+                prepared.graph_input,
+                config=prepared.run_config,
+            )
+
+    state_after = await prepared.graph.aget_state(prepared.thread_config)
+    if state_after.next:
+        interrupt_question = _extract_interrupt_question(state_after)
+        return ChatResponse(
+            answer=interrupt_question,
+            thread_id=prepared.thread_id,
+            trace_id=prepared.trace_id,
+        )
+
+    return ChatResponse(
+        answer=final_state.get("answer", _fallback_answer()),
+        thread_id=prepared.thread_id,
+        proposed_actions=final_state.get("proposed_actions", []),
+        trace_id=prepared.trace_id,
+    )
+
+
+async def stream_chat(payload: ChatRequest, *, auth_token: str | None = None) -> AsyncIterator[dict]:
+    prepared = await _prepare_run(payload, auth_token=auth_token)
+    yield {"type": "start", "threadId": prepared.thread_id, "traceId": prepared.trace_id}
+
+    streamed_answer = ""
+    final_answer = _fallback_answer()
+    proposed_actions: list[Any] = []
+
+    # Nodes whose LLM output is the final user-facing response.
+    # Synthesizer is included for the greeting/proposal-summary path.
+    _STREAMING_NODES = {
+        "chat_agent", "wiki_agent", "calendar_agent",
+        "contacts_agent", "mail_agent", "synthesizer",
+    }
+
+    with span("chat.graph.stream", prepared.metadata):
+        stream_input: Any = (
+            Command(resume=prepared.latest_user_msg)
+            if prepared.has_pending_interrupt
+            else prepared.graph_input
+        )
+        async for part in prepared.graph.astream(
+            stream_input,
+            config=prepared.run_config,
+            stream_mode=["messages", "updates"],
+            version="v2",
+        ):
+            if part["type"] == "messages":
+                message_chunk, metadata = part["data"]
+                if metadata.get("langgraph_node") not in _STREAMING_NODES:
+                    continue
+                content = getattr(message_chunk, "content", "")
+                if isinstance(content, str) and content:
+                    streamed_answer += content
+                    yield {"type": "token", "content": content}
+            elif part["type"] == "updates":
+                for _node_name, update in part["data"].items():
+                    if not isinstance(update, dict):
+                        continue
+                    if "answer" in update:
+                        final_answer = update["answer"] or final_answer
+                    if "proposed_actions" in update:
+                        proposed_actions = update["proposed_actions"] or []
+
+    state_after = await prepared.graph.aget_state(prepared.thread_config)
+    if state_after.next:
+        final_answer = _extract_interrupt_question(state_after)
+        proposed_actions = []
+    else:
+        values = getattr(state_after, "values", {}) or {}
+        final_answer = values.get("answer", final_answer)
+        proposed_actions = values.get("proposed_actions", proposed_actions)
+
+    if final_answer and final_answer != streamed_answer:
+        yield {"type": "answer", "answer": final_answer}
+
+    yield {
+        "type": "final",
+        "answer": final_answer,
+        "threadId": prepared.thread_id,
+        "proposedActions": proposed_actions,
+        "traceId": prepared.trace_id,
+    }
+
+
+@dataclass
+class PreparedRun:
+    graph: Any
+    graph_input: dict
+    has_pending_interrupt: bool
+    latest_user_msg: str
+    metadata: dict
+    run_config: dict
+    thread_config: dict
+    thread_id: str
+    trace_id: str | None
+
+
+async def _prepare_run(payload: ChatRequest, *, auth_token: str | None = None) -> PreparedRun:
     thread_id = make_thread_id(
         payload.auth_context.org_id,
         payload.auth_context.user_id,
@@ -53,79 +165,54 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
     user_key = (payload.auth_context.org_id, payload.auth_context.user_id)
     user_context = _build_user_context(payload, auth_token=auth_token)
 
-    with span("chat.graph", metadata):
-        runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
+    runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
 
-        # Convert messages to proper types
-        converted_messages = [
-            HumanMessage(content=message.content)
-            if message.role == "user"
-            else AIMessage(content=message.content)
-            for message in payload.messages
-        ]
+    converted_messages: list[AnyMessage] = [
+        HumanMessage(content=message.content)
+        if message.role == "user"
+        else AIMessage(content=message.content)
+        for message in payload.messages
+    ]
 
-        # Get current user memories
-        user_memories = runtime_state.user_memories.get(user_key, [])
+    user_memories = runtime_state.user_memories.get(user_key, [])
 
-        # Trim context window and extract new memories
-        trimmed_messages, updated_memories = runtime_state.context_manager.trim_messages(
-            converted_messages,
-            org_id=payload.auth_context.org_id,
-            user_id=payload.auth_context.user_id,
-            memories=user_memories,
-        )
+    trimmed_messages, updated_memories = runtime_state.context_manager.trim_messages(
+        converted_messages,
+        org_id=payload.auth_context.org_id,
+        user_id=payload.auth_context.user_id,
+        memories=user_memories,
+    )
 
-        # Update stored memories if they changed
-        if updated_memories:
-            runtime_state.user_memories[user_key] = updated_memories
+    if updated_memories:
+        runtime_state.user_memories[user_key] = updated_memories
 
-        # Build final messages with memory context
-        final_messages = runtime_state.context_manager.build_context_with_memories(
-            trimmed_messages, memories=updated_memories
-        )
-        # Check if this thread has a pending interrupt waiting for user input
-        current_state = await graph.aget_state(thread_config)
-        has_pending_interrupt = bool(current_state.next)
+    final_messages = runtime_state.context_manager.build_context_with_memories(
+        trimmed_messages, memories=updated_memories
+    )
+    current_state = await graph.aget_state(thread_config)
+    has_pending_interrupt = bool(current_state.next)
 
-        if has_pending_interrupt:
-            # Resume the interrupted graph with the user's answer
-            final_state = await graph.ainvoke(
-                Command(resume=latest_user_msg),
-                config=run_config,
-            )
-        else:
-            # Fresh graph invocation
-            final_state = await graph.ainvoke(
-                {
-                    "org_id": payload.auth_context.org_id,
-                    "user_id": payload.auth_context.user_id,
-                    "session_id": payload.session_id,
-                    "role": payload.auth_context.role,
-                    "thread_id": thread_id,
-                    "auth_token": auth_token,
-                    "context": {
-                        **payload.context.model_dump(by_alias=True, exclude_none=True),
-                        "userContext": user_context,
-                    },
-                    "messages": final_messages,
-                },
-                config=run_config,
-            )
-
-    # Check if the graph is now paused waiting for more user input
-    state_after = await graph.aget_state(thread_config)
-    if state_after.next:
-        interrupt_question = _extract_interrupt_question(state_after)
-        return ChatResponse(
-            answer=interrupt_question,
-            thread_id=thread_id,
-            trace_id=trace_id,
-        )
-
-    return ChatResponse(
-        answer=final_state.get("answer", _fallback_answer()),
+    return PreparedRun(
+        graph=graph,
+        graph_input={
+            "org_id": payload.auth_context.org_id,
+            "user_id": payload.auth_context.user_id,
+            "session_id": payload.session_id,
+            "role": payload.auth_context.role,
+            "thread_id": thread_id,
+            "auth_token": auth_token,
+            "context": {
+                **payload.context.model_dump(by_alias=True, exclude_none=True),
+                "userContext": user_context,
+            },
+            "messages": final_messages,
+        },
+        has_pending_interrupt=has_pending_interrupt,
+        latest_user_msg=latest_user_msg,
+        metadata=metadata,
+        run_config=run_config,
+        thread_config=thread_config,
         thread_id=thread_id,
-        proposed_actions=final_state.get("proposed_actions", []),
         trace_id=trace_id,
     )
 

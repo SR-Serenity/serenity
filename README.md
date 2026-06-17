@@ -209,7 +209,7 @@ NEXT_PUBLIC_API_URL=http://localhost:2991
 
 # AI service (apps/ai-service/.env)
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5.4-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash-lite

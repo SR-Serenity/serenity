@@ -102,6 +102,7 @@ export type {
   AiChatMessage,
   AiChatRequest,
   AiChatResponse,
+  AiChatStreamEvent,
   AiFileAskRequest,
   AiFileAskResponse,
   AiFileIndexRequest,

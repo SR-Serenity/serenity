@@ -7,6 +7,8 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Bot,
   CalendarDays,
+  Check,
+  ChevronsUpDown,
   Home,
   LogOut,
   Maximize2,
@@ -15,7 +17,6 @@ import {
   Plus,
   Settings,
   Settings2,
-  Shuffle,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -37,9 +38,9 @@ export interface WorkspaceRailItem {
   icon: LucideIcon
   label: string
   href: string
-  /** notify dot */
   notify?: boolean
-  /** 'top' | 'bottom' | undefined (= middle) */
+  /** Group label shown as a section header in the sidebar */
+  group?: string
   position?: 'top' | 'bottom'
 }
 
@@ -54,7 +55,6 @@ interface WorkspaceRailProps {
   switchingOrgSlug?: string | null
   onSwitchOrg: (orgSlug: string) => void
   onLogout: () => void
-  /** User initials for the avatar */
   userInitials: string
 }
 
@@ -76,199 +76,211 @@ function getConflictingAddon(currentPath: string): UtilityActionId | null {
   return routeAddonConflicts.find(item => item.segment === activeSegment)?.addon ?? null
 }
 
-function HomeButton({ orgSlug, currentPath }: { orgSlug: string; currentPath: string }) {
-  const href = `/${orgSlug}/dashboard`
-  const isActive = currentPath === href
-
+/* ─── Nav item ─────────────────────────────────────────────────── */
+function NavItem({
+  icon: Icon,
+  label,
+  href,
+  isActive,
+  notify,
+}: {
+  icon: LucideIcon
+  label: string
+  href: string
+  isActive: boolean
+  notify?: boolean
+}) {
   return (
     <Link
       href={href}
-      title="Dashboard"
+      title={label}
       className={cn(
-        'flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border outline-none',
-        'transition-all duration-150 ease-out',
-        'focus-visible:border-focus',
+        'group flex h-8 w-full items-center gap-3 rounded-md px-3 text-[13px] outline-none',
+        'transition-colors duration-100',
         isActive
-          ? 'border-transparent bg-primary/10 text-accent-txt'
-          : 'border-transparent bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
+          ? 'bg-accent/[0.09] font-medium text-accent-txt'
+          : 'text-content hover:bg-ui hover:text-caption',
       )}
     >
-      <Home className="h-4.5 w-4.5" />
-    </Link>
-  )
-}
-
-function AppButton({
-  item,
-  isActive,
-  navigatorVisible,
-}: {
-  item: WorkspaceRailItem
-  isActive: boolean
-  navigatorVisible: boolean
-}) {
-  const Icon = item.icon
-  // Keep a visible edge when both the app and navigator context are active.
-  const navigatorState = isActive && navigatorVisible
-
-  return (
-    <Link
-      href={item.href}
-      title={item.label}
-      id={`app-sidebar-${item.id}`}
-      className={cn(
-        'relative flex items-center justify-center shrink-0 cursor-pointer group',
-        'w-9 h-9 rounded-xl border outline-none',
-        'transition-colors duration-150',
-        'focus-visible:border-focus focus-visible:bg-primary/10',
-        isActive
-          ? 'bg-primary/10 border-transparent'
-          : 'bg-transparent border-transparent hover:bg-btn-hover',
-        navigatorState && 'border-btn-border',
-      )}
-    >
-      <span
+      <Icon
         className={cn(
-          'flex items-center justify-center',
-          'w-5 h-5',
-          'transition-colors duration-150',
-          isActive
-            ? 'text-accent-txt'
-            : 'text-nav-icon group-hover:text-caption',
+          'h-[15px] w-[15px] shrink-0',
+          isActive ? 'text-accent-txt' : 'text-muted group-hover:text-caption',
         )}
-      >
-        <Icon className="h-4.5 w-[18px]" />
-      </span>
-
-      {item.notify && (
-        <span
-          className={cn(
-            'absolute rounded-full bg-highlight',
-            'size-2',
-            'top-4 right-1.5',
-          )}
-        />
-      )}
+      />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {notify && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-highlight" />}
     </Link>
   )
 }
 
-function AccountPopover({
+/* ─── Org header ────────────────────────────────────────────────── */
+function OrgHeader({
   orgSlug,
-  user,
   currentOrg,
   organizations,
   switchingOrgSlug,
   onSwitchOrg,
-  onLogout,
-  userInitials,
 }: {
   orgSlug: string
-  user: User | null
   currentOrg: OrgSummary
   organizations: OrgSummary[]
   switchingOrgSlug?: string | null
   onSwitchOrg: (orgSlug: string) => void
-  onLogout: () => void
-  userInitials: string
 }) {
-  const otherOrganizations = organizations.filter(org => org.slug !== currentOrg.slug)
+  const otherOrgs = organizations.filter(o => o.slug !== currentOrg.slug)
 
   return (
     <Popover>
-      <PopoverTrigger
-        id="profile-button"
-        title="Account"
-        className={cn(
-          'mt-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full',
-          'border border-avatar-border bg-avatar text-xs font-semibold text-caption',
-          'outline-none transition-opacity hover:opacity-80 focus-visible:border-focus',
-        )}
-      >
-        {userInitials}
+      <PopoverTrigger className={cn(
+        'group flex w-full shrink-0 items-center gap-2.5 rounded-md px-2 py-2',
+        'transition-colors duration-100 hover:bg-ui outline-none focus-visible:bg-ui',
+      )}>
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-white">
+          {currentOrg.name.slice(0, 1).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-[13px] font-semibold text-primary-text">{currentOrg.name}</p>
+        </div>
+        <ChevronsUpDown className="h-3 w-3 shrink-0 text-dimmed opacity-0 group-hover:opacity-100" />
       </PopoverTrigger>
+
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={8}
+        className="w-64 gap-1 rounded-xl border border-divider bg-panel p-2 text-content shadow-lg ring-0"
+      >
+        <div className="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wider text-dimmed">
+          Workspaces
+        </div>
+
+        {/* Current org */}
+        <div className="flex items-center gap-2.5 rounded-lg bg-btn-hover px-2.5 py-2">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-[10px] font-bold text-white">
+            {currentOrg.name.slice(0, 1).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-primary-text">{currentOrg.name}</p>
+            <p className="text-xs text-dimmed capitalize">{currentOrg.role}</p>
+          </div>
+          <Check className="h-3.5 w-3.5 shrink-0 text-accent-txt" />
+        </div>
+
+        {otherOrgs.length > 0 && (
+          <>
+            <ShellDivider className="my-1.5" />
+            {otherOrgs.map(org => (
+              <button
+                key={org.id}
+                type="button"
+                onClick={() => onSwitchOrg(org.slug)}
+                disabled={switchingOrgSlug === org.slug}
+                className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm transition-colors hover:bg-btn-hover disabled:opacity-50"
+              >
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-nav-selected text-[10px] font-bold text-caption">
+                  {org.name.slice(0, 1).toUpperCase()}
+                </div>
+                <span className="min-w-0 flex-1 truncate text-content">{org.name}</span>
+                <span className="shrink-0 text-xs text-dimmed capitalize">{org.role}</span>
+              </button>
+            ))}
+          </>
+        )}
+
+        <ShellDivider className="my-1.5" />
+        <Link
+          href={`/${orgSlug}/settings?tab=organization`}
+          className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
+        >
+          <Settings className="h-3.5 w-3.5 text-muted" />
+          Organization settings
+        </Link>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/* ─── User section ──────────────────────────────────────────────── */
+function UserSection({
+  orgSlug,
+  user,
+  userInitials,
+  onLogout,
+}: {
+  orgSlug: string
+  user: User | null
+  userInitials: string
+  onLogout: () => void
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger className={cn(
+        'group flex w-full shrink-0 items-center gap-2.5 rounded-md px-2 py-2',
+        'transition-colors duration-100 hover:bg-ui outline-none focus-visible:bg-ui',
+      )}>
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-avatar text-[10px] font-semibold text-caption">
+          {userInitials}
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-[13px] font-medium text-primary-text leading-snug">
+            {user?.displayName ?? 'Member'}
+          </p>
+        </div>
+        <Settings2 className="h-3 w-3 shrink-0 text-dimmed opacity-0 group-hover:opacity-100" />
+      </PopoverTrigger>
+
       <PopoverContent
         side="right"
         align="end"
-        sideOffset={10}
-        className="w-72 gap-1 rounded-xl border border-divider bg-panel p-2 text-content shadow-lg ring-0"
+        sideOffset={8}
+        className="w-64 gap-1 rounded-xl border border-divider bg-panel p-2 text-content shadow-lg ring-0"
       >
-        <PopoverHeader className="gap-2 rounded-xl bg-btn-hover p-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-avatar-border bg-avatar text-sm font-semibold text-caption">
+        <PopoverHeader className="gap-2 rounded-lg bg-btn-hover p-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-avatar-border bg-avatar text-sm font-semibold text-caption">
               {userInitials}
             </div>
             <div className="min-w-0">
               <PopoverTitle className="truncate text-sm font-semibold text-primary-text">
                 {user?.displayName ?? 'Member'}
               </PopoverTitle>
-              <p className="truncate text-xs text-muted">{user?.email}</p>
+              <p className="truncate text-xs text-dimmed">{user?.email}</p>
             </div>
-          </div>
-          <div className="rounded-lg border border-divider bg-panel px-2 py-1.5">
-            <p className="truncate text-sm font-medium text-primary-text">{currentOrg.name}</p>
-            <p className="text-xs text-muted">{currentOrg.role}</p>
           </div>
         </PopoverHeader>
 
         <Link
-          href={`/${orgSlug}/settings`}
-          className="flex h-9 items-center gap-2 rounded-xl px-3 text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
+          href={`/${orgSlug}/profile`}
+          className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
         >
-          <Settings2 className="h-4 w-4 text-muted" />
-          Settings
+          <Settings2 className="h-3.5 w-3.5 text-muted" />
+          Profile &amp; preferences
         </Link>
         <Link
-          href={`/${orgSlug}/settings?tab=organization`}
-          className="flex h-9 items-center gap-2 rounded-xl px-3 text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
+          href={`/${orgSlug}/settings`}
+          className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
         >
-          <Settings className="h-4 w-4 text-muted" />
-          Organization settings
+          <Settings className="h-3.5 w-3.5 text-muted" />
+          Workspace settings
         </Link>
 
-        <ShellDivider className="my-1" />
-
-        <div className="px-3 py-1 text-xs font-medium uppercase text-tertiary-text">
-          Switch workspace
-        </div>
-        {otherOrganizations.length > 0 ? (
-          otherOrganizations.map(org => (
-            <button
-              key={org.id}
-              type="button"
-              onClick={() => onSwitchOrg(org.slug)}
-              disabled={switchingOrgSlug === org.slug}
-              className="flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-left text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption disabled:cursor-wait disabled:opacity-60"
-            >
-              <Shuffle className="h-4 w-4 shrink-0 text-muted" />
-              <span className="min-w-0 flex-1 truncate">{org.name}</span>
-              <span className="shrink-0 text-xs text-muted">{org.role}</span>
-            </button>
-          ))
-        ) : (
-          <div className="rounded-xl px-3 py-2 text-sm text-muted">
-            No other workspaces available.
-          </div>
-        )}
-
-        <ShellDivider className="my-1" />
+        <ShellDivider className="my-1.5" />
 
         <button
           type="button"
           onClick={onLogout}
-          className="flex h-9 w-full items-center gap-2 rounded-xl px-3 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+          className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm text-danger transition-colors hover:bg-danger/10"
         >
-          <LogOut className="h-4 w-4" />
-          Log out
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
         </button>
       </PopoverContent>
     </Popover>
   )
 }
 
-/**
- * Vertical application rail for workspace navigation and account actions.
- */
+/* ─── Workspace rail ────────────────────────────────────────────── */
 export function WorkspaceRail({
   orgSlug,
   apps,
@@ -282,93 +294,94 @@ export function WorkspaceRail({
   onLogout,
   userInitials,
 }: WorkspaceRailProps) {
-  const topApps = apps.filter(a => a.position === 'top')
-  const midApps = apps.filter(a => !a.position || (a.position !== 'top' && a.position !== 'bottom'))
-  const bottomApps = apps.filter(a => a.position === 'bottom')
 
   function isActive(item: WorkspaceRailItem) {
     return currentPath === item.href || currentPath.startsWith(item.href + '/')
   }
 
+  // Build ordered list of unique groups
+  const groups = [...new Set(apps.map(a => a.group).filter(Boolean))] as string[]
+
+  // Map group → items
+  const byGroup = apps.reduce<Record<string, WorkspaceRailItem[]>>((acc, app) => {
+    const key = app.group ?? '__ungrouped'
+    acc[key] = acc[key] ?? []
+    acc[key].push(app)
+    return acc
+  }, {})
+
+  const ungrouped = byGroup['__ungrouped'] ?? []
+  const dashboardHref = `/${orgSlug}/dashboard`
+
   return (
-    <aside
-      className={cn(
-        'flex flex-col items-center justify-between shrink-0',
-        'h-full',
-        'w-17',
-        'bg-nav',
-        'border-r border-nav-divider',
-      )}
-    >
-      <div className="flex flex-col items-center mt-5 w-full">
-        <div className="mb-1">
-          <HomeButton orgSlug={orgSlug} currentPath={currentPath} />
-        </div>
-
-        {topApps.map(app => (
-          <AppButton
-            key={app.id}
-            item={app}
-            isActive={isActive(app)}
-            navigatorVisible={navigatorVisible}
-          />
-        ))}
-
-        {topApps.length > 0 && (midApps.length > 0 || bottomApps.length > 0) && (
-          <ShellDivider className="mx-auto mt-4 w-9" />
-        )}
-
-        <div className="flex flex-col items-center gap-1 w-full overflow-y-auto no-scrollbar px-3 py-2">
-          {midApps.map(app => (
-            <AppButton
-              key={app.id}
-              item={app}
-              isActive={isActive(app)}
-              navigatorVisible={navigatorVisible}
-            />
-          ))}
-        </div>
-
-        {bottomApps.length > 0 && (
-          <>
-            <ShellDivider className="mx-auto mt-4 w-9" />
-            <div className="flex flex-col items-center gap-1 w-full px-3 py-2">
-              {bottomApps.map(app => (
-                <AppButton
-                  key={app.id}
-                  item={app}
-                  isActive={isActive(app)}
-                  navigatorVisible={navigatorVisible}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div
-        className={cn(
-          'flex flex-col items-center gap-1 w-full',
-          'mb-5 pt-4',
-          'border-t border-nav-divider',
-        )}
-      >
-
-        <AccountPopover
+    <aside className="flex h-full w-[220px] shrink-0 flex-col border-r border-nav-divider bg-nav">
+      {/* Org header */}
+      <div className="shrink-0 px-3 pt-3 pb-1">
+        <OrgHeader
           orgSlug={orgSlug}
-          user={user}
           currentOrg={currentOrg}
           organizations={organizations}
           switchingOrgSlug={switchingOrgSlug}
           onSwitchOrg={onSwitchOrg}
-          onLogout={onLogout}
+        />
+      </div>
+
+      {/* Nav */}
+      <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-2">
+        <NavItem
+          icon={Home}
+          label="Home"
+          href={dashboardHref}
+          isActive={currentPath === dashboardHref || currentPath === `/${orgSlug}`}
+        />
+
+        {ungrouped.map(app => (
+          <NavItem
+            key={app.id}
+            icon={app.icon}
+            label={app.label}
+            href={app.href}
+            isActive={isActive(app)}
+            notify={app.notify}
+          />
+        ))}
+
+        {groups.map(group => (
+          <div key={group} className="mt-6">
+            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-dimmed">
+              {group}
+            </p>
+            {(byGroup[group] ?? []).map(app => (
+              <NavItem
+                key={app.id}
+                icon={app.icon}
+                label={app.label}
+                href={app.href}
+                isActive={isActive(app)}
+                notify={app.notify}
+              />
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      {/* Subtle separator */}
+      <div className="mx-3 h-px bg-nav-divider opacity-60" />
+
+      {/* User section */}
+      <div className="shrink-0 px-3 py-3">
+        <UserSection
+          orgSlug={orgSlug}
+          user={user}
           userInitials={userInitials}
+          onLogout={onLogout}
         />
       </div>
     </aside>
   )
 }
 
+/* ─── Addon panel internals ─────────────────────────────────────── */
 function CalendarAddonPanel() {
   const today = new Date()
   const days = Array.from({ length: 14 }, (_, index) => {
@@ -395,7 +408,7 @@ function CalendarAddonPanel() {
               type="button"
               className={cn(
                 'flex h-10 flex-col items-center justify-center rounded-lg text-xs transition-colors',
-                isToday ? 'bg-primary/10 text-accent-txt' : 'text-content hover:bg-btn-hover',
+                isToday ? 'bg-accent/10 text-accent-txt' : 'text-content hover:bg-btn-hover',
               )}
             >
               <span className="text-[10px] text-muted">
@@ -419,8 +432,8 @@ function AddonContent({
 }) {
   if (activeView === 'add') {
     return (
-      <div className="space-y-2">
-        <p className="px-1 text-xs font-medium text-muted">Add a panel view</p>
+      <div className="space-y-1">
+        <p className="px-1 pb-1 text-xs font-medium text-muted">Add a panel</p>
         {utilityActions.map(action => {
           const Icon = action.icon
           return (
@@ -428,7 +441,7 @@ function AddonContent({
               key={action.id}
               type="button"
               onClick={() => onSelectView(action.id)}
-              className="flex h-10 w-full items-center gap-3 rounded-lg px-2 text-left text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
+              className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-content transition-colors hover:bg-btn-hover hover:text-caption"
             >
               <Icon className="h-4 w-4 text-muted" />
               <span>{action.title}</span>
@@ -438,12 +451,8 @@ function AddonContent({
       </div>
     )
   }
-
   if (activeView === 'calendar') return <CalendarAddonPanel />
-
-  if (activeView === 'copilot') {
-    return <AiChatPanel compact={true} />
-  }
+  if (activeView === 'copilot') return <AiChatPanel compact={true} />
   return null
 }
 
@@ -459,7 +468,7 @@ function WorkspaceAddonPanel({
   onSelectView: (view: UtilityActionId) => void
 }) {
   const action = activeView === 'add'
-    ? { title: 'Add view', icon: Plus }
+    ? { title: 'Add panel', icon: Plus }
     : utilityActions.find(item => item.id === activeView) ?? utilityActions[0]
   const Icon = action.icon
   const aiPanel = activeView === 'copilot'
@@ -467,22 +476,23 @@ function WorkspaceAddonPanel({
   return (
     <aside
       className={cn(
-        'flex h-full w-90 shrink-0 flex-col overflow-hidden rounded-xl border',
-        aiPanel ? 'border-blue-100 bg-[#f7f9ff]' : 'border-nav-divider bg-panel',
+        'flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-l',
+        aiPanel ? 'border-blue-100/60 bg-[#f8faff]' : 'border-divider bg-panel',
       )}
       aria-label={`${action.title} panel`}
     >
-      <div className={cn('flex h-14 shrink-0 items-center justify-between border-b px-4', aiPanel ? 'border-blue-100' : 'border-nav-divider')}>
+      <div className={cn(
+        'flex h-11 shrink-0 items-center justify-between px-4',
+        aiPanel ? 'border-b border-blue-100/60' : 'border-b border-divider',
+      )}>
         <div className="flex min-w-0 items-center gap-2">
-          <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', aiPanel ? 'bg-white text-[#2f6fed] shadow-sm ring-1 ring-blue-100' : 'bg-btn-hover text-caption')}>
-            <Icon className="h-4 w-4" />
-          </span>
-          <h2 className="truncate text-sm font-semibold text-primary-text">{action.title}</h2>
+          <Icon className={cn('h-4 w-4 shrink-0', aiPanel ? 'text-blue-500' : 'text-muted')} />
+          <h2 className="truncate text-[13px] font-semibold text-primary-text">{action.title}</h2>
         </div>
-        <div className="flex items-center gap-1">
-          <ShellIconActionButton title="Expand panel" icon={Maximize2} onClick={onExpand} />
-          <ShellIconActionButton title="Panel options" icon={MoreVertical} />
-          <ShellIconActionButton title="Close panel" icon={X} onClick={onClose} />
+        <div className="flex items-center gap-0.5">
+          <ShellIconActionButton title="Expand" icon={Maximize2} onClick={onExpand} />
+          <ShellIconActionButton title="Options" icon={MoreVertical} />
+          <ShellIconActionButton title="Close" icon={X} onClick={onClose} />
         </div>
       </div>
 
@@ -493,10 +503,10 @@ function WorkspaceAddonPanel({
   )
 }
 
+/* ─── Utility rail (right side) ─────────────────────────────────── */
 export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: string; currentPath: string }) {
   const router = useRouter()
 
-  // Initialize state from localStorage
   const getSavedState = () => {
     if (typeof window === 'undefined') return { activeView: 'calendar' as AddonViewId, panelOpen: false }
     const saved = localStorage.getItem('workspace-panel-state')
@@ -518,7 +528,6 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
   const currentPathOnly = currentPath.split('?')[0]
   const copilotExpanded = currentPathOnly.endsWith('/copilot')
 
-  // Restore panel state on mount (only if copilot is not expanded to full page)
   useEffect(() => {
     if (!copilotExpanded && initialState.panelOpen) {
       setPanelOpen(true)
@@ -526,11 +535,9 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
     }
   }, [])
 
-  // Persist panel state whenever it changes
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const state = { activeView, panelOpen }
-    localStorage.setItem('workspace-panel-state', JSON.stringify(state))
+    localStorage.setItem('workspace-panel-state', JSON.stringify({ activeView, panelOpen }))
   }, [activeView, panelOpen])
 
   const conflictingAddon = useMemo(() => getConflictingAddon(currentPath), [currentPath])
@@ -542,24 +549,19 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
   const activeSessionId = useAiAgentStore(state => state.activeSessionId)
 
   useEffect(() => {
-    if (panelOpen && activeView === conflictingAddon) {
-      setPanelOpen(false)
-    }
+    if (panelOpen && activeView === conflictingAddon) setPanelOpen(false)
   }, [activeView, conflictingAddon, panelOpen])
 
   useEffect(() => {
     if (aiPanelOpenRequest > 0 && conflictingAddon !== 'copilot') {
-      setActiveView('copilot')
-      setPanelOpen(true)
+      setActiveView('copilot'); setPanelOpen(true)
     }
   }, [aiPanelOpenRequest, conflictingAddon])
 
   useEffect(() => {
     if (!aiPanelOpenAfterNavigation || copilotExpanded) return
-    setActiveView('copilot')
-    setPanelOpen(true)
-    setCopilotDisplayMode('addon')
-    consumeOpenAiPanelAfterNavigation()
+    setActiveView('copilot'); setPanelOpen(true)
+    setCopilotDisplayMode('addon'); consumeOpenAiPanelAfterNavigation()
   }, [aiPanelOpenAfterNavigation, consumeOpenAiPanelAfterNavigation, copilotExpanded, setCopilotDisplayMode])
 
   function openView(view: AddonViewId) {
@@ -580,8 +582,7 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
       router.push(`${basePath}/copilot${params.toString() ? `?${params.toString()}` : ''}`)
       return
     }
-    setActiveView(view)
-    setPanelOpen(true)
+    setActiveView(view); setPanelOpen(true)
   }
 
   function expandPanel() {
@@ -589,8 +590,7 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
       const params = new URLSearchParams()
       if (activeSessionId) params.set('session', activeSessionId)
       if (!copilotExpanded) params.set('from', currentPath)
-      setCopilotDisplayMode('expanded')
-      setPanelOpen(false)
+      setCopilotDisplayMode('expanded'); setPanelOpen(false)
       router.push(`${basePath}/copilot${params.toString() ? `?${params.toString()}` : ''}`)
       return
     }
@@ -608,42 +608,37 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
         />
       )}
 
+      {/* Right icon strip */}
       <aside
-        className={cn(
-          'flex h-full w-15 shrink-0 flex-col items-center justify-between',
-          'bg-nav border border-nav-divider',
-          'rounded-xl',
-        )}
+        className="flex h-full w-[52px] shrink-0 flex-col items-center border-l border-nav-divider bg-nav"
         aria-label="Quick actions"
       >
-        <div className="flex w-full flex-col items-center gap-1 px-2 pt-5">
+        <div className="flex w-full flex-col items-center gap-0.5 px-1.5 pt-3">
           <ShellIconActionButton
-            title={panelOpen ? 'Close side panel' : 'Open side panel'}
+            title={panelOpen ? 'Close panel' : 'Open panel'}
             icon={PanelRight}
             active={panelOpen}
             onClick={() => setPanelOpen((open: boolean) => !open)}
           />
-          <ShellDivider className="my-2 w-8" />
+          <ShellDivider className="my-2 w-7" />
           {utilityActions.map(action => (
             <ShellIconActionButton
               key={action.id}
-              title={action.id === conflictingAddon ? `${action.title} is already open` : action.title}
+              title={action.id === conflictingAddon ? `${action.title} already open` : action.title}
               icon={action.icon}
               active={(panelOpen && activeView === action.id) || (action.id === 'copilot' && copilotExpanded)}
               disabled={action.id === conflictingAddon}
               onClick={() => openView(action.id)}
             />
           ))}
-          <ShellDivider className="my-2 w-8" />
+          <ShellDivider className="my-2 w-7" />
           <ShellIconActionButton
-            title="Add view"
+            title="Add panel"
             icon={Plus}
             active={panelOpen && activeView === 'add'}
             onClick={() => openView('add')}
           />
         </div>
-
-
       </aside>
     </>
   )

@@ -66,6 +66,19 @@ export type AiChatResponse = {
   traceId?: string | null
 }
 
+export type AiChatStreamEvent =
+  | { type: 'start'; threadId: string; traceId?: string | null }
+  | { type: 'token'; content: string }
+  | { type: 'answer'; answer: string }
+  | {
+      type: 'final'
+      answer: string
+      threadId: string
+      sources?: AiSource[]
+      proposedActions: AiProposedAction[]
+      traceId?: string | null
+    }
+
 export type AiFileMetadata = {
   fileId: string
   sourceUrl?: string | null

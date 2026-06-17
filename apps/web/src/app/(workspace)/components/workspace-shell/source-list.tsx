@@ -27,7 +27,7 @@ function SourcePill({
       onClick={hasLink || onOpen ? handleClick : undefined}
       className={
         `group flex w-full items-start gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2.5 text-left shadow-sm transition-colors ` +
-        (hasLink || onOpen ? 'hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer' : 'cursor-default')
+        (hasLink || onOpen ? 'hover:border-gray-300 hover:bg-gray-50 cursor-pointer' : 'cursor-default')
       }
     >
       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
@@ -46,7 +46,7 @@ function SourcePill({
       </div>
 
       {(hasLink || onOpen) && (
-        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-blue-400" />
+        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-gray-500" />
       )}
     </button>
   )

@@ -2,9 +2,9 @@
 
 from typing import Annotated
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
+from langchain.tools import ToolRuntime, tool
 
+from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.services.workspace_service import (
     get_mail_thread,
     list_mail_accounts,
@@ -13,19 +13,9 @@ from src.services.workspace_service import (
 )
 
 
-def _get_auth_token(config: RunnableConfig) -> str:
-    return config.get("configurable", {}).get("agent_context", {}).get("auth_token", "")
-
-
-@tool(
-    description=(
-        "List connected mail accounts for this workspace. "
-        "Returns account email addresses and their status. "
-        "Use this to see which mail accounts are available."
-    )
-)
-def list_mail_accounts_tool(config: RunnableConfig) -> str:
-    auth_token = _get_auth_token(config)
+@tool(description="List connected mail accounts for this workspace.")
+def list_mail_accounts_tool(runtime: ToolRuntime[AgentContext]) -> str:
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -43,18 +33,12 @@ def list_mail_accounts_tool(config: RunnableConfig) -> str:
         return f"Error listing mail accounts: {e}"
 
 
-@tool(
-    description=(
-        "List recent mail threads (email conversations). "
-        "Returns subject, sender, snippet, date, and thread ID. "
-        "Use this to browse recent emails or find a specific thread."
-    )
-)
+@tool(description="List recent mail threads (email conversations) with subject, sender, snippet, and date.")
 def list_mail_threads_tool(
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
     limit: Annotated[int, "Maximum number of threads to return (default 20)"] = 20,
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -74,39 +58,24 @@ def list_mail_threads_tool(
         return f"Error listing mail threads: {e}"
 
 
-@tool(
-    description=(
-        "Search mail threads by keyword across subject, sender, and snippet. "
-        "Returns matching threads with their details. "
-        "Use this to find specific emails or email conversations."
-    )
-)
+@tool(description="Search mail threads by keyword across subject, sender, and snippet.")
 def search_mail_threads_tool(
     query: Annotated[str, "Keyword or phrase to search for in mail threads"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
         threads = list_mail_threads(auth_token, limit=50)
         terms = {t.lower() for t in query.split() if len(t) > 2}
-        matches = []
-        for t in threads:
-            haystack = " ".join(
-                filter(
-                    None,
-                    [
-                        t.get("subject"),
-                        t.get("from"),
-                        t.get("senderName"),
-                        t.get("snippet"),
-                        t.get("preview"),
-                    ],
-                )
-            ).lower()
-            if any(term in haystack for term in terms):
-                matches.append(t)
+        matches = [
+            t for t in threads
+            if any(
+                term in " ".join(filter(None, [t.get("subject"), t.get("from"), t.get("senderName"), t.get("snippet"), t.get("preview")])).lower()
+                for term in terms
+            )
+        ]
         if not matches:
             return f"No mail threads found matching '{query}'."
         lines = [f"Mail threads matching '{query}':"]
@@ -122,18 +91,12 @@ def search_mail_threads_tool(
         return f"Error searching mail: {e}"
 
 
-@tool(
-    description=(
-        "Read the full content of a specific mail thread by its ID. "
-        "Returns all messages in the thread with sender, date, and body. "
-        "Use list_mail_threads_tool first to find the thread ID."
-    )
-)
+@tool(description="Read the full content of a specific mail thread by ID. Returns all messages with sender, date, and body.")
 def get_mail_thread_tool(
     thread_id: Annotated[str, "The mail thread ID to read"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -156,29 +119,25 @@ def get_mail_thread_tool(
 @tool(
     description=(
         "Send a new email from the user's connected mail account. "
-        "Use only when the user explicitly asks to send an email and has provided "
-        "the recipients, subject, and body."
+        "Use only when the user explicitly asks to send an email."
     )
 )
 def send_email_tool(
     to: Annotated[list[str], "Recipient email addresses"],
     subject: Annotated[str, "Email subject"],
     body: Annotated[str, "Plain text email body"],
-    config: RunnableConfig,
-    cc: Annotated[list[str] | None, "Optional CC email addresses"] = None,
-    bcc: Annotated[list[str] | None, "Optional BCC email addresses"] = None,
+    runtime: ToolRuntime[AgentContext],
+    cc: Annotated[list[str] | None, "Optional CC addresses"] = None,
+    bcc: Annotated[list[str] | None, "Optional BCC addresses"] = None,
     account_id: Annotated[str | None, "Optional connected mail account ID to send from"] = None,
 ) -> str:
-    auth_token = _get_auth_token(config)
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     if not to:
         return "Cannot send email without at least one recipient."
-    if not subject.strip():
-        return "Cannot send email without a subject."
-    if not body.strip():
-        return "Cannot send email without a body."
-
+    if not subject.strip() or not body.strip():
+        return "Cannot send email without a subject and body."
     payload: dict = {"to": to, "subject": subject, "body": body}
     if cc:
         payload["cc"] = cc
@@ -186,11 +145,8 @@ def send_email_tool(
         payload["bcc"] = bcc
     if account_id:
         payload["accountId"] = account_id
-
     try:
         result = send_mail(auth_token, payload)
-        if result.get("success"):
-            return f"Email sent to {', '.join(to)} with subject '{subject}'."
-        return f"Email send request completed: {result}"
+        return f"Email sent to {', '.join(to)} with subject '{subject}'." if result.get("success") else f"Send result: {result}"
     except Exception as e:
         return f"Error sending email: {e}"

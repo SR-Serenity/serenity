@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str | None = None
 
     OPENAI_API_KEY: str | None = None
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MODEL: str = "gpt-5.4-mini"
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     OPENAI_FINAL_TRANSCRIPTION_MODEL: str = "gpt-4o-transcribe-diarize"
     OPENAI_REALTIME_TRANSCRIPTION_MODEL: str = "gpt-4o-transcribe"
