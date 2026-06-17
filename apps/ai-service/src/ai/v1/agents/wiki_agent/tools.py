@@ -2,16 +2,12 @@
 
 from typing import Annotated
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
+from langchain.tools import ToolRuntime, tool
 
 from src.ai.v1.agents.wiki_agent.editor import wiki_editor_logic
+from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.ai.v1.documents.index_store import get_index_store
 from src.services.workspace_service import get_wiki_page, list_wiki_pages
-
-
-def _get_agent_context(config: RunnableConfig) -> dict:
-    return config.get("configurable", {}).get("agent_context", {})
 
 
 @tool(
@@ -21,9 +17,8 @@ def _get_agent_context(config: RunnableConfig) -> dict:
         "Use this to discover what knowledge articles exist before reading a specific one."
     )
 )
-def list_wiki_pages_tool(config: RunnableConfig) -> str:
-    context = _get_agent_context(config)
-    auth_token: str = context.get("auth_token", "")
+def list_wiki_pages_tool(runtime: ToolRuntime[AgentContext]) -> str:
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -51,9 +46,9 @@ def list_wiki_pages_tool(config: RunnableConfig) -> str:
 )
 def get_wiki_page_tool(
     page_id: Annotated[str, "The wiki page UUID to read"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    auth_token: str = _get_agent_context(config).get("auth_token", "")
+    auth_token = runtime.context.auth_token
     if not auth_token:
         return "No auth token available."
     try:
@@ -77,22 +72,16 @@ def get_wiki_page_tool(
 )
 def search_wiki_pages_tool(
     query: Annotated[str, "Keyword or phrase to search for in wiki pages"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    context = _get_agent_context(config)
-    auth_token: str = context.get("auth_token", "")
-    org_id: str = context.get("org_id", "")
+    auth_token = runtime.context.auth_token
+    org_id = runtime.context.org_id
     if not auth_token:
         return "No auth token available."
     try:
         store = get_index_store()
         if org_id:
-            results = store.search(
-                org_id=org_id,
-                source_type="wiki",
-                query=query,
-                limit=5,
-            )
+            results = store.search(org_id=org_id, source_type="wiki", query=query, limit=5)
             if results:
                 lines = [f"Wiki pages matching '{query}':"]
                 for result in results:
@@ -111,9 +100,7 @@ def search_wiki_pages_tool(
         terms = {t.lower() for t in query.split() if len(t) > 2}
         matches = []
         for p in pages:
-            haystack = (
-                (p.get("title") or "") + " " + (p.get("contentMarkdown") or "")
-            ).lower()
+            haystack = ((p.get("title") or "") + " " + (p.get("contentMarkdown") or "")).lower()
             if any(t in haystack for t in terms):
                 matches.append(p)
         if not matches:
@@ -139,19 +126,17 @@ def search_wiki_pages_tool(
 )
 def edit_wiki_page_tool(
     instruction: Annotated[str, "What to change — be specific about the section and what to do"],
-    config: RunnableConfig,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
-    context = _get_agent_context(config)
-    auth_token: str = context.get("auth_token", "")
-    page_id: str = context.get("wiki_page_id", "")
-    if not auth_token:
+    ctx = runtime.context
+    if not ctx.auth_token:
         return "No auth token available."
-    if not page_id:
+    if not ctx.wiki_page_id:
         return "No wiki page is currently open. Cannot edit."
     try:
-        page = get_wiki_page(auth_token, page_id)
+        page = get_wiki_page(ctx.auth_token, ctx.wiki_page_id)
         if not page:
-            return f"Wiki page {page_id} not found."
+            return f"Wiki page {ctx.wiki_page_id} not found."
         page_title = page.get("title", "Untitled")
         page_content = page.get("contentMarkdown") or ""
         explanation, updated_content = wiki_editor_logic.edit(
@@ -159,8 +144,8 @@ def edit_wiki_page_tool(
             page_content_markdown=page_content,
             prompt=instruction,
         )
-        context["_pending_edit"] = {
-            "pageId": page_id,
+        ctx.pending_edit = {
+            "pageId": ctx.wiki_page_id,
             "title": page_title,
             "contentMarkdown": updated_content,
         }

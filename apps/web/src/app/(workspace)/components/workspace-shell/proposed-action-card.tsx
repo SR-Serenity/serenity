@@ -78,13 +78,13 @@ function MemberPicker({
         {selectedMembers.map(m => (
           <span
             key={m.id}
-            className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+            className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
           >
             {m.displayName}
             <button
               type="button"
               onClick={() => onChange(selected.filter(id => id !== m.id))}
-              className="hover:text-blue-900"
+              className="hover:text-gray-900"
             >
               <X className="size-2.5" />
             </button>
@@ -107,7 +107,7 @@ function MemberPicker({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search members…"
-            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400"
+            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-gray-400"
           />
           {available.length > 0 && (
             <div className="absolute top-full mt-1 max-h-36 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-md">
@@ -140,7 +140,7 @@ function MemberPicker({
 }
 
 function inputCls() {
-  return 'w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-400'
+  return 'w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-gray-400'
 }
 
 function labelCls() {
@@ -433,7 +433,7 @@ function TaskForm({
         </label>
         <textarea
           rows={2}
-          className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-400"
+          className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-gray-400"
           value={String(payload.description ?? '')}
           onChange={e => onChange({ ...payload, description: e.target.value || null })}
         />
@@ -634,12 +634,12 @@ export function ProposedActionCard({
   }
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-white px-3 py-2.5 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
       <div className="flex items-center gap-2">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500">
           <Icon className="size-3.5" />
         </span>
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
           {ACTION_LABELS[action.type]}
         </p>
       </div>
@@ -662,7 +662,7 @@ export function ProposedActionCard({
           type="button"
           disabled={cardState === 'confirming'}
           onClick={() => void handleConfirm()}
-          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-60"
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-gray-900 text-xs font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
         >
           {cardState === 'confirming' ? (
             <Loader2 className="size-3.5 animate-spin" />

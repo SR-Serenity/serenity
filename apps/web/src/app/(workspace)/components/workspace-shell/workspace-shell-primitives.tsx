@@ -34,7 +34,7 @@ export function ShellIconActionButton({
     'transition-all duration-150 ease-out',
     'focus-visible:border-focus focus-visible:bg-primary/10',
     isCopilot
-      ? 'copilot-sparkle-btn'
+      ? (active ? 'bg-primary/10 text-accent-txt' : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption')
       : active
         ? 'bg-primary/10 text-accent-txt'
         : 'bg-transparent text-nav-icon hover:bg-btn-hover hover:text-caption',
@@ -44,7 +44,7 @@ export function ShellIconActionButton({
 
   const iconClasses = cn(
     'h-[18px] w-[18px]',
-    isCopilot ? 'text-violet-600 group-hover:text-violet-500' : ''
+    isCopilot ? 'text-gray-600 group-hover:text-gray-900' : ''
   )
 
   if (as === 'link' && href) {

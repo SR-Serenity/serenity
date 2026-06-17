@@ -7,10 +7,10 @@ import Link from 'next/link'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { ChatConversation } from '@serenity/api'
 import {
+  Bot,
   Building2,
   Calendar,
   CheckSquare,
-  ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
@@ -19,11 +19,13 @@ import {
   Loader2,
   Lock,
   Mail,
+  Maximize2,
   MessageSquare,
   Plus,
   Search,
   UserSquare,
   Users,
+  X,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
@@ -33,12 +35,12 @@ import { useChatStore } from '@/stores/chat-store'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { WorkspaceHeader } from '@/app/(workspace)/components/workspace-shell/workspace-header'
-import { ShellDivider, ShellSectionHeader } from '@/app/(workspace)/components/workspace-shell/workspace-shell-primitives'
+import { ShellDivider, ShellIconActionButton, ShellSectionHeader } from '@/app/(workspace)/components/workspace-shell/workspace-shell-primitives'
 import {
   WorkspaceRail,
-  WorkspaceUtilityRail,
   type WorkspaceRailItem,
 } from '@/app/(workspace)/components/workspace-shell/workspace-rail'
+import { AiChatPanel } from '@/app/(workspace)/components/workspace-shell/ai-agent-panel'
 
 type WorkspaceLayoutProps = { children: ReactNode }
 
@@ -60,14 +62,14 @@ interface NavSection {
 
 function buildApps(basePath: string): WorkspaceRailItem[] {
   return [
-    { id: 'planner', icon: Calendar, label: 'Planner', href: `${basePath}/calendar` },
-    { id: 'tasks', icon: CheckSquare, label: 'Tasks', href: `${basePath}/tasks` },
-    { id: 'office', icon: Building2, label: 'Office', href: `${basePath}/office` },
-    { id: 'contact', icon: UserSquare, label: 'Contact', href: `${basePath}/contact` },
-    { id: 'mail', icon: Mail, label: 'Mail', href: `${basePath}/mail` },
-    { id: 'chat', icon: MessageSquare, label: 'Chat', href: `${basePath}/chat` },
-    { id: 'wiki', icon: FileText, label: 'Wiki', href: `${basePath}/wiki` },
-    { id: 'automation', icon: Zap, label: 'Automation', href: `${basePath}/automation` },
+    { id: 'planner',    icon: Calendar,      label: 'Planner',    href: `${basePath}/calendar`,   group: 'Work' },
+    { id: 'tasks',      icon: CheckSquare,   label: 'Tasks',      href: `${basePath}/tasks`,      group: 'Work' },
+    { id: 'mail',       icon: Mail,          label: 'Mail',       href: `${basePath}/mail`,       group: 'Communicate' },
+    { id: 'chat',       icon: MessageSquare, label: 'Chat',       href: `${basePath}/chat`,       group: 'Communicate' },
+    { id: 'wiki',       icon: FileText,      label: 'Wiki',       href: `${basePath}/wiki`,       group: 'Knowledge' },
+    { id: 'contact',    icon: UserSquare,    label: 'Contacts',   href: `${basePath}/contact`,    group: 'People' },
+    { id: 'office',     icon: Building2,     label: 'Office',     href: `${basePath}/office`,     group: 'People' },
+    { id: 'automation', icon: Zap,           label: 'Automation', href: `${basePath}/automation`, group: 'Tools' },
   ]
 }
 
@@ -692,6 +694,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const setSwitchingOrgSlug = useWorkspaceStore((state) => state.setSwitchingOrgSlug)
   const chatConversations = useChatStore((state) => state.conversations)
   const loadChatConversations = useChatStore((state) => state.loadConversations)
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
   useEffect(() => {
     if (auth.initializing) return
@@ -722,14 +725,8 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   if (auth.initializing || !auth.isAuthenticated || !orgSlug || !auth.currentOrg) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ backgroundColor: 'var(--theme-back-color)' }}
-      >
-        <Loader2
-          className="h-6 w-6 animate-spin"
-          style={{ color: 'var(--global-accent-BackgroundColor)' }}
-        />
+      <div className="flex min-h-screen items-center justify-center bg-nav">
+        <Loader2 className="h-6 w-6 animate-spin text-accent" />
       </div>
     )
   }
@@ -766,116 +763,108 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   }
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-back">
-      <WorkspaceHeader
-        currentPath={pathname}
+    <div className="flex h-screen w-full overflow-hidden bg-surface">
+      {/* ── Left sidebar (full height) ── */}
+      <WorkspaceRail
         orgSlug={orgSlug}
-        activeApp={activeApp ? {
-          id: activeApp.id,
-          label: activeApp.label,
-          icon: activeApp.icon,
-          href: activeApp.href,
-        } : undefined}
+        apps={apps}
+        currentPath={pathname}
+        navigatorVisible={navigatorVisible}
+        user={auth.user}
+        currentOrg={auth.currentOrg}
+        organizations={availableOrganizations}
+        switchingOrgSlug={switchingOrgSlug}
+        onSwitchOrg={handleSwitchOrg}
+        onLogout={handleLogout}
+        userInitials={userInitials}
       />
 
-      <div className="flex min-h-0 w-full flex-1 gap-2 overflow-hidden bg-back p-2">
-        <div
-          className={cn(
-            'group/nav relative h-full min-h-0 shrink-0 overflow-visible',
-            'transition-[width] duration-200 ease-out',
-            navigatorVisible && sections.length > 0 ? 'w-87' : 'w-17',
-          )}
-        >
-          <div className="flex h-full min-h-0 overflow-hidden rounded-xl border border-nav-divider bg-nav">
-            <WorkspaceRail
-              orgSlug={orgSlug}
-              apps={apps}
-              currentPath={pathname}
-              navigatorVisible={navigatorVisible}
-              user={auth.user}
-              currentOrg={auth.currentOrg}
-              organizations={availableOrganizations}
-              switchingOrgSlug={switchingOrgSlug}
-              onSwitchOrg={handleSwitchOrg}
-              onLogout={handleLogout}
-              userInitials={userInitials}
-            />
+      {/* ── Center column: header + subnav + content ── */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <WorkspaceHeader
+          orgSlug={orgSlug}
+          activeApp={activeApp ? {
+            id: activeApp.id,
+            label: activeApp.label,
+            icon: activeApp.icon,
+            href: activeApp.href,
+          } : undefined}
+          hasSubnav={sections.length > 0}
+          navigatorVisible={navigatorVisible}
+          onToggleNavigator={() => setNavigatorVisible(v => !v)}
+          copilotOpen={copilotOpen}
+          onToggleCopilot={() => setCopilotOpen(v => !v)}
+        />
 
-            {sections.length > 0 && (
-              <div
-                aria-hidden={!navigatorVisible}
-                className={cn(
-                  'h-full min-h-0 overflow-hidden',
-                  'transition-[width,opacity,transform] duration-200 ease-out',
-                  navigatorVisible
-                    ? 'w-70 translate-x-0 opacity-100'
-                    : 'w-0 -translate-x-2 opacity-0 pointer-events-none',
-                )}
-              >
-                {activeApp?.id === 'chat' ? (
-                  <ChatSubnav
-                    basePath={basePath}
-                    conversations={chatConversations}
-                    currentPath={currentPath}
-                    currentUserId={auth.user?.id}
-                    search={chatNavSearch}
-                    onSearchChange={setChatNavSearch}
-                  />
-                ) : activeApp?.id === 'planner' ? (
-                  <PlannerSubnav
-                    basePath={basePath}
-                    currentPath={currentPath}
-                  />
-                ) : activeApp?.id === 'wiki' ? (
-                  <WikiSubnav />
-                ) : (
-                  <ModuleSubnav
-                    title={activeApp?.label ?? 'Workspace'}
-                    sections={sections}
-                    currentPath={currentPath}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* ── Subnav panel (app-specific) ── */}
           {sections.length > 0 && (
-            <button
-              type="button"
-              title={navigatorVisible ? 'Collapse menu' : 'Expand menu'}
-              onClick={() => setNavigatorVisible(visible => !visible)}
+            <div
+              aria-hidden={!navigatorVisible}
               className={cn(
-                'absolute right-0 top-1/2 z-20 flex h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center',
-                'rounded-full border border-nav-divider bg-panel text-muted shadow-sm outline-none',
-                'opacity-0 transition-all duration-150 ease-out',
-                'hover:bg-btn-hover hover:text-caption',
-                'focus-visible:border-focus focus-visible:opacity-100',
-                'group-hover/nav:opacity-100',
+                'h-full shrink-0 overflow-hidden border-r border-divider/60 bg-nav',
+                'transition-[width] duration-200 ease-out',
+                navigatorVisible ? 'w-[280px]' : 'w-0 pointer-events-none',
               )}
             >
-              {navigatorVisible ? (
-                <ChevronLeft className="h-4 w-4" />
+              {activeApp?.id === 'chat' ? (
+                <ChatSubnav
+                  basePath={basePath}
+                  conversations={chatConversations}
+                  currentPath={currentPath}
+                  currentUserId={auth.user?.id}
+                  search={chatNavSearch}
+                  onSearchChange={setChatNavSearch}
+                />
+              ) : activeApp?.id === 'planner' ? (
+                <PlannerSubnav basePath={basePath} currentPath={currentPath} />
+              ) : activeApp?.id === 'wiki' ? (
+                <WikiSubnav />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ModuleSubnav
+                  title={activeApp?.label ?? 'Workspace'}
+                  sections={sections}
+                  currentPath={currentPath}
+                />
               )}
-            </button>
-          )}
-        </div>
-
-        <div
-          className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border',
-            activeApp?.id === 'chat' || activeApp?.id === 'tasks' ? 'border-gray-200 bg-white' : 'border-divider bg-surface',
-          )}
-        >
-          <main className="min-h-0 flex-1 overflow-hidden">
-            <div className="h-full w-full overflow-y-auto no-scrollbar">
-              {children}
             </div>
-          </main>
-        </div>
+          )}
 
-        <WorkspaceUtilityRail basePath={basePath} currentPath={currentPath} />
+          {/* ── Main content ── */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-panel">
+            <main className="min-h-0 flex-1 overflow-hidden">
+              <div className="h-full w-full overflow-y-auto no-scrollbar">
+                {children}
+              </div>
+            </main>
+          </div>
+
+          {/* ── Copilot panel ── */}
+          {copilotOpen && (
+            <aside className="flex h-full w-[420px] shrink-0 flex-col overflow-hidden border-l border-blue-100/60 bg-[#f8faff]">
+              <div className="flex h-11 shrink-0 items-center justify-between border-b border-blue-100/60 px-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Bot className="h-4 w-4 shrink-0 text-blue-500" />
+                  <h2 className="truncate text-[13px] font-semibold text-primary-text">Copilot</h2>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <ShellIconActionButton
+                    title="Expand"
+                    icon={Maximize2}
+                    onClick={() => {
+                      setCopilotOpen(false)
+                      router.push(`${basePath}/copilot`)
+                    }}
+                  />
+                  <ShellIconActionButton title="Close" icon={X} onClick={() => setCopilotOpen(false)} />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden px-4 py-3">
+                <AiChatPanel compact={true} />
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -44,7 +44,9 @@ def build_chat_prompt(context: dict) -> str:
     conversation_id = context.get("conversation_id")
     if conversation_id:
         prompt += (
-            f"\n\n<ACTIVE_CONTEXT>Chat conversation ID {conversation_id} is currently open. "
-            f"Call get_conversation_messages_tool(conversation_id='{conversation_id}') FIRST before responding.</ACTIVE_CONTEXT>"
+            f"\n\n<ACTIVE_CONTEXT>Chat conversation ID {conversation_id} is currently open in the user's browser. "
+            f"If the user refers to 'this conversation', 'this channel', or is clearly asking about messages here, "
+            f"call get_conversation_messages_tool(conversation_id='{conversation_id}') first. "
+            f"For broader searches or unrelated questions, use search_all_messages_tool instead.</ACTIVE_CONTEXT>"
         )
     return prompt

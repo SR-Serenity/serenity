@@ -403,6 +403,7 @@ export const NotionBlockEditor = forwardRef<NotionBlockEditorHandle, {
         theme="light"
         slashMenu={false}
         onChange={handleEditorChange}
+        className="serenity-notion-editor"
       >
         <SuggestionMenuController
           triggerCharacter="/"

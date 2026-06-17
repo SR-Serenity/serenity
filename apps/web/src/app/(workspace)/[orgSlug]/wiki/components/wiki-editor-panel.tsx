@@ -38,16 +38,12 @@ function visibilityIcon(visibility: WikiPageVisibility) {
   return <Globe className="h-3.5 w-3.5" />
 }
 
-function visibilityLabel(visibility: WikiPageVisibility, deptName?: string | null) {
-  if (visibility === 'PRIVATE') return 'Private'
-  if (visibility === 'DEPARTMENT') return deptName ?? 'Department'
-  return 'Workspace'
-}
 
 export function WikiEditorPanel() {
   const params = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [sharePanelOpen, setSharePanelOpen] = useState(false)
+  const [localCoverColor, setLocalCoverColor] = useState<string | null | undefined>(undefined)
   const editorRef = useRef<NotionBlockEditorHandle>(null)
   const { token, currentOrg, user } = useAuthStore(useShallow(state => ({ token: state.token, currentOrg: state.currentOrg, user: state.user })))
   const isAdmin = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN'
@@ -127,7 +123,7 @@ export function WikiEditorPanel() {
     createPage(token, params.orgSlug, visibility, dept?.id ?? null, dept?.name ?? null, path => router.push(path))
   }
 
-  const coverColor = selectedPage?.coverColor ?? null
+  const coverColor = localCoverColor !== undefined ? localCoverColor : (selectedPage?.coverColor ?? null)
 
   if (loading && !selectedPage) {
     return (
@@ -171,69 +167,72 @@ export function WikiEditorPanel() {
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-white text-[#37352f] [color-scheme:light]">
+    <div className="relative flex h-full flex-col bg-[#ffffff] text-[#37352f] [color-scheme:light]">
       {error && (
         <div className="shrink-0 border-b border-red-100 bg-red-50 px-6 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      {/* Notion-style top action bar */}
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#e9e9e7] px-6">
-        <div className="flex items-center gap-2 text-[13px] text-[#9b9a97]">
-          {visibilityIcon(selectedPage.visibility)}
-          <span>{visibilityLabel(selectedPage.visibility, selectedPage.departmentName)}</span>
-          <span className="text-[#c7c5bf]">·</span>
+      {/* Top action bar */}
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-[#f0efed] bg-white/80 px-4 backdrop-blur-sm">
+        {/* Left: save status */}
+        <div className="flex items-center gap-1.5 text-[12px] text-[#b0aea8]">
           {saving ? (
-            <span className="flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> Saving…
-            </span>
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Saving…</span>
+            </>
           ) : dirty ? (
-            <span>Unsaved</span>
+            <span>Unsaved changes</span>
           ) : (
-            <span>Saved</span>
+            <span className="text-[#c7c5bf]">Saved</span>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setSharePanelOpen(open => !open)}
-            title="Share"
-            className={cn(
-              'flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-[#9b9a97] hover:bg-[#f1f1ef]',
-              sharePanelOpen && 'bg-[#f1f1ef]',
-            )}
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            <span>Share</span>
-          </button>
+
+        {/* Right: actions */}
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={handleToggleFavorite}
             title={selectedPage.favorite ? 'Remove from favorites' : 'Add to favorites'}
             className={cn(
-              'flex h-7 w-7 items-center justify-center rounded-md text-[#9b9a97] hover:bg-[#f1f1ef]',
-              selectedPage.favorite && 'text-amber-500',
+              'flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-[#f1f1ef]',
+              selectedPage.favorite ? 'text-amber-400' : 'text-[#b0aea8]',
             )}
           >
-            <Star className="h-4 w-4" fill={selectedPage.favorite ? 'currentColor' : 'none'} />
+            <Star className="h-3.5 w-3.5" fill={selectedPage.favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSharePanelOpen(open => !open)}
+            title="Share"
+            className={cn(
+              'flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors',
+              sharePanelOpen
+                ? 'bg-[#ededeb] text-[#37352f]'
+                : 'text-[#787774] hover:bg-[#f1f1ef]',
+            )}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            <span>Share</span>
           </button>
           {selectedPage.canEdit && (
             <button
               type="button"
               onClick={handleDeletePage}
               title="Delete page"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#9b9a97] hover:bg-red-50 hover:text-red-500"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[#b0aea8] transition-colors hover:bg-red-50 hover:text-red-400"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
           <button
             type="button"
             title="More options"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#9b9a97] hover:bg-[#f1f1ef]"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[#b0aea8] transition-colors hover:bg-[#f1f1ef]"
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -243,34 +242,58 @@ export function WikiEditorPanel() {
         {/* Cover color strip */}
         {coverColor && (
           <div
-            className="h-32 w-full"
+            className="h-36 w-full"
             style={{ backgroundColor: coverColor }}
           />
         )}
 
-        <article className="mx-auto w-full max-w-[900px] px-24 pb-32 pt-12 max-lg:px-16 max-sm:px-6">
-          {/* Cover color picker (only when no cover set) */}
-          {!coverColor && selectedPage.canEdit && (
-            <div className="mb-4 flex items-center gap-2 opacity-0 transition-opacity hover:opacity-100 focus-within:opacity-100 group-hover:opacity-100">
-              <span className="text-xs text-[#9b9a97]">Add cover</span>
-              <div className="flex gap-1">
-                {COVER_COLORS.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => updateDraft({ ...draft })}
-                    title={color}
-                    className="h-4 w-4 rounded-full border border-[#e9e9e7]"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+        <article className={cn(
+          'mx-auto w-full max-w-[720px] pb-40 max-lg:px-12 max-sm:px-5',
+          coverColor ? 'px-20 pt-6' : 'px-20 pt-16',
+        )}>
 
-          {/* Page icon */}
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-[#f1f1ef] text-[#787774]">
-            <FileText className="h-7 w-7" />
+          {/* Page icon + cover actions */}
+          <div className="group/header mb-1 flex items-end justify-between">
+            <div className="flex h-[52px] w-[52px] items-center justify-center rounded-lg bg-[#f1f1ef] text-[#9b9a97] transition-colors hover:bg-[#ebebea]">
+              <FileText className="h-6 w-6" />
+            </div>
+
+            {/* Cover color picker — appears on hover */}
+            {selectedPage.canEdit && (
+              <div className={cn(
+                'flex items-center gap-2 opacity-0 transition-opacity group-hover/header:opacity-100',
+                !coverColor && 'mb-1',
+              )}>
+                {!coverColor && (
+                  <span className="text-[11px] font-medium text-[#b0aea8]">Add cover</span>
+                )}
+                <div className="flex gap-1">
+                  {COVER_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setLocalCoverColor(color)}
+                      title={color}
+                      className={cn(
+                        'h-4 w-4 rounded-full border-2 transition-transform hover:scale-110',
+                        coverColor === color ? 'border-[#37352f]' : 'border-transparent',
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  {coverColor && (
+                    <button
+                      type="button"
+                      onClick={() => setLocalCoverColor(null)}
+                      className="h-4 w-4 rounded-full border-2 border-transparent bg-[#e9e9e7] text-[10px] leading-none text-[#9b9a97] hover:bg-[#deded9]"
+                      title="Remove cover"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Title */}
@@ -279,39 +302,42 @@ export function WikiEditorPanel() {
             onChange={event => updateDraft({ title: event.target.value })}
             disabled={!selectedPage.canEdit}
             placeholder="Untitled"
-            className="mb-4 block w-full border-none bg-transparent text-[40px] font-bold leading-tight tracking-tight text-[#37352f] outline-none placeholder:text-[#d3d1cb] disabled:opacity-80"
+            className="mt-4 mb-1 block w-full border-none bg-transparent text-[32px] font-bold leading-snug tracking-[-0.02em] text-[#1a1a1a] outline-none placeholder:text-[#d3d1cb] disabled:cursor-default disabled:opacity-90"
           />
 
-          {/* Metadata row */}
-          <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-[#9b9a97]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#9b9a97]">{visibilityIcon(draft.visibility)}</span>
-              <select
-                value={draft.visibility}
-                onChange={event => updateDraft({ visibility: event.target.value as WikiPageVisibility })}
-                disabled={!selectedPage.canEdit}
-                className="h-7 cursor-pointer rounded border border-transparent bg-transparent px-1.5 text-[13px] text-[#787774] outline-none hover:bg-[#f1f1ef] focus:bg-white disabled:opacity-70"
-              >
-                <option value="PRIVATE">Private</option>
-                <option value="WORKSPACE">Workspace</option>
-                {isAdmin && <option value="DEPARTMENT">Department</option>}
-              </select>
-
-              {draft.visibility === 'DEPARTMENT' && (
+          {/* Metadata row — Notion-style property rows */}
+          <div className="mb-8 mt-3 flex flex-col gap-0.5 border-t border-[#f0efed] pt-3">
+            <div className="flex items-center gap-3 rounded-md px-1 py-1 transition-colors hover:bg-[#f7f6f3]">
+              <span className="flex w-28 shrink-0 items-center gap-1.5 text-[12px] text-[#9b9a97]">
+                {visibilityIcon(draft.visibility)}
+                <span>Visibility</span>
+              </span>
+              <div className="flex items-center gap-1.5">
                 <select
-                  value={draft.departmentId}
-                  onChange={event => updateDraft({ departmentId: event.target.value })}
+                  value={draft.visibility}
+                  onChange={event => updateDraft({ visibility: event.target.value as WikiPageVisibility })}
                   disabled={!selectedPage.canEdit}
-                  className="h-7 cursor-pointer rounded border border-transparent bg-transparent px-1.5 text-[13px] text-[#787774] outline-none hover:bg-[#f1f1ef] focus:bg-white disabled:opacity-70"
+                  className="h-6 cursor-pointer rounded border border-transparent bg-transparent px-1 text-[13px] text-[#37352f] outline-none hover:bg-[#ededeb] focus:bg-[#ededeb] disabled:cursor-default disabled:opacity-70"
                 >
-                  <option value="">Select department</option>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
+                  <option value="PRIVATE">Private</option>
+                  <option value="WORKSPACE">Workspace</option>
+                  {isAdmin && <option value="DEPARTMENT">Department</option>}
                 </select>
-              )}
+                {draft.visibility === 'DEPARTMENT' && (
+                  <select
+                    value={draft.departmentId}
+                    onChange={event => updateDraft({ departmentId: event.target.value })}
+                    disabled={!selectedPage.canEdit}
+                    className="h-6 cursor-pointer rounded border border-transparent bg-transparent px-1 text-[13px] text-[#37352f] outline-none hover:bg-[#ededeb] focus:bg-[#ededeb] disabled:cursor-default disabled:opacity-70"
+                  >
+                    <option value="">Select department…</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
-
           </div>
 
           {/* Block editor */}
