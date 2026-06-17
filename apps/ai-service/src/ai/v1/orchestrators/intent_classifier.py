@@ -28,10 +28,14 @@ Available intents (pick ALL that apply, or just one):
 Rules:
 - Work for any language — detect intent from meaning, not keywords.
 - A message can have multiple intents; include all that apply.
-- When the user refers to "this page/document" → WIKI_AGENT, "this conversation" → CHAT_AGENT, \
+- When the user refers to "this page/document" → WIKI_AGENT, "this conversation/channel" → CHAT_AGENT, \
 "this task/event" → CALENDAR_AGENT (based on active context below).
+- When multiple contexts are active (e.g. both a wiki page and a chat conversation are open), \
+  choose the domain based on what the user's message is actually about — do not assume the user \
+  is asking about all open contexts.
 - Use CHAT_ASSIST only when no workspace data is needed.
-- When unsure, default to the domain that matches the active context, or WIKI_AGENT.
+- When genuinely unsure, pick the domain that best matches the phrasing; only fall back to the \
+  active context as a tiebreaker.
 - Respond ONLY with the JSON object, no markdown, no explanation.
 
 Active context: {active_context}

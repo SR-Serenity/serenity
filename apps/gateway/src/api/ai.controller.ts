@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { ServerResponse } from 'http';
 import { ApiProxyService } from './api-proxy.service';
 
 type RequestWithAuth = {
@@ -22,6 +23,21 @@ export class AiController {
     return this.apiProxy.forwardAiPostRequest(
       'ai/chat',
       body,
+      req.headers.authorization,
+    );
+  }
+
+  @Post('chat/stream')
+  @ApiOperation({ summary: 'Stream chat responses from Serenity AI' })
+  chatStream(
+    @Req() req: RequestWithAuth,
+    @Body() body: unknown,
+    @Res() res: ServerResponse,
+  ) {
+    return this.apiProxy.forwardAiStreamPostRequest(
+      'ai/chat/stream',
+      body,
+      res,
       req.headers.authorization,
     );
   }

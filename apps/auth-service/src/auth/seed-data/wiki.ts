@@ -137,7 +137,6 @@ Before opening the pull request, the teammate should write:
 - [ ] Notes from onboarding added to the wiki.
 `,
     contentJson: [
-      h(1, 'New Teammate Onboarding'),
       image(imageUrls.onboarding, 'Team onboarding workshop'),
       p(
         'This page is the single onboarding guide for a new Serenity teammate. By the end of the first week, the teammate should understand communication, local setup, core service ownership, and their first safe contribution.',
@@ -237,7 +236,6 @@ The PR description must include:
 If the change teaches the team something new, update the wiki. Chat messages are useful for discussion, but the wiki is where durable decisions belong.
 `,
     contentJson: [
-      h(1, 'Engineering Delivery Guide'),
       image(imageUrls.delivery, 'Engineering team planning work'),
       p(
         'This guide explains how engineering work moves from an idea to a shipped change. Follow it when implementing features, fixing bugs, or changing service behavior.',
@@ -336,7 +334,6 @@ Post updates in this format:
 Write the follow-up within one business day. Keep it factual. The purpose is to improve the system, not assign blame.
 `,
     contentJson: [
-      h(1, 'Incident Response Runbook'),
       image(imageUrls.incident, 'Operations room during incident response'),
       p(
         'Use this runbook when a production or staging issue affects users, data integrity, security, or critical development workflows.',

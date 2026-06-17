@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import {
+  Bot,
   Check,
   Download,
   Edit3,
@@ -11,7 +12,6 @@ import {
   Reply,
   RotateCcw,
   SmilePlus,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react'
@@ -209,8 +209,8 @@ export function MessageItem({
       <div className="group relative px-3 py-1 sm:px-4">
         <div className="flex w-full gap-2.5">
           {!compact && (
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
-              <Sparkles className="h-4 w-4" />
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white">
+              <Bot className="h-4 w-4" />
             </div>
           )}
           {compact && (
@@ -221,15 +221,14 @@ export function MessageItem({
           <div className="min-w-0 flex-1">
             {!compact && (
               <div className="flex min-w-0 items-baseline gap-2">
-                <span className="truncate font-semibold text-violet-700">Copilot</span>
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-600">
-                  <Sparkles className="h-2.5 w-2.5" />
+                <span className="truncate font-semibold text-gray-900">Copilot</span>
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 ring-1 ring-gray-200">
                   AI
                 </span>
                 <span className="shrink-0 text-xs text-gray-400">{formatTime(message.createdAt)}</span>
               </div>
             )}
-            <div className="whitespace-pre-wrap wrap-break-word text-sm leading-5 text-gray-800">
+            <div className="whitespace-pre-wrap wrap-break-word text-sm leading-5 text-gray-700">
               {message.content}
             </div>
           </div>
