@@ -213,6 +213,10 @@
   --activity-status-active: #34DB80;
   --activity-status-dnd:    #D95757;
   --activity-status-busy:   #FCC500;
+  
+  /* Shared animations & transitions */
+  --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ─── Theme: Dark ─────────────────────────────────────────────── */
@@ -321,6 +325,15 @@
   --tag-accent-SunshineText:                #ffbd2e;
   --avatar-bg-color:                        #4f5358;
   --avatar-border-color:                    rgba(255, 255, 255, 0.1);
+  
+  /* Active states, glass, and glow */
+  --active-nav-bg: linear-gradient(90deg, rgba(37, 99, 235, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%);
+  --active-nav-border: #3b82f6;
+  --card-glow-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.3);
+  --rainbow-border-gradient: linear-gradient(90deg, #3b82f6, #a5b4fc, #f472b6, #fb7185);
+  --glass-bg: rgba(22, 23, 25, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --premium-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
 /* ─── Theme: Light ────────────────────────────────────────────── */
@@ -429,6 +442,15 @@
   --tag-accent-SunshineText:                #8e5e00;
   --avatar-bg-color:                        #e0e0e0;
   --avatar-border-color: transparent;
+  
+  /* Active states, glass, and glow */
+  --active-nav-bg: linear-gradient(90deg, rgba(37, 99, 235, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%);
+  --active-nav-border: #2563eb;
+  --card-glow-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.15);
+  --rainbow-border-gradient: linear-gradient(90deg, #1570ef, #818cf8, #ec4899, #f43f5e);
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(15, 23, 42, 0.06);
+  --premium-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 /* ─── Tailwind v4 Theme Bridge ────────────────────────────────── */
@@ -510,6 +532,15 @@
   --font-sans:    var(--font-family);
   --font-heading: var(--font-family);
   --font-mono:    'IBM Plex Mono', monospace;
+  
+  /* Map custom serenity premium colors & themes */
+  --color-nav-active-bg: var(--active-nav-bg);
+  --color-nav-active-border: var(--active-nav-border);
+  --color-rainbow-border: var(--rainbow-border-gradient);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --shadow-premium: var(--premium-card-shadow);
+  --shadow-glow: var(--card-glow-shadow);
 }
 
 /* ─── Global Reset & Base ─────────────────────────────────────── */
@@ -696,3 +727,127 @@ body {
 .copilot-sparkle-btn:active {
   transform: translateY(0);
 }
+
+/* ─── Serenity AI Composer — Monday-style rainbow border ──────── */
+.serenity-composer {
+  background:
+    linear-gradient(var(--theme-popup-color), var(--theme-popup-color)) padding-box,
+    linear-gradient(135deg,
+      rgba(107, 140, 249, 0.35) 0%,
+      rgba(184, 123, 249, 0.35) 30%,
+      rgba(249, 123, 206, 0.25) 55%,
+      rgba(249, 172, 123, 0.25) 78%,
+      rgba(249, 215, 123, 0.25) 100%
+    ) border-box;
+  border: 1.5px solid transparent;
+  transition: background 0.2s ease;
+}
+
+.serenity-composer:focus-within {
+  background:
+    linear-gradient(var(--theme-popup-color), var(--theme-popup-color)) padding-box,
+    linear-gradient(135deg,
+      #6B8CF9 0%,
+      #B87BF9 28%,
+      #F97BCE 52%,
+      #F9AC7B 76%,
+      #F9D77B 100%
+    ) border-box;
+}
+
+/* Light-surface variant (used on white bg pages) */
+.serenity-composer-light {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg,
+      rgba(107, 140, 249, 0.4) 0%,
+      rgba(184, 123, 249, 0.4) 30%,
+      rgba(249, 123, 206, 0.3) 55%,
+      rgba(249, 172, 123, 0.3) 78%,
+      rgba(249, 215, 123, 0.3) 100%
+    ) border-box;
+  border: 2px solid transparent;
+  transition: background 0.2s ease;
+}
+
+.serenity-composer-light:focus-within {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg,
+      #6B8CF9 0%,
+      #B87BF9 28%,
+      #F97BCE 52%,
+      #F9AC7B 76%,
+      #F9D77B 100%
+    ) border-box;
+  box-shadow: 0 4px 24px rgba(107, 140, 249, 0.12);
+}
+
+/* ─── Premium UI animations and utilities ─────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(37, 99, 235, 0.15); }
+  50% { border-color: rgba(99, 102, 241, 0.45); }
+}
+
+@keyframes rainbow-glow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+.animate-rainbow-glow {
+  background-size: 200% 200%;
+  animation: rainbow-glow 6s linear infinite;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Smooth transitions */
+.transition-all-smooth {
+  transition: var(--transition-smooth);
+}
+
+.transition-bounce {
+  transition: var(--transition-bounce);
+}
+

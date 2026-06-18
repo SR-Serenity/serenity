@@ -11,6 +11,7 @@ from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat, stream_chat
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
+from src.ai.v1.agents.workflow_suggest_agent import workflow_suggest_agent
 from src.ai.v1.agents.meeting_notes import meeting_notes_agent
 from src.ai.v1.agents.meeting_live_transcription import (
     live_meeting_transcription_manager,
@@ -20,6 +21,11 @@ from src.ai.v1.agents.task_extractor import task_extractor_agent
 from src.api.internal.v1.schemas import (
     AutomationExecuteRequest,
     AutomationExecuteResponse,
+    WorkflowSuggestRequest,
+    WorkflowSuggestResponse,
+    WorkflowSuggestStepsGraph,
+    WorkflowSuggestStepNode,
+    WorkflowSuggestStepEdge,
     ChatRequest,
     ChatResponse,
     ExecuteActionRequest,
@@ -239,6 +245,41 @@ async def automation_execute(
     )
 
     return AutomationExecuteResponse(content=content, execution_id=execution_id)
+
+
+@router.post("/automation/suggest", response_model=WorkflowSuggestResponse)
+async def automation_suggest(
+    payload: WorkflowSuggestRequest,
+    request: Request,
+) -> WorkflowSuggestResponse:
+    """Generate a workflow stepsGraph from a plain-English description."""
+    _assert_internal_token(request)
+
+    graph = workflow_suggest_agent.suggest(description=payload.description)
+    if not graph:
+        return WorkflowSuggestResponse(
+            name="",
+            stepsGraph=WorkflowSuggestStepsGraph(nodes=[], edges=[]),
+        )
+
+    steps_graph = WorkflowSuggestStepsGraph(
+        nodes=[
+            WorkflowSuggestStepNode(
+                id=n.id,
+                type=n.type,
+                nodeType=n.node_type,
+                config=n.config,
+                position=n.position,
+            )
+            for n in graph.nodes
+        ],
+        edges=[
+            WorkflowSuggestStepEdge(id=e.id, source=e.source, target=e.target)
+            for e in graph.edges
+        ],
+    )
+
+    return WorkflowSuggestResponse(name=graph.name, stepsGraph=steps_graph)
 
 
 @router.post("/actions/execute", response_model=ExecuteActionResponse)

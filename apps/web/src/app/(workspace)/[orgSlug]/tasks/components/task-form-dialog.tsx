@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, X } from 'lucide-react'
+import { ChevronDown, Loader2, X } from 'lucide-react'
 import type { CreateTaskInput, Member, Task, TaskPriority, TaskStatus } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
@@ -34,15 +34,15 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     if (!title.trim() || saving) return
     setSaving(true)
     setError(null)
@@ -56,20 +56,24 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       })
       onClose()
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Failed to save task')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task')
       setSaving(false)
     }
   }
 
+  const selectClass = "h-8 w-full appearance-none rounded-lg border border-border bg-[var(--input-BackgroundColor)] px-2.5 pr-7 text-sm text-foreground outline-none transition-all duration-150 focus:ring-2 focus:ring-accent/30 focus:border-accent/60 disabled:opacity-50 cursor-pointer"
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.04]">
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">
+          <h2 className="text-[15px] font-semibold text-foreground">
             {isEdit ? 'Edit task' : 'New task'}
           </h2>
-          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} title="Close">
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -80,11 +84,11 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
             <Input
               id="task-title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={e => setTitle(e.target.value)}
               placeholder="Prepare final demo script"
               autoFocus
               disabled={saving}
-              className="mt-1.5"
+              className="mt-1.5 focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/60"
             />
           </div>
 
@@ -93,66 +97,71 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
             <textarea
               id="task-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               placeholder="Optional details…"
               disabled={saving}
               rows={3}
-              className="mt-1.5 w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="mt-1.5 w-full resize-none rounded-lg border border-border bg-[var(--input-BackgroundColor)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground transition-all duration-150 focus:ring-2 focus:ring-accent/30 focus:border-accent/60 disabled:opacity-50"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="task-status">Status</Label>
-              <select
-                id="task-status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                disabled={saving}
-                className="mt-1.5 h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-1.5">
+                <select
+                  id="task-status"
+                  value={status}
+                  onChange={e => setStatus(e.target.value as TaskStatus)}
+                  disabled={saving}
+                  className={selectClass}
+                >
+                  {STATUSES.map(s => (
+                    <option key={s} value={s}>
+                      {s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
             <div>
               <Label htmlFor="task-priority">Priority</Label>
-              <select
-                id="task-priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                disabled={saving}
-                className="mt-1.5 h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {p.charAt(0) + p.slice(1).toLowerCase()}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-1.5">
+                <select
+                  id="task-priority"
+                  value={priority}
+                  onChange={e => setPriority(e.target.value as TaskPriority)}
+                  disabled={saving}
+                  className={selectClass}
+                >
+                  {PRIORITIES.map(p => (
+                    <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="task-assignee">Assignee</Label>
-              <select
-                id="task-assignee"
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                disabled={saving}
-                className="mt-1.5 h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.displayName}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-1.5">
+                <select
+                  id="task-assignee"
+                  value={assigneeId}
+                  onChange={e => setAssigneeId(e.target.value)}
+                  disabled={saving}
+                  className={selectClass}
+                >
+                  <option value="">Unassigned</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.displayName}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
             <div>
               <Label htmlFor="task-due">Due date</Label>
@@ -160,9 +169,9 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
                 id="task-due"
                 type="date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={e => setDueDate(e.target.value)}
                 disabled={saving}
-                className="mt-1.5"
+                className="mt-1.5 focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/60"
               />
             </div>
           </div>
@@ -173,7 +182,7 @@ export function TaskFormDialog({ task, members, onClose, onSubmit }: TaskFormDia
             <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || !title.trim()}>
+            <Button type="submit" disabled={saving || !title.trim()} className="active:scale-[0.97]">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {isEdit ? 'Save changes' : 'Create task'}
             </Button>

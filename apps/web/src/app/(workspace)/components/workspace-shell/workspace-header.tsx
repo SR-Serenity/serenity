@@ -49,7 +49,6 @@ export function WorkspaceHeader({
 
   return (
     <header className="flex h-11 w-full shrink-0 items-center gap-2 border-b border-divider bg-panel px-4">
-
       {/* Breadcrumb */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         {hasSubnav && (
@@ -79,7 +78,7 @@ export function WorkspaceHeader({
       </div>
 
       {/* Right actions */}
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
           title="Search  ⌘K"
@@ -112,8 +111,8 @@ export function WorkspaceHeader({
             className={cn(
               'ml-1 flex h-7 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors',
               copilotOpen
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                ? 'bg-accent text-white hover:bg-accent/90'
+                : 'bg-ui text-content hover:bg-ui-hover',
             )}
           >
             <Bot className="h-3.5 w-3.5 shrink-0" />

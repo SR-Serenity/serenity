@@ -1,0 +1,99 @@
+{
+  "name": "Wiki Agent Evaluation",
+  "feature": "wiki",
+  "agent": "wiki_agent",
+  "description": "Evaluation dataset for the wiki agent covering search, QA/factual lookup, summarization, editing, formatting, and translation tasks.",
+  "cases": [
+    {
+      "input": "What port does the auth-service run on and who owns it?",
+      "expected_output": "The auth-service runs on port 3001 and is owned by David Miller.",
+      "retrieval_context": [
+        "## Service Registry\n\n| Service | Port | Owner |\n|---|---|---|\n| auth-service | 3001 | David Miller |\n| core-service | 2993 | Alex Vance |\n| gateway | 3000 | Alex Vance |\n| realtime-service | 3002 | Bob Chen |\n| ai-service | 8000 | Huy Phan |"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Who owns the core-service and what port does it use?",
+      "expected_output": "The core-service runs on port 2993 and is owned by Alex Vance.",
+      "retrieval_context": [
+        "## Service Registry\n\n| Service | Port | Owner |\n|---|---|---|\n| auth-service | 3001 | David Miller |\n| core-service | 2993 | Alex Vance |\n| gateway | 3000 | Alex Vance |\n| realtime-service | 3002 | Bob Chen |\n| ai-service | 8000 | Huy Phan |"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is the on-call rotation for Sprint 13?",
+      "expected_output": "For Sprint 13, the primary on-call is David Miller and the backup is John Park.",
+      "retrieval_context": [
+        "## On-Call Rotation\n\n| Sprint | Primary | Backup |\n|---|---|---|\n| Sprint 12 | Bob Chen | David Miller |\n| Sprint 13 | David Miller | John Park |"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What fields must be included in every PR description?",
+      "expected_output": "Every PR description must include: Problem, Solution, Verification, Risk, and Screenshots.",
+      "retrieval_context": [
+        "## Pull Request Guidelines\n\nEvery PR description must include the following sections:\n- **Problem**: Describe the issue or motivation\n- **Solution**: Explain the approach taken\n- **Verification**: Steps to verify the fix or feature\n- **Risk**: Potential risks or side effects\n- **Screenshots**: Before/after visuals where applicable"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Who can approve production deployments?",
+      "expected_output": "Production deployments must be approved by Alex Vance or David Miller.",
+      "retrieval_context": [
+        "## Deployment Policy\n\nAll production deployments require approval from either **Alex Vance** or **David Miller** before merging. Staging deployments can be self-approved by the author."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is the default password for seed users in development?",
+      "expected_output": "The default password for all seed users is `password123`.",
+      "retrieval_context": [
+        "## Development Seed Data\n\nAll seed users are created with the default password: `password123`. This must never be used in production environments."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is the brand tagline and what is the primary brand color token?",
+      "expected_output": "The brand tagline is \"Your whole team, one place.\" The primary brand color token is `--brand` (#070738).",
+      "retrieval_context": [
+        "# Brand & Design Guidelines\n\n## Tagline\n\n\"Your whole team, one place.\"\n\n## Color System\n\nThe primary brand color is `--brand` (#070738), a deep navy. Use CSS variables for all color references; never hardcode hex values in components.\n\n| Token | Value | Usage |\n|---|---|---|\n| `--brand` | #070738 | Primary brand color |\n| `--brand-surface` | light tint | Page/panel backgrounds |"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Summarize the Engineering Delivery Guide wiki page.",
+      "expected_output": "The Engineering Delivery Guide covers PR description requirements (Problem, Solution, Verification, Risk, Screenshots), the production deployment approval policy (Alex Vance or David Miller), on-call rotation (Sprint 12: Bob Chen primary / David Miller backup; Sprint 13: David Miller primary / John Park backup), and the service registry with ports and owners for all five services.",
+      "retrieval_context": [
+        "# Engineering Delivery Guide\n\nThis guide describes the engineering delivery process at Serenity.\n\n## Pull Request Guidelines\n\nEvery PR description must include: Problem, Solution, Verification, Risk, Screenshots.\n\n## Deployment Policy\n\nProduction deployments require approval from Alex Vance or David Miller.\n\n## On-Call Rotation\n\n| Sprint | Primary | Backup |\n|---|---|---|\n| Sprint 12 | Bob Chen | David Miller |\n| Sprint 13 | David Miller | John Park |\n\n## Service Registry\n\n| Service | Port | Owner |\n|---|---|---|\n| auth-service | 3001 | David Miller |\n| core-service | 2993 | Alex Vance |\n| gateway | 3000 | Alex Vance |\n| realtime-service | 3002 | Bob Chen |\n| ai-service | 8000 | Huy Phan |"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Add a checklist section to this page for first-week tasks: set up local dev environment, join #general and #engineering channels, complete security training, have 1-on-1 with manager.",
+      "expected_output": "The assistant appends a '## First Week Checklist' section with four markdown checkboxes: '- [ ] Set up local dev environment', '- [ ] Join #general and #engineering channels', '- [ ] Complete security training', '- [ ] Have 1-on-1 with manager'.",
+      "retrieval_context": [],
+      "page_title": "New Teammate Onboarding",
+      "page_content_markdown": "# New Teammate Onboarding\n\nWelcome to Serenity! This guide will help you get up to speed quickly.\n\n## Before Your First Day\n\nYou should have received your Serenity workspace invite and laptop setup instructions via email.\n\n## Who to Meet\n\nSchedule introductory calls with your team lead and direct teammates in your first week.\n\n## Key Resources\n\n- Engineering Delivery Guide\n- Brand & Design Guidelines\n- API Architecture & Service Map"
+    },
+    {
+      "input": "Add a service map table listing all five services with their port and owner.",
+      "expected_output": "The assistant inserts a markdown table with columns Service, Port, Owner and five rows: auth-service/3001/David Miller, core-service/2993/Alex Vance, gateway/3000/Alex Vance, realtime-service/3002/Bob Chen, ai-service/8000/Huy Phan.",
+      "retrieval_context": [],
+      "page_title": "API Architecture & Service Map",
+      "page_content_markdown": "# API Architecture & Service Map\n\nThis page documents the microservice architecture of the Serenity platform.\n\n## Overview\n\nSerenity is built as a set of independently deployable microservices communicating over internal HTTP and WebSocket connections.\n\n## Services\n\n<!-- Add service map table here -->"
+    },
+    {
+      "input": "Rewrite the introduction of this runbook to be concise and action-oriented.",
+      "expected_output": "The assistant replaces the verbose introduction with a short, imperative sentence such as 'Follow these steps immediately when a production incident is detected.' without removing factual content from the rest of the page.",
+      "retrieval_context": [],
+      "page_title": "Incident Response Runbook",
+      "page_content_markdown": "# Incident Response Runbook\n\n## Introduction\n\nThis document is intended to serve as a comprehensive guide that team members should refer to when they encounter a situation that may or may not constitute a production incident. The purpose of this runbook is to provide a structured and methodical approach to handling incidents in a way that minimizes impact on users and ensures a swift resolution.\n\n## Steps\n\n1. Detect and confirm the incident\n2. Page the on-call engineer\n3. Open an incident channel in Slack\n4. Communicate status to stakeholders every 15 minutes\n5. Resolve and write a post-mortem"
+    },
+    {
+      "input": "Translate this sentence to Vietnamese: 'Welcome to Serenity! This guide will help you get up to speed quickly.'",
+      "expected_output": "The assistant outputs the Vietnamese translation: 'Chào mừng bạn đến với Serenity! Hướng dẫn này sẽ giúp bạn nhanh chóng làm quen với công việc.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    }
+  ]
+}

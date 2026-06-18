@@ -1,12 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AutomationTriggerType } from '@prisma/client';
+import { AutomationActionType, AutomationTriggerType, TaskPriority, TaskSourceType, TaskStatus } from '@prisma/client';
+import type { AutomationRule, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AutomationAgentService } from './automation-agent.service';
+import type { AgentContext } from './automation-agent.service';
+import type { StepNode, StepsGraph } from './dto/automation.dto';
 
 type ChatMessageContext = {
   conversationId: string;
   content: string;
   authorId: string;
+};
+
+export type TaskTriggerEvent = {
+  taskId: string;
+  orgId: string;
+  title: string;
+  status: TaskStatus;
+  assigneeId: string | null;
+  previousStatus?: TaskStatus;
+  previousAssigneeId?: string | null;
+  triggerType: AutomationTriggerType.TASK_CREATED | AutomationTriggerType.TASK_STATUS_CHANGED | AutomationTriggerType.TASK_ASSIGNED;
 };
 
 @Injectable()
@@ -20,29 +34,27 @@ export class AutomationEngineService {
 
   async runScheduled(ruleId: string): Promise<void> {
     const rule = await this.prisma.automationRule.findUnique({ where: { id: ruleId } });
-    if (!rule || !rule.enabled) {
-      return;
-    }
+    if (!rule || !rule.enabled) return;
 
     const org = await this.prisma.organization.findUnique({
       where: { id: rule.orgId },
       select: { name: true },
     });
 
-    await this.agent.execute(rule, {
-      orgId: rule.orgId,
-      orgName: org?.name,
-      triggerType: AutomationTriggerType.SCHEDULE,
-    });
+    const context: AgentContext = { orgId: rule.orgId, orgName: org?.name, triggerType: AutomationTriggerType.SCHEDULE };
+
+    if (rule.stepsGraph) {
+      await this.walkGraph(rule, rule.stepsGraph as unknown as StepsGraph, context);
+    } else {
+      await this.agent.execute(rule, context);
+    }
   }
 
   async runMemberJoined(orgId: string, userId: string): Promise<void> {
     const rules = await this.prisma.automationRule.findMany({
       where: { orgId, triggerType: AutomationTriggerType.MEMBER_JOINED, enabled: true },
     });
-    if (!rules.length) {
-      return;
-    }
+    if (!rules.length) return;
 
     const [user, org] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } }),
@@ -51,13 +63,15 @@ export class AutomationEngineService {
 
     for (const rule of rules) {
       try {
-        await this.agent.execute(rule, {
-          orgId,
-          userId,
-          displayName: user?.displayName,
-          orgName: org?.name,
+        const context: AgentContext = {
+          orgId, userId, displayName: user?.displayName, orgName: org?.name,
           triggerType: AutomationTriggerType.MEMBER_JOINED,
-        });
+        };
+        if (rule.stepsGraph) {
+          await this.walkGraph(rule, rule.stepsGraph as unknown as StepsGraph, context);
+        } else {
+          await this.agent.execute(rule, context);
+        }
       } catch (err) {
         this.logger.error(`Failed executing rule ${rule.id} on member_joined: ${err}`);
       }
@@ -68,31 +82,230 @@ export class AutomationEngineService {
     const rules = await this.prisma.automationRule.findMany({
       where: { orgId, triggerType: AutomationTriggerType.MESSAGE_KEYWORD, enabled: true },
     });
-    if (!rules.length) {
-      return;
-    }
+    if (!rules.length) return;
 
     const lowerContent = message.content.toLowerCase();
 
     for (const rule of rules) {
       try {
-        const config = rule.triggerConfig as { keywords?: string[] };
-        const keywords: string[] = config.keywords ?? [];
-        const matched = keywords.some(kw => lowerContent.includes(kw.toLowerCase()));
-        if (!matched) {
-          continue;
-        }
+        const triggerConfig = (rule.stepsGraph
+          ? (rule.stepsGraph as unknown as StepsGraph).nodes.find(n => n.type === 'trigger')?.config
+          : rule.triggerConfig) as { keywords?: string[] } | undefined;
+        const keywords: string[] = triggerConfig?.keywords ?? [];
+        if (!keywords.some(kw => lowerContent.includes(kw.toLowerCase()))) continue;
 
-        await this.agent.execute(rule, {
-          orgId,
-          conversationId: message.conversationId,
-          messageContent: message.content,
-          userId: message.authorId,
+        const context: AgentContext = {
+          orgId, conversationId: message.conversationId,
+          messageContent: message.content, userId: message.authorId,
           triggerType: AutomationTriggerType.MESSAGE_KEYWORD,
-        });
+        };
+        if (rule.stepsGraph) {
+          await this.walkGraph(rule, rule.stepsGraph as unknown as StepsGraph, context);
+        } else {
+          await this.agent.execute(rule, context);
+        }
       } catch (err) {
         this.logger.error(`Failed executing rule ${rule.id} on message_keyword: ${err}`);
       }
     }
+  }
+
+  async runTaskTrigger(event: TaskTriggerEvent): Promise<void> {
+    const rules = await this.prisma.automationRule.findMany({
+      where: { orgId: event.orgId, triggerType: event.triggerType, enabled: true },
+    });
+    if (!rules.length) return;
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: event.orgId },
+      select: { name: true },
+    });
+
+    for (const rule of rules) {
+      try {
+        const triggerConfig = (rule.stepsGraph
+          ? (rule.stepsGraph as unknown as StepsGraph).nodes.find(n => n.type === 'trigger')?.config
+          : rule.triggerConfig) as Record<string, unknown> | undefined;
+
+        if (!this.matchesTaskTrigger(event, triggerConfig ?? {})) continue;
+
+        const context: AgentContext = {
+          orgId: event.orgId,
+          orgName: org?.name,
+          userId: event.assigneeId ?? undefined,
+          triggerType: event.triggerType,
+          taskId: event.taskId,
+          taskTitle: event.title,
+          taskStatus: event.status,
+        };
+
+        if (rule.stepsGraph) {
+          await this.walkGraph(rule, rule.stepsGraph as unknown as StepsGraph, context);
+        } else {
+          await this.agent.execute(rule, context);
+        }
+      } catch (err) {
+        this.logger.error(`Failed executing rule ${rule.id} on task trigger: ${err}`);
+      }
+    }
+  }
+
+  private matchesTaskTrigger(event: TaskTriggerEvent, config: Record<string, unknown>): boolean {
+    if (event.triggerType === AutomationTriggerType.TASK_STATUS_CHANGED) {
+      const requiredStatus = config.status as string | undefined;
+      if (requiredStatus && event.status !== requiredStatus) return false;
+    }
+    if (event.triggerType === AutomationTriggerType.TASK_ASSIGNED) {
+      const requiredAssignee = config.assigneeId as string | undefined;
+      if (requiredAssignee && event.assigneeId !== requiredAssignee) return false;
+      if (event.assigneeId === event.previousAssigneeId) return false;
+    }
+    return true;
+  }
+
+  private async walkGraph(rule: AutomationRule, graph: StepsGraph, context: AgentContext): Promise<void> {
+    const triggerNode = graph.nodes.find(n => n.type === 'trigger');
+    if (!triggerNode) return;
+
+    const actionNodeIds = graph.edges
+      .filter(e => e.source === triggerNode.id)
+      .map(e => e.target);
+
+    const visited = new Set<string>();
+    const queue = [...actionNodeIds];
+
+    while (queue.length) {
+      const nodeId = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      const node = graph.nodes.find(n => n.id === nodeId);
+      if (!node || node.type !== 'action') continue;
+
+      await this.executeActionNode(rule, node, context);
+
+      const nextIds = graph.edges.filter(e => e.source === nodeId).map(e => e.target);
+      queue.push(...nextIds);
+    }
+  }
+
+  private async executeActionNode(rule: AutomationRule, node: StepNode, context: AgentContext): Promise<void> {
+    const actionType = node.nodeType as AutomationActionType;
+
+    switch (actionType) {
+      case AutomationActionType.AI_AGENT:
+        await this.agent.execute(rule, context, node.config as { instruction: string; targetType: 'CHANNEL' | 'DM_TRIGGER_USER'; targetId?: string });
+        break;
+
+      case AutomationActionType.NOTIFY:
+        await this.executeNotify(rule.orgId, node.config as { userId?: string; message: string }, context);
+        break;
+
+      case AutomationActionType.CREATE_TASK:
+        await this.executeCreateTask(rule.orgId, node.config as {
+          title: string; status?: TaskStatus; priority?: TaskPriority; assigneeId?: string;
+        }, context);
+        break;
+
+      case AutomationActionType.POST_CHANNEL:
+        await this.executePostChannel(rule.orgId, node.config as { channelId: string; message: string }, context);
+        break;
+
+      default:
+        this.logger.warn(`Unknown action type ${actionType} in rule ${rule.id}`);
+    }
+  }
+
+  private async executeNotify(orgId: string, config: { userId?: string; message: string }, context: AgentContext): Promise<void> {
+    const targetUserId = config.userId ?? context.userId;
+    if (!targetUserId || !config.message) return;
+
+    const botUser = await this.prisma.workspaceMember.findFirst({
+      where: { orgId, role: 'OWNER' },
+      select: { userId: true },
+    });
+    if (!botUser) return;
+
+    const content = config.message
+      .replace('{task.title}', context.taskTitle ?? '')
+      .replace('{user.name}', context.displayName ?? '')
+      .replace('{date}', new Date().toLocaleDateString());
+
+    const ids = [botUser.userId, targetUserId].sort();
+    const dmKey = ids.join(':');
+    let dm = await this.prisma.chatConversation.findFirst({ where: { orgId, dmKey }, select: { id: true } });
+    if (!dm) {
+      dm = await this.prisma.chatConversation.create({
+        data: {
+          orgId, type: 'DM', dmKey, createdById: botUser.userId,
+          members: { createMany: { data: ids.map(userId => ({ userId })), skipDuplicates: true } },
+        },
+        select: { id: true },
+      });
+    }
+
+    const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await this.prisma.chatMessage.create({ data: { id: msgId, conversationId: dm.id, authorId: botUser.userId, content } });
+    await this.prisma.chatConversation.update({ where: { id: dm.id }, data: { updatedAt: new Date() } });
+  }
+
+  private async executeCreateTask(
+    orgId: string,
+    config: { title: string; status?: TaskStatus; priority?: TaskPriority; assigneeId?: string },
+    context: AgentContext,
+  ): Promise<void> {
+    if (!config.title) return;
+
+    const botUser = await this.prisma.workspaceMember.findFirst({
+      where: { orgId, role: 'OWNER' },
+      select: { userId: true },
+    });
+    if (!botUser) return;
+
+    const title = config.title
+      .replace('{task.title}', context.taskTitle ?? '')
+      .replace('{user.name}', context.displayName ?? '');
+
+    await this.prisma.task.create({
+      data: {
+        orgId,
+        title,
+        status: config.status ?? TaskStatus.TODO,
+        priority: config.priority ?? TaskPriority.MEDIUM,
+        assigneeId: config.assigneeId ?? null,
+        sourceType: TaskSourceType.AI,
+        createdBy: botUser.userId,
+        createdByAi: true,
+        aiReason: 'Created by automation rule',
+      },
+    });
+  }
+
+  private async executePostChannel(
+    orgId: string,
+    config: { channelId: string; message: string },
+    context: AgentContext,
+  ): Promise<void> {
+    if (!config.channelId || !config.message) return;
+
+    const botUser = await this.prisma.workspaceMember.findFirst({
+      where: { orgId, role: 'OWNER' },
+      select: { userId: true },
+    });
+    if (!botUser) return;
+
+    const content = config.message
+      .replace('{task.title}', context.taskTitle ?? '')
+      .replace('{user.name}', context.displayName ?? '')
+      .replace('{date}', new Date().toLocaleDateString());
+
+    const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await this.prisma.chatMessage.create({
+      data: { id: msgId, conversationId: config.channelId, authorId: botUser.userId, content },
+    });
+    await this.prisma.chatConversation.update({
+      where: { id: config.channelId },
+      data: { updatedAt: new Date() },
+    });
   }
 }

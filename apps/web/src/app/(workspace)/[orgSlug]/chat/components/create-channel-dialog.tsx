@@ -7,6 +7,7 @@ import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
 import { Label } from '@/app/shared/components/ui/label'
 import { cn } from '@/lib/utils'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 type ChannelType = Exclude<ChatConversationType, 'DM'>
 
@@ -15,16 +16,6 @@ type CreateChannelDialogProps = {
   onClose: () => void
   onCreate: (name: string, type: ChannelType, memberIds: string[]) => Promise<void>
   onLoadMembers: () => Promise<Member[]>
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'U'
 }
 
 export function CreateChannelDialog({
@@ -48,64 +39,58 @@ export function CreateChannelDialog({
     onLoadMembers()
       .then(loadedMembers => {
         if (!active) return
-        setMembers(loadedMembers.filter(member => member.id !== currentUserId))
+        setMembers(loadedMembers.filter(m => m.id !== currentUserId))
       })
       .catch(loadError => {
         if (!active) return
         setError(loadError instanceof Error ? loadError.message : 'Failed to load members')
       })
-      .finally(() => {
-        if (active) setIsLoadingMembers(false)
-      })
-
-    return () => {
-      active = false
-    }
+      .finally(() => { if (active) setIsLoadingMembers(false) })
+    return () => { active = false }
   }, [currentUserId, onLoadMembers])
 
   const filteredMembers = useMemo(() => {
-    const query = memberSearch.trim().toLowerCase()
-    if (!query) return members
-    return members.filter(member =>
-      member.displayName.toLowerCase().includes(query) ||
-      member.email.toLowerCase().includes(query) ||
-      member.departmentName?.toLowerCase().includes(query)
+    const q = memberSearch.trim().toLowerCase()
+    if (!q) return members
+    return members.filter(m =>
+      m.displayName.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q) ||
+      m.departmentName?.toLowerCase().includes(q)
     )
   }, [members, memberSearch])
 
-  const toggleMember = (memberId: string) => {
+  const toggleMember = (id: string) => {
     setSelectedMemberIds(prev =>
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!name.trim() || isCreating) return
-
     setIsCreating(true)
     setError(null)
     try {
       await onCreate(name.trim(), type, selectedMemberIds)
       onClose()
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Failed to create channel')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create channel')
     } finally {
       setIsCreating(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.04]">
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Create channel</h2>
-            <p className="text-sm text-gray-500">Give team work a shared place</p>
+            <h2 className="text-[15px] font-semibold text-foreground">Create channel</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Give your team a shared space</p>
           </div>
-          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} title="Close">
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -117,125 +102,109 @@ export function CreateChannelDialog({
               <Input
                 id="channel-name"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={e => setName(e.target.value)}
                 placeholder="project-launch"
                 autoFocus
                 disabled={isCreating}
-                className="mt-2 h-10 rounded-xl border-gray-200 bg-white focus-visible:ring-blue-100"
+                className="mt-2 h-9 rounded-xl focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/60"
               />
             </div>
 
             <div>
               <Label>Channel type</Label>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setType('PUBLIC_CHANNEL')}
-                  disabled={isCreating}
-                  className={cn(
-                    'rounded-xl border p-4 text-left transition-colors',
-                    type === 'PUBLIC_CHANNEL'
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  )}
-                >
-                  <div className="mb-2 flex items-center gap-2 font-semibold text-gray-900">
-                    <Hash className="h-4 w-4 text-blue-600" />
-                    Public
-                  </div>
-                  <p className="text-sm text-gray-500">Visible to everyone in workspace.</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType('PRIVATE_CHANNEL')}
-                  disabled={isCreating}
-                  className={cn(
-                    'rounded-xl border p-4 text-left transition-colors',
-                    type === 'PRIVATE_CHANNEL'
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  )}
-                >
-                  <div className="mb-2 flex items-center gap-2 font-semibold text-gray-900">
-                    <Lock className="h-4 w-4 text-blue-600" />
-                    Private
-                  </div>
-                  <p className="text-sm text-gray-500">Only invited members can access.</p>
-                </button>
+                {([
+                  { value: 'PUBLIC_CHANNEL', Icon: Hash, label: 'Public', desc: 'Visible to everyone in the workspace.' },
+                  { value: 'PRIVATE_CHANNEL', Icon: Lock, label: 'Private', desc: 'Only invited members can access.' },
+                ] as const).map(({ value, Icon, label, desc }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setType(value)}
+                    disabled={isCreating}
+                    className={cn(
+                      'rounded-xl border p-4 text-left transition-all duration-150 active:scale-[0.98]',
+                      type === value
+                        ? 'border-accent/40 bg-accent/[0.08]'
+                        : 'border-border bg-transparent hover:border-border/80 hover:bg-popup-hover'
+                    )}
+                  >
+                    <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Icon className={cn('h-4 w-4', type === value ? 'text-accent-txt' : 'text-muted-foreground')} />
+                      {label}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </button>
+                ))}
               </div>
             </div>
 
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <Label>Invite members</Label>
-                <span className="text-xs text-gray-500">{selectedMemberIds.length} selected</span>
+                <span className="text-xs text-muted-foreground">{selectedMemberIds.length} selected</span>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-white">
-                <div className="relative border-b border-gray-100">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <div className="rounded-xl border border-border">
+                <div className="relative border-b border-border">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={memberSearch}
-                    onChange={(event) => setMemberSearch(event.target.value)}
+                    onChange={e => setMemberSearch(e.target.value)}
                     placeholder="Search members"
                     disabled={isCreating || isLoadingMembers}
-                    className="h-10 border-0 bg-transparent pl-9 focus-visible:ring-0"
+                    className="h-9 border-0 bg-transparent pl-9 focus-visible:ring-0"
                   />
                 </div>
-                <div className="max-h-56 overflow-y-auto p-2">
+                <div className="max-h-52 overflow-y-auto p-1.5">
                   {isLoadingMembers ? (
-                    <div className="flex justify-center py-8 text-gray-400">
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                    <div className="flex justify-center py-8 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
                   ) : filteredMembers.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-gray-500">No members found</div>
+                    <p className="py-8 text-center text-xs text-muted-foreground">No members found</p>
                   ) : (
-                    filteredMembers.map(member => (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => toggleMember(member.id)}
-                        disabled={isCreating}
-                        className={cn(
-                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors',
-                          selectedMemberIds.includes(member.id)
-                            ? 'bg-blue-50'
-                            : 'hover:bg-gray-50'
-                        )}
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[11px] font-semibold text-white">
-                          {initials(member.displayName)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-gray-900">{member.displayName}</div>
-                          <div className="truncate text-xs text-gray-500">{member.email}</div>
-                        </div>
-                        <div
+                    filteredMembers.map(member => {
+                      const selected = selectedMemberIds.includes(member.id)
+                      return (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => toggleMember(member.id)}
+                          disabled={isCreating}
                           className={cn(
-                            'h-4 w-4 rounded border',
-                            selectedMemberIds.includes(member.id)
-                              ? 'border-blue-600 bg-blue-600'
-                              : 'border-gray-300'
+                            'group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all duration-150',
+                            selected ? 'bg-accent/[0.08]' : 'hover:bg-popup-hover hover:translate-x-0.5'
                           )}
-                        />
-                      </button>
-                    ))
+                        >
+                          <DiceBearAvatar
+                            seed={member.id}
+                            name={member.displayName}
+                            className="h-7 w-7 rounded-md transition-transform duration-150 group-hover:scale-105"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium text-foreground">{member.displayName}</div>
+                            <div className="truncate text-xs text-muted-foreground">{member.email}</div>
+                          </div>
+                          <div className={cn(
+                            'h-4 w-4 rounded border transition-all duration-150',
+                            selected ? 'border-accent bg-accent scale-100' : 'border-border scale-95'
+                          )} />
+                        </button>
+                      )
+                    })
                   )}
                 </div>
               </div>
             </div>
           </div>
 
-          {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
+          {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
           <div className="mt-6 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={isCreating}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={!name.trim() || isCreating}
-              className="gap-2 bg-blue-600 text-white hover:bg-blue-700"
-            >
+            <Button type="submit" disabled={!name.trim() || isCreating} className="active:scale-[0.97]">
               {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
               Create channel
             </Button>

@@ -29,7 +29,13 @@ final user-facing answer from what you return.
   search_all_messages_tool(query)                 — search across all conversations
   get_messages_from_person_tool(person_name)      — messages from a specific person
 
+# IMPORTANT: conversation_id is always a UUID (e.g. "cm3x..."), never a channel name
+# like "#general". Always call list_conversations_tool() first to get the real UUID,
+# then pass that UUID to get_conversation_messages_tool or search_messages_tool.
+
 # Stop rules
+- ALWAYS call list_conversations_tool() first when the user mentions a channel name
+  (e.g. "#general", "engineering", "random") to resolve its UUID before fetching messages.
 - For recap/summary requests: use get_conversation_messages_tool, not empty-query search.
 - For "this conversation": if an active conversation ID is provided, fetch it first.
 - After each tool call ask: "Do I have all the relevant data?" Stop as soon as yes.

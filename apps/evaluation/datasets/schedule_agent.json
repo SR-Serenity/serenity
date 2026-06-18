@@ -1,0 +1,104 @@
+{
+  "name": "Schedule Agent Evaluation",
+  "feature": "schedule",
+  "agent": "schedule_agent",
+  "description": "Evaluation dataset for the schedule agent covering task creation, meeting scheduling, room booking, recurring events, batch creation, reminders, and underspecified requests.",
+  "cases": [
+    {
+      "input": "Create a high priority task for me to write the Q3 performance report, due next Friday.",
+      "expected_output": "The assistant creates a task titled 'Write Q3 performance report' assigned to Huy Phan with HIGH priority and a due date of next Friday, then confirms the task was created.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Create a medium priority task for Emily Rose to finalize the onboarding flow mockups, due next Wednesday.",
+      "expected_output": "The assistant creates a task titled 'Finalize onboarding flow mockups' assigned to Emily Rose with MEDIUM priority and a due date of next Wednesday, then confirms creation.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Schedule a 30-minute meeting with Bob Chen and David Miller tomorrow at 2 PM to discuss the Redis session layer.",
+      "expected_output": "The assistant creates a meeting titled 'Redis session layer discussion' tomorrow at 2:00–2:30 PM with attendees Huy Phan, Bob Chen, and David Miller, then confirms the event.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Book Room A for a design workshop next Thursday from 10 AM to 12 PM.",
+      "expected_output": "The assistant creates a calendar event titled 'Design Workshop' in Room A on next Thursday from 10:00 AM–12:00 PM and confirms the room booking.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Set up a weekly recurring 1-on-1 meeting with Mary Watson every Tuesday at 11 AM for 30 minutes.",
+      "expected_output": "The assistant creates a weekly recurring event titled '1-on-1: Huy & Mary' every Tuesday at 11:00–11:30 AM with attendees Huy Phan and Mary Watson, then confirms the recurring schedule.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Create two tasks: one high priority task for me to prepare the Q3 board slide deck due next Monday, and one medium priority task for Alice to draft the September blog post due next Wednesday.",
+      "expected_output": "The assistant creates two tasks: 'Prepare Q3 board slide deck' assigned to Huy Phan (HIGH, due next Monday) and 'Draft September blog post' assigned to Alice Nguyen (MEDIUM, due next Wednesday), confirming both.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Remind me to follow up on PR #52 feedback next Monday at 9 AM.",
+      "expected_output": "The assistant creates a reminder or calendar event titled 'Follow up on PR #52 feedback' for next Monday at 9:00 AM assigned to Huy Phan, and confirms it was set.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Schedule a meeting.",
+      "expected_output": "The assistant asks for the missing details needed to create the meeting: the title or purpose, attendees, date and time, and duration.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Create a low priority task to update the README for the ai-service, due next Friday.",
+      "expected_output": "The assistant creates a task titled 'Update README for ai-service' assigned to Huy Phan with LOW priority and a due date of next Friday, then confirms creation.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Book the Main Conference Room for the all-hands rehearsal next Wednesday from 1 PM to 2 PM.",
+      "expected_output": "The assistant creates a calendar event titled 'All-Hands Rehearsal' in the Main Conference Room on next Wednesday from 1:00–2:00 PM and confirms the booking.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Schedule a 1-hour product sync with Alex Vance, Bob Chen, and John Park next Tuesday at 3 PM.",
+      "expected_output": "The assistant creates a meeting titled 'Product Sync' next Tuesday at 3:00–4:00 PM with attendees Huy Phan, Alex Vance, Bob Chen, and John Park, then confirms.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Set up a daily standup recurring event every weekday at 10 AM for 30 minutes with Bob Chen, David Miller, Mary Watson, and John Park.",
+      "expected_output": "The assistant creates a daily recurring event (weekdays) titled 'Daily Standup' at 10:00–10:30 AM with attendees Huy Phan, Bob Chen, David Miller, Mary Watson, and John Park, then confirms the recurring setup.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Create a high priority task for John Park to fix the cookie Max-Age mismatch issue (#46), due next Monday.",
+      "expected_output": "The assistant creates a task titled 'Fix cookie Max-Age mismatch (issue #46)' assigned to John Park with HIGH priority and a due date of next Monday, then confirms.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Create a task for me to review the intern interview candidates, low priority, due next Monday.",
+      "expected_output": "The assistant creates a task titled 'Review intern interview candidates' assigned to Huy Phan with LOW priority and a due date of next Monday, then confirms.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Schedule a 90-minute architecture review meeting for next Friday at 2 PM with Alex Vance and David Miller in Room B.",
+      "expected_output": "The assistant creates a meeting titled 'Architecture Review' on next Friday from 2:00–3:30 PM in Room B with attendees Huy Phan, Alex Vance, and David Miller, then confirms.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Add a task for David Miller.",
+      "expected_output": "The assistant asks for the missing information: the task title/description, priority level, and due date before creating the task.",
+      "retrieval_context": [],
+      "conversation_context": []
+    }
+  ]
+}

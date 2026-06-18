@@ -1,0 +1,87 @@
+{
+  "name": "Contacts Agent Evaluation",
+  "feature": "contacts",
+  "agent": "contacts_agent",
+  "description": "Evaluation dataset for the contacts agent covering department listing, email lookup, phone lookup, role/title lookup, and external contact lookup.",
+  "cases": [
+    {
+      "input": "Who is on the Engineering team?",
+      "expected_output": "The Engineering team members are Bob Chen, David Miller, Mary Watson, Alex Vance, John Park, and Huy Phan.",
+      "retrieval_context": [
+        "Department: Engineering\nMembers: Bob Chen (Senior Software Engineer), David Miller (Backend Engineer), Mary Watson (QA Engineer), Alex Vance (Engineering Lead), John Park (Frontend Engineer), Huy Phan (creator/owner)"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is Alice Nguyen's email address?",
+      "expected_output": "Alice Nguyen's email address is alice.nguyen-{orgSlug}@example.com.",
+      "retrieval_context": [
+        "Contact: Alice Nguyen\nTitle: Marketing Manager\nEmail: alice.nguyen-{orgSlug}@example.com\nPhone: +1-555-0121\nDepartment: Marketing"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is David Miller's phone number?",
+      "expected_output": "David Miller's phone number is +1-555-0148.",
+      "retrieval_context": [
+        "Contact: David Miller\nTitle: Backend Engineer\nEmail: david.miller@workspace.com\nPhone: +1-555-0148\nDepartment: Engineering"
+      ]
+    },
+    {
+      "input": "What is Sarah Connor's title and email?",
+      "expected_output": "Sarah Connor is the Head of Marketing. Her email is sarah.connor@workspace.com.",
+      "retrieval_context": [
+        "Contact: Sarah Connor\nTitle: Head of Marketing\nEmail: sarah.connor@workspace.com\nPhone: +1-555-0162\nDepartment: Marketing"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Who is the Engineering Lead and what is their phone number?",
+      "expected_output": "Alex Vance is the Engineering Lead. His phone number is +1-555-0175.",
+      "retrieval_context": [
+        "Contact: Alex Vance\nTitle: Engineering Lead\nEmail: alex.vance@workspace.com\nPhone: +1-555-0175\nDepartment: Engineering"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What are the email and phone number for Emily Rose?",
+      "expected_output": "Emily Rose's email is emily.rose@workspace.com and her phone number is +1-555-0197.",
+      "retrieval_context": [
+        "Contact: Emily Rose\nTitle: UI/UX Designer\nEmail: emily.rose@workspace.com\nPhone: +1-555-0197\nDepartment: Design"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Who are the members of the Marketing department?",
+      "expected_output": "The Marketing department has two members: Alice Nguyen (Marketing Manager) and Sarah Connor (Head of Marketing).",
+      "retrieval_context": [
+        "Department: Marketing\nMembers: Alice Nguyen (Marketing Manager), Sarah Connor (Head of Marketing)"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "How can I contact Michael Torres from NovaTech Solutions?",
+      "expected_output": "Michael Torres is the Head of Engineering at NovaTech Solutions. His email is michael.torres@novatech.io and his phone number is +1-555-0230.",
+      "retrieval_context": [
+        "External Contact: Michael Torres\nTitle: Head of Engineering\nCompany: NovaTech Solutions\nEmail: michael.torres@novatech.io\nPhone: +1-555-0230"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is Linda Park's role and how do I reach her?",
+      "expected_output": "Linda Park is a Partner at Venture X Capital. Her email is linda.park@venture-x.com and her phone number is +1-555-0241.",
+      "retrieval_context": [
+        "External Contact: Linda Park\nTitle: Partner\nCompany: Venture X Capital\nEmail: linda.park@venture-x.com\nPhone: +1-555-0241"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Find the contact details for James Okafor.",
+      "expected_output": "James Okafor is a Freelance Consultant at DesignHub. His email is j.okafor@designhub.co and his phone number is +1-555-0259.",
+      "retrieval_context": [
+        "External Contact: James Okafor\nTitle: Freelance Consultant\nCompany: DesignHub\nEmail: j.okafor@designhub.co\nPhone: +1-555-0259"
+      ],
+      "conversation_context": []
+    }
+  ]
+}

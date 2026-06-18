@@ -504,7 +504,7 @@ export class AuthService {
             },
             {
               headers: { 'x-internal-api-token': internalToken },
-              timeout: 10000,
+              timeout: 30000,
             }
           );
         } catch (err: any) {

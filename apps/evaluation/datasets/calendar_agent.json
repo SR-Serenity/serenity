@@ -1,0 +1,96 @@
+{
+  "name": "Calendar Agent Evaluation",
+  "feature": "calendar",
+  "agent": "calendar_agent",
+  "description": "Evaluation dataset for the calendar agent covering event listing, attendee lookup, room lookup, task listing, task status update, and event detail lookup.",
+  "cases": [
+    {
+      "input": "What events do I have today?",
+      "expected_output": "Today you have one event: Daily Standup from 10:00 AM to 10:30 AM with Bob Chen, David Miller, Mary Watson, and John Park.",
+      "retrieval_context": [
+        "Event: Daily Standup\nDate: today\nTime: 10:00 AM – 10:30 AM\nAttendees: Huy Phan, Bob Chen, David Miller, Mary Watson, John Park"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is happening on next Monday?",
+      "expected_output": "Next Monday has three events: Weekly Team Standup from 9:00–10:00 AM with all 9 team members; Sprint 13 Planning from 11:00 AM–12:30 PM in Room B with Huy Phan, Alex Vance, Bob Chen, David Miller, Mary Watson, and John Park; and a Coffee chat with Emily Rose from 3:00–3:30 PM.",
+      "retrieval_context": [
+        "Event: Weekly Team Standup\nDate: next Monday\nTime: 9:00 AM – 10:00 AM\nAttendees: all 9 members",
+        "Event: Sprint 13 Planning\nDate: next Monday\nTime: 11:00 AM – 12:30 PM\nRoom: Room B\nAttendees: Huy Phan, Alex Vance, Bob Chen, David Miller, Mary Watson, John Park",
+        "Event: Coffee chat — Emily\nDate: next Monday\nTime: 3:00 PM – 3:30 PM\nAttendees: Huy Phan, Emily Rose"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Who is attending the Design Review this Friday?",
+      "expected_output": "The Design Review — Sprint 12 on Friday from 3:00–4:30 PM in Room A is attended by Huy Phan, Emily Rose, John Park, and Alex Vance.",
+      "retrieval_context": [
+        "Event: Design Review — Sprint 12\nDate: this Friday\nTime: 3:00 PM – 4:30 PM\nRoom: Room A\nAttendees: Huy Phan, Emily Rose, John Park, Alex Vance"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What room is Sprint 13 Planning in?",
+      "expected_output": "Sprint 13 Planning is scheduled in Room B.",
+      "retrieval_context": [
+        "Event: Sprint 13 Planning\nDate: next Monday\nTime: 11:00 AM – 12:30 PM\nRoom: Room B\nAttendees: Huy Phan, Alex Vance, Bob Chen, David Miller, Mary Watson, John Park"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "When is the Architecture Review for the AI Gateway Migration?",
+      "expected_output": "The Architecture Review: AI Gateway Migration is on next Wednesday from 3:00–4:00 PM in Room B. Attendees are Alex Vance, Bob Chen, David Miller, and Huy Phan.",
+      "retrieval_context": [
+        "Event: Architecture Review: AI Gateway Migration\nDate: next Wednesday\nTime: 3:00 PM – 4:00 PM\nRoom: Room B\nAttendees: Alex Vance, Bob Chen, David Miller, Huy Phan"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What are my high-priority tasks that are in progress?",
+      "expected_output": "Your high-priority in-progress tasks are: 'Integrate G-Eval metric into evaluation pipeline' (due Friday) and 'Add gateway proxy config for AI service' assigned to Bob Chen (due Friday).",
+      "retrieval_context": [
+        "Task: Integrate G-Eval metric into evaluation pipeline\nAssignee: Huy Phan\nStatus: IN_PROGRESS\nPriority: HIGH\nDue: Friday",
+        "Task: Add gateway proxy config for AI service\nAssignee: Bob Chen\nStatus: IN_PROGRESS\nPriority: HIGH\nDue: Friday"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What tasks are assigned to Bob Chen?",
+      "expected_output": "Bob Chen has two tasks: 'Add gateway proxy config for AI service' (IN_PROGRESS, HIGH priority, due Friday) and 'Add rate limiting to AI service endpoint' (TODO, HIGH priority, due next Tuesday).",
+      "retrieval_context": [
+        "Task: Add gateway proxy config for AI service\nAssignee: Bob Chen\nStatus: IN_PROGRESS\nPriority: HIGH\nDue: Friday",
+        "Task: Add rate limiting to AI service endpoint\nAssignee: Bob Chen\nStatus: TODO\nPriority: HIGH\nDue: next Tuesday"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Mark the task 'Publish changelog for v2.3.0' as done.",
+      "expected_output": "The assistant confirms it will update the status of the task 'Publish changelog for v2.3.0' to DONE, then asks for confirmation before applying the change.",
+      "retrieval_context": [
+        "Task: Publish changelog for v2.3.0\nAssignee: Huy Phan\nStatus: TODO\nPriority: MEDIUM\nDue: tomorrow"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "When is the Company All-Hands and what room is it in?",
+      "expected_output": "The Company All-Hands & Product Demo is next Thursday from 2:00–3:30 PM in the Main Conference Room. All 9 team members are attending.",
+      "retrieval_context": [
+        "Event: Company All-Hands & Product Demo\nDate: next Thursday\nTime: 2:00 PM – 3:30 PM\nRoom: Main Conference Room\nAttendees: all 9 members"
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "List all tasks that are marked as DONE.",
+      "expected_output": "The completed tasks are: 'Fix race condition in token refresh endpoint' (David Miller, HIGH), 'Wiki search Unicode normalization fix' (Mary Watson, MEDIUM), 'Redis graceful fallback for session store' (Huy Phan, HIGH), 'Draft Q3 marketing brief and campaign plan' (Sarah Connor, HIGH), and 'Publish August social calendar' (Alice Nguyen, MEDIUM).",
+      "retrieval_context": [
+        "Task: Fix race condition in token refresh endpoint\nAssignee: David Miller\nStatus: DONE\nPriority: HIGH",
+        "Task: Wiki search Unicode normalization fix\nAssignee: Mary Watson\nStatus: DONE\nPriority: MEDIUM",
+        "Task: Redis graceful fallback for session store\nAssignee: Huy Phan\nStatus: DONE\nPriority: HIGH",
+        "Task: Draft Q3 marketing brief and campaign plan\nAssignee: Sarah Connor\nStatus: DONE\nPriority: HIGH",
+        "Task: Publish August social calendar\nAssignee: Alice Nguyen\nStatus: DONE\nPriority: MEDIUM"
+      ],
+      "conversation_context": []
+    }
+  ]
+}
