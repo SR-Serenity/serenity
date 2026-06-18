@@ -1,46 +1,113 @@
-import json
+from dataclasses import dataclass
 
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from src.ai.v1.contexts.schemas.enums import Domain
 from src.ai.v1.contexts.schemas.state import IntentClassification, IntentDomain, PipelineState
 from src.core.config import settings
 
-_CLASSIFY_PROMPT = """\
-You are an intent classifier for a workspace AI assistant.
 
-Classify the user's latest message and respond with ONLY valid JSON:
-{{
-  "language": "<detected language name in English, e.g. English, Vietnamese, French>",
-  "intents": ["<intent1>", "<intent2>"]
-}}
+# ── Structured output schema ──────────────────────────────────────────────────
 
-Available intents (pick ALL that apply, or just one):
-- WIKI_AGENT     : Reading, searching, summarizing, or editing wiki pages and knowledge base articles.
-- CHAT_AGENT     : Reading, searching, or summarizing chat conversations and messages.
-- CALENDAR_AGENT : Querying, updating, or deleting calendar events and tasks.
-- CONTACTS_AGENT : Finding people, team members, or contacts in the directory.
-- MAIL_AGENT     : Reading, searching, or sending emails.
-- SCHEDULE_AGENT : Creating brand-new calendar items — tasks, events, meetings, or room bookings.
-- CHAT_ASSIST    : Writing help, translation, grammar — ONLY when the content is already in the message.
-- GREETING       : Greetings, small talk, or chitchat.
+class IntentClassifierOutput(BaseModel):
+    language: str
+    intents: list[str]
+    needs_memory: bool
 
-Rules:
-- Work for any language — detect intent from meaning, not keywords.
-- A message can have multiple intents; include all that apply.
-- When the user refers to "this page/document" → WIKI_AGENT, "this conversation/channel" → CHAT_AGENT, \
-"this task/event" → CALENDAR_AGENT (based on active context below).
-- When multiple contexts are active (e.g. both a wiki page and a chat conversation are open), \
-  choose the domain based on what the user's message is actually about — do not assume the user \
-  is asking about all open contexts.
-- Use CHAT_ASSIST only when no workspace data is needed.
-- When genuinely unsure, pick the domain that best matches the phrasing; only fall back to the \
-  active context as a tiebreaker.
-- Respond ONLY with the JSON object, no markdown, no explanation.
 
-Active context: {active_context}
-Latest user message: {message}
+# ── Per-request context ───────────────────────────────────────────────────────
+
+@dataclass
+class ClassifierContext:
+    active_context: str
+    user_message: str
+
+
+# ── System prompt ─────────────────────────────────────────────────────────────
+
+_SYSTEM_PROMPT = """\
+You are the intent router for Serenity AI, a workspace assistant.
+
+# Goal
+Decide which sub-agents to call based on what the user wants to do, \
+taking the currently open workspace item into account.
+
+# Success criteria
+- Every intent that materially applies is included.
+- `language` is always detected, even for short messages.
+- `needs_memory` is true only when past user preferences or behavior \
+  would meaningfully improve the answer.
+
+# Available intents
+- WIKI_AGENT     : Read, search, summarize, or edit wiki / knowledge-base pages.
+- CHAT_AGENT     : Read, search, or recap chat conversations and messages.
+- CALENDAR_AGENT : Query, update, or delete existing calendar events and tasks.
+- CONTACTS_AGENT : Find people, team members, or contacts in the workspace directory.
+- MAIL_AGENT     : Read, search, or send emails.
+- SCHEDULE_AGENT : Create new calendar items — tasks, events, meetings, room bookings.
+- CHAT_ASSIST    : Writing help, translation, grammar — only when all content \
+  is already in the message and no workspace data lookup is needed.
+- GREETING       : Greetings, small talk, chitchat.
+
+# Routing rules
+- Pick ALL intents that apply; one message can need multiple agents.
+- Detect intent from meaning, not keywords; works in any language.
+- Use CHAT_ASSIST only when no workspace data lookup is needed.
+- Set `needs_memory` true for personalised requests such as \
+  "my usual", recommendations, or follow-ups on stated preferences.
+
+# How to use the open workspace context
+The user currently has the following item open: {active_context}
+
+Use this as a strong signal when the user's intent is ambiguous or when \
+they use pronouns like "this", "it", "here":
+- Wiki page open   → if the message could be about reading, editing, or \
+  asking a question about that page, include WIKI_AGENT.
+- Conversation open → if the message could be about summarising, recapping, \
+  or searching that conversation, include CHAT_AGENT.
+- Task/event open  → if the message could be about viewing, updating, or \
+  acting on that item, include CALENDAR_AGENT.
+
+If the message is clearly about something completely different \
+(e.g. user asks to schedule a meeting while a wiki page is open), \
+follow the message intent and ignore the open context.
+
+User message: {user_message}
 """
+
+
+@dynamic_prompt
+def _classifier_prompt(request: ModelRequest[ClassifierContext]) -> str:
+    ctx = request.runtime.context
+    return _SYSTEM_PROMPT.format(
+        active_context=ctx.active_context,
+        user_message=ctx.user_message,
+    )
+
+
+# ── Agent singleton ───────────────────────────────────────────────────────────
+
+_agent = None
+
+
+def _get_agent():
+    global _agent
+    if _agent is None and settings.OPENAI_API_KEY:
+        _agent = create_agent(
+            ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0),
+            tools=[],
+            middleware=[_classifier_prompt],
+            response_format=IntentClassifierOutput,
+            context_schema=ClassifierContext,
+            name="intent_classifier",
+        )
+    return _agent
+
+
+# ── Name → Domain mapping ─────────────────────────────────────────────────────
 
 _NAME_TO_DOMAIN: dict[str, Domain | None] = {
     "WIKI_AGENT": Domain.WIKI_AGENT,
@@ -54,22 +121,45 @@ _NAME_TO_DOMAIN: dict[str, Domain | None] = {
 }
 
 
+# ── Public function ───────────────────────────────────────────────────────────
+
 def classify_intent(state: PipelineState) -> IntentClassification:
     text = _latest_user_text(state)
     context = state.get("context", {}) or {}
     active_context_desc = _describe_active_context(context)
 
-    if not settings.OPENAI_API_KEY:
-        return IntentClassification(intent=None, language="English")
+    agent = _get_agent()
+    if not agent:
+        fallback = _domain_from_context(context)
+        if fallback:
+            return IntentClassification(
+                intent=[IntentDomain(domain=fallback, confidence=0.85)],
+                language="English",
+                needs_memory=False,
+            )
+        return IntentClassification(intent=None, language="English", needs_memory=False)
 
     try:
-        llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0)
-        raw = llm.invoke(_CLASSIFY_PROMPT.format(message=text, active_context=active_context_desc))
-        data = json.loads(str(raw.content))
-        language: str = data.get("language", "English") or "English"
-        intent_names: list[str] = data.get("intents", ["WIKI_AGENT"])
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": text}]},
+            context=ClassifierContext(
+                active_context=active_context_desc,
+                user_message=text,
+            ),
+        )
+        data: IntentClassifierOutput = result["structured_response"]
+        language = data.language or "English"
+        needs_memory = data.needs_memory
+        intent_names = data.intents or []
     except Exception:
-        return IntentClassification(intent=None, language="English")
+        fallback = _domain_from_context(context)
+        if fallback:
+            return IntentClassification(
+                intent=[IntentDomain(domain=fallback, confidence=0.85)],
+                language="English",
+                needs_memory=False,
+            )
+        return IntentClassification(intent=None, language="English", needs_memory=False)
 
     intents = [
         IntentDomain(domain=d, confidence=0.9)
@@ -78,21 +168,25 @@ def classify_intent(state: PipelineState) -> IntentClassification:
     ]
 
     if not intents:
-        fallback = _infer_from_context(context)
+        fallback = _domain_from_context(context)
         if fallback:
-            return IntentClassification(intent=[IntentDomain(domain=fallback, confidence=0.85)], language=language)
-        return IntentClassification(intent=None, language=language)
+            return IntentClassification(
+                intent=[IntentDomain(domain=fallback, confidence=0.85)],
+                language=language,
+                needs_memory=needs_memory,
+            )
+        return IntentClassification(intent=None, language=language, needs_memory=False)
 
-    return IntentClassification(intent=intents, language=language)
+    return IntentClassification(intent=intents, language=language, needs_memory=needs_memory)
 
 
-def _infer_from_context(context: dict) -> Domain | None:
-    if context.get("taskId"):
-        return Domain.CALENDAR_AGENT
+def _domain_from_context(context: dict) -> Domain | None:
     if context.get("wikiPageId"):
         return Domain.WIKI_AGENT
     if context.get("conversationId"):
         return Domain.CHAT_AGENT
+    if context.get("taskId"):
+        return Domain.CALENDAR_AGENT
     return None
 
 

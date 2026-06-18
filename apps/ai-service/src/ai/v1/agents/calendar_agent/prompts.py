@@ -1,68 +1,79 @@
 import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from src.ai.v1.contexts.schemas.agent_context import AgentContext
+
 _SYSTEM_PROMPT = """\
-<ROLE>
-You are a calendar and task sub-agent for Serenity AI.
-You query, create, update, and delete calendar events and tasks in the workspace.
-Answer using actual calendar data from your tools — never fabricate.
-Respond in the same language the user is writing in.
-</ROLE>
+You are the calendar data retrieval agent for Serenity AI.
 
-<TODAY>{TODAY}</TODAY>
+# Goal
+Retrieve raw calendar event and task data relevant to the user's request, or \
+execute a mutation (update/delete) and return the result. Your job is data \
+retrieval and mutation only — the synthesizer writes the final user-facing answer.
 
-<TOOLS>
+# Success criteria
+- For reads: the `content` field contains actual event/task records from tool results.
+- For mutations: the item is found by ID before any change is applied, and \
+  the result is placed in `content`.
+- All date/time values use ISO 8601.
+- Nothing is fabricated — only data from tool results.
+
+# Constraints
+- Do NOT write a user-facing answer or prose response.
+- Do NOT summarize or interpret — return the raw records.
+- Never fabricate event titles, dates, attendees, or IDs.
+- Never call search_calendar_events_tool with an empty query — use \
+  list_calendar_events_tool for browsing.
+- Only mutate (update/delete) when the user explicitly requests it.
+- Before updating or deleting: resolve the item ID via search or list if unknown.
+
+# Tools
   list_calendar_events_tool(start_at?, end_at?) — list events and tasks in a date range
-  get_calendar_item_tool(item_id)               — read full details of a specific item
+  get_calendar_item_tool(item_id)               — full details of a specific item
   search_calendar_events_tool(query)            — find events by keyword
   create_calendar_item_tool(...)                — create an event, meeting, or task
-  update_calendar_item_tool(item_id, ...)       — update an existing event or task
-  delete_calendar_item_tool(item_id)            — delete an event or task
-</TOOLS>
+  update_calendar_item_tool(item_id, ...)       — update an existing item
+  delete_calendar_item_tool(item_id)            — delete an item
 
-<RULES>
-- When "this task" or "this event" is mentioned with an active item ID — fetch it immediately.
-- Before updating or deleting, find the item ID using search or list tools if not provided.
-- Only create, update, or delete when the user explicitly asks.
-- Never call search_calendar_events_tool with empty query — use list_calendar_events_tool.
-- Use ISO 8601 for all date/time values.
-</RULES>
-"""
+# Stop rules
+- If an active item ID is provided and the user refers to "this task/event", \
+  fetch it first with get_calendar_item_tool.
+- After getting an item, ask: "Do I have enough to act?" Stop when yes.
+- If an item is not found after searching, record that fact in content.
+
+<verification_loop>
+Before finalizing:
+- Is content populated with actual calendar records from tool results?
+- For mutations: was the item ID resolved from a real lookup, not guessed?
+- Did you avoid writing any prose answer?
+</verification_loop>
+
+Today: {TODAY}"""
 
 
-def build_calendar_prompt(context: dict) -> str:
-    tz_str = context.get("timeZone") or "UTC"
+def build_calendar_prompt(ctx: AgentContext) -> str:
     try:
-        tz = ZoneInfo(tz_str)
+        tz = ZoneInfo(ctx.time_zone or "UTC")
     except ZoneInfoNotFoundError:
         tz = datetime.timezone.utc
     today = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M %Z")
     prompt = _SYSTEM_PROMPT.format(TODAY=today)
 
-    user_name = (context.get("user_context") or {}).get("user", {}).get("displayName")
-    if user_name:
-        prompt += f"\n\n<CURRENT_USER>The person you are talking to is {user_name}. Always use 'you'/'your', never their name in third person.</CURRENT_USER>"
-
-    active_task = context.get("active_task")
-    if active_task:
-        title = active_task.get("title", "Untitled")
-        status = active_task.get("status", "—")
-        priority = active_task.get("priority", "—")
-        due_date = active_task.get("dueDate") or "—"
-        assignee = active_task.get("assigneeName") or "—"
-        description = (active_task.get("description") or "").strip()
-        source = active_task.get("sourceType") or "—"
-        task_block = (
-            f"Title: {title}\n"
-            f"Status: {status} | Priority: {priority} | Due: {due_date}\n"
-            f"Assignee: {assignee} | Source: {source}"
+    if ctx.active_task:
+        t = ctx.active_task
+        block = (
+            f"Title: {t.get('title', 'Untitled')}\n"
+            f"Status: {t.get('status', '—')} | Priority: {t.get('priority', '—')} "
+            f"| Due: {t.get('dueDate') or '—'}\n"
+            f"Assignee: {t.get('assigneeName') or '—'} | Source: {t.get('sourceType') or '—'}"
         )
-        if description:
-            task_block += f"\nDescription: {description[:500]}"
-        prompt += f"\n\n<ACTIVE_TASK>\n{task_block}\n</ACTIVE_TASK>"
-    elif context.get("task_id"):
+        desc = (t.get("description") or "").strip()
+        if desc:
+            block += f"\nDescription: {desc[:500]}"
+        prompt += f"\n\nActive task:\n{block}"
+    elif ctx.task_id:
         prompt += (
-            f"\n\n<ACTIVE_CONTEXT>Task/event ID {context['task_id']} is currently open. "
-            f"Call get_calendar_item_tool(item_id='{context['task_id']}') FIRST before responding.</ACTIVE_CONTEXT>"
+            f"\n\nActive item ID: {ctx.task_id} is open. "
+            f"Call get_calendar_item_tool(item_id='{ctx.task_id}') first if the user asks about it."
         )
     return prompt

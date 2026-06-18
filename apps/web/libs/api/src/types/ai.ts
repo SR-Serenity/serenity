@@ -53,7 +53,7 @@ export type AiProposedAction = {
 
 export type AiChatRequest = {
   sessionId: string
-  messages: AiChatMessage[]
+  message: string
   authContext: AiAuthContext
   context?: AiRequestContext
 }

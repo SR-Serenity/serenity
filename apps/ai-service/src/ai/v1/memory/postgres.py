@@ -5,14 +5,17 @@ from typing import Any
 from src.core.config import settings
 
 
-def create_checkpointer() -> Any:
+async def create_checkpointer() -> Any:
     if settings.DATABASE_URL:
         try:
-            from langgraph.checkpoint.postgres import PostgresSaver
+            import psycopg
+            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-            saver = PostgresSaver.from_conn_string(settings.DATABASE_URL)
-            if hasattr(saver, "setup"):
-                saver.setup()
+            conn = await psycopg.AsyncConnection.connect(
+                settings.DATABASE_URL, autocommit=True
+            )
+            saver = AsyncPostgresSaver(conn)
+            await saver.setup()
             return saver
         except Exception:
             pass
@@ -25,14 +28,17 @@ def create_checkpointer() -> Any:
         return None
 
 
-def create_store() -> Any:
+async def create_store() -> Any:
     if settings.DATABASE_URL:
         try:
-            from langgraph.store.postgres import PostgresStore
+            import psycopg
+            from langgraph.store.postgres.aio import AsyncPostgresStore
 
-            store = PostgresStore.from_conn_string(settings.DATABASE_URL)
-            if hasattr(store, "setup"):
-                store.setup()
+            conn = await psycopg.AsyncConnection.connect(
+                settings.DATABASE_URL, autocommit=True
+            )
+            store = AsyncPostgresStore(conn)
+            await store.setup()
             return store
         except Exception:
             pass
