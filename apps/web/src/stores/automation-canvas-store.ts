@@ -42,7 +42,7 @@ export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((s
   loadFromGraph: (name, graph) => {
     const nodes: Node[] = graph.nodes.map(n => ({
       id: n.id,
-      type: n.type === 'trigger' ? 'triggerNode' : 'actionNode',
+      type: n.type === 'trigger' ? 'triggerNode' : n.type === 'condition' ? 'conditionNode' : 'actionNode',
       position: n.position,
       data: { nodeType: n.nodeType, config: n.config },
     }))
@@ -50,6 +50,7 @@ export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((s
       id: e.id,
       source: e.source,
       target: e.target,
+      sourceHandle: e.sourceHandle,
       type: 'automationEdge',
     }))
     set({ ruleName: name, nodes, edges })
@@ -72,12 +73,17 @@ export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((s
     const stepsGraph: StepsGraph = {
       nodes: nodes.map(n => ({
         id: n.id,
-        type: n.type === 'triggerNode' ? 'trigger' : 'action',
+        type: n.type === 'triggerNode' ? 'trigger' : n.type === 'conditionNode' ? 'condition' : 'action',
         nodeType: (n.data as { nodeType: string }).nodeType as StepsGraph['nodes'][0]['nodeType'],
         config: (n.data as { config: Record<string, unknown> }).config ?? {},
         position: n.position,
       })),
-      edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })),
+      edges: edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle as 'true' | 'false' | undefined,
+      })),
     }
 
     const triggerData = triggerNode.data as { nodeType: string; config: Record<string, unknown> }

@@ -1,10 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AutomationActionType, AutomationTriggerType, TaskPriority, TaskSourceType, TaskStatus } from '@prisma/client';
-import type { AutomationRule, Prisma } from '@prisma/client';
+import type { AutomationRule } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { RealtimeEventsService } from '../realtime/realtime-events.service';
+import { RealtimeDomain } from '../realtime/config/enums/realtime-domain.enum';
+import { ChatRealtimeEvent } from '../realtime/config/enums/chat-realtime-event.enum';
 import { AutomationAgentService } from './automation-agent.service';
 import type { AgentContext } from './automation-agent.service';
+import { AutomationConditionType } from './dto/automation.dto';
 import type { StepNode, StepsGraph } from './dto/automation.dto';
+
+const aiMessageInclude = {
+  author: { select: { id: true, email: true, displayName: true } },
+  replyTo: {
+    select: {
+      id: true, authorId: true, content: true, unsentAt: true,
+      author: { select: { id: true, email: true, displayName: true } },
+    },
+  },
+  attachments: true,
+  reactions: { include: { user: { select: { id: true, displayName: true } } }, orderBy: { createdAt: 'asc' as const } },
+  replies: { select: { id: true } },
+} as const;
 
 type ChatMessageContext = {
   conversationId: string;
@@ -17,10 +34,14 @@ export type TaskTriggerEvent = {
   orgId: string;
   title: string;
   status: TaskStatus;
+  priority?: TaskPriority;
   assigneeId: string | null;
   previousStatus?: TaskStatus;
   previousAssigneeId?: string | null;
-  triggerType: AutomationTriggerType.TASK_CREATED | AutomationTriggerType.TASK_STATUS_CHANGED | AutomationTriggerType.TASK_ASSIGNED;
+  triggerType: Extract<
+    AutomationTriggerType,
+    'TASK_CREATED' | 'TASK_STATUS_CHANGED' | 'TASK_ASSIGNED'
+  >;
 };
 
 @Injectable()
@@ -30,6 +51,7 @@ export class AutomationEngineService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agent: AutomationAgentService,
+    private readonly realtimeEvents: RealtimeEventsService,
   ) {}
 
   async runScheduled(ruleId: string): Promise<void> {
@@ -90,9 +112,11 @@ export class AutomationEngineService {
       try {
         const triggerConfig = (rule.stepsGraph
           ? (rule.stepsGraph as unknown as StepsGraph).nodes.find(n => n.type === 'trigger')?.config
-          : rule.triggerConfig) as { keywords?: string[] } | undefined;
+          : rule.triggerConfig) as { keywords?: string[]; channelIds?: string[] } | undefined;
         const keywords: string[] = triggerConfig?.keywords ?? [];
         if (!keywords.some(kw => lowerContent.includes(kw.toLowerCase()))) continue;
+        const channelIds: string[] = triggerConfig?.channelIds ?? [];
+        if (channelIds.length > 0 && !channelIds.includes(message.conversationId)) continue;
 
         const context: AgentContext = {
           orgId, conversationId: message.conversationId,
@@ -137,6 +161,7 @@ export class AutomationEngineService {
           taskId: event.taskId,
           taskTitle: event.title,
           taskStatus: event.status,
+          taskPriority: event.priority,
         };
 
         if (rule.stepsGraph) {
@@ -167,12 +192,9 @@ export class AutomationEngineService {
     const triggerNode = graph.nodes.find(n => n.type === 'trigger');
     if (!triggerNode) return;
 
-    const actionNodeIds = graph.edges
-      .filter(e => e.source === triggerNode.id)
-      .map(e => e.target);
-
+    const startIds = graph.edges.filter(e => e.source === triggerNode.id).map(e => e.target);
     const visited = new Set<string>();
-    const queue = [...actionNodeIds];
+    const queue = [...startIds];
 
     while (queue.length) {
       const nodeId = queue.shift()!;
@@ -180,12 +202,63 @@ export class AutomationEngineService {
       visited.add(nodeId);
 
       const node = graph.nodes.find(n => n.id === nodeId);
-      if (!node || node.type !== 'action') continue;
+      if (!node) continue;
 
-      await this.executeActionNode(rule, node, context);
+      if (node.type === 'condition') {
+        const passed = await this.evaluateCondition(node, context);
+        const branch = passed ? 'true' : 'false';
+        const nextIds = graph.edges
+          .filter(e => e.source === nodeId && e.sourceHandle === branch)
+          .map(e => e.target);
+        queue.push(...nextIds);
+      } else if (node.type === 'action') {
+        await this.executeActionNode(rule, node, context);
+        const nextIds = graph.edges.filter(e => e.source === nodeId).map(e => e.target);
+        queue.push(...nextIds);
+      }
+    }
+  }
 
-      const nextIds = graph.edges.filter(e => e.source === nodeId).map(e => e.target);
-      queue.push(...nextIds);
+  private async evaluateCondition(node: StepNode, context: AgentContext): Promise<boolean> {
+    const config = node.config;
+
+    switch (node.nodeType as AutomationConditionType) {
+      case AutomationConditionType.TIME_WINDOW: {
+        const now = new Date();
+        const hour = now.getHours();
+        const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        const today = dayNames[now.getDay()];
+        const startHour = (config.startHour as number) ?? 0;
+        const endHour = (config.endHour as number) ?? 24;
+        const days = (config.days as string[]) ?? dayNames;
+        return hour >= startHour && hour < endHour && days.includes(today);
+      }
+
+      case AutomationConditionType.CHANNEL_IS: {
+        const channelIds = (config.channelIds as string[]) ?? [];
+        if (channelIds.length === 0) return true;
+        return !!context.conversationId && channelIds.includes(context.conversationId);
+      }
+
+      case AutomationConditionType.TASK_PRIORITY_IS: {
+        const required = config.priority as string | undefined;
+        if (!required) return true;
+        return context.taskPriority === required;
+      }
+
+      case AutomationConditionType.USER_IN_DEPARTMENT: {
+        const departmentId = config.departmentId as string | undefined;
+        if (!departmentId || !context.userId) return false;
+        const member = await this.prisma.workspaceMember.findFirst({
+          where: { userId: context.userId, orgId: context.orgId, departmentId },
+          select: { userId: true },
+        });
+        return !!member;
+      }
+
+      default:
+        this.logger.warn(`Unknown condition type ${node.nodeType}`);
+        return false;
     }
   }
 
@@ -245,8 +318,17 @@ export class AutomationEngineService {
     }
 
     const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await this.prisma.chatMessage.create({ data: { id: msgId, conversationId: dm.id, authorId: botUser.userId, content } });
+    const message = await this.prisma.chatMessage.create({
+      data: { id: msgId, conversationId: dm.id, authorId: botUser.userId, content, isCopilot: true },
+      include: aiMessageInclude,
+    });
     await this.prisma.chatConversation.update({ where: { id: dm.id }, data: { updatedAt: new Date() } });
+    await this.realtimeEvents.publish({
+      domain: RealtimeDomain.CHAT,
+      event: ChatRealtimeEvent.MESSAGE_CREATED,
+      target: { orgId, conversationId: dm.id },
+      payload: message,
+    });
   }
 
   private async executeCreateTask(
@@ -300,12 +382,16 @@ export class AutomationEngineService {
       .replace('{date}', new Date().toLocaleDateString());
 
     const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await this.prisma.chatMessage.create({
-      data: { id: msgId, conversationId: config.channelId, authorId: botUser.userId, content },
+    const message = await this.prisma.chatMessage.create({
+      data: { id: msgId, conversationId: config.channelId, authorId: botUser.userId, content, isCopilot: true },
+      include: aiMessageInclude,
     });
-    await this.prisma.chatConversation.update({
-      where: { id: config.channelId },
-      data: { updatedAt: new Date() },
+    await this.prisma.chatConversation.update({ where: { id: config.channelId }, data: { updatedAt: new Date() } });
+    await this.realtimeEvents.publish({
+      domain: RealtimeDomain.CHAT,
+      event: ChatRealtimeEvent.MESSAGE_CREATED,
+      target: { orgId, conversationId: config.channelId },
+      payload: message,
     });
   }
 }

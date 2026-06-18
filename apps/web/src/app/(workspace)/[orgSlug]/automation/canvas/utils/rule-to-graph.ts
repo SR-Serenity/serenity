@@ -5,7 +5,7 @@ export function ruleToGraph(rule: AutomationRule): { nodes: Node[]; edges: Edge[
   if (rule.stepsGraph) {
     const nodes: Node[] = rule.stepsGraph.nodes.map(n => ({
       id: n.id,
-      type: n.type === 'trigger' ? 'triggerNode' : 'actionNode',
+      type: n.type === 'trigger' ? 'triggerNode' : n.type === 'condition' ? 'conditionNode' : 'actionNode',
       position: n.position,
       data: { nodeType: n.nodeType, config: n.config },
     }))
@@ -13,6 +13,7 @@ export function ruleToGraph(rule: AutomationRule): { nodes: Node[]; edges: Edge[
       id: e.id,
       source: e.source,
       target: e.target,
+      sourceHandle: e.sourceHandle,
       type: 'automationEdge',
     }))
     return { nodes, edges }

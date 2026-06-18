@@ -1,56 +1,47 @@
 'use client'
 
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow } from '@xyflow/react'
+import { EdgeLabelRenderer, getStraightPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
-import { Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function AutomationEdge({
-  id, sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition,
+  id, sourceX, sourceY, targetX, targetY, sourceHandleId,
 }: EdgeProps) {
-  const { addNodes, addEdges, deleteElements, getNode } = useReactFlow()
+  const [edgePath] = getStraightPath({ sourceX, sourceY, targetX, targetY })
 
-  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
+  const isTrueBranch  = sourceHandleId === 'true'
+  const isFalseBranch = sourceHandleId === 'false'
+  const isBranch      = isTrueBranch || isFalseBranch
 
-  function handleAddNode() {
-    const newNodeId = `action-${Date.now()}`
-    const sourceNode = getNode(id.split('->')[0])
-    const midY = (sourceY + targetY) / 2
-
-    addNodes([{
-      id: newNodeId,
-      type: 'actionNode',
-      position: { x: (sourceX + targetX) / 2 - 128, y: midY - 60 },
-      data: { nodeType: 'AI_AGENT', config: {} },
-    }])
-
-    deleteElements({ edges: [{ id }] })
-
-    const sourceId = id.split('->')[0] ?? sourceNode?.id ?? ''
-    const targetId = id.split('->')[1] ?? ''
-
-    addEdges([
-      { id: `${sourceId}->${newNodeId}`, source: sourceId, target: newNodeId, type: 'automationEdge' },
-      { id: `${newNodeId}->${targetId}`, source: newNodeId, target: targetId, type: 'automationEdge' },
-    ])
-  }
+  const strokeColor = isTrueBranch ? '#22c55e' : isFalseBranch ? '#f87171' : '#cbd5e1'
+  const strokeDash  = isBranch ? '6 3' : '0'
 
   return (
     <>
-      <BaseEdge id={id} path={edgePath} style={{ stroke: '#cbd5e1', strokeWidth: 2 }} />
-      <EdgeLabelRenderer>
-        <div
-          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
-          className="pointer-events-auto absolute"
-        >
-          <button
-            onClick={handleAddNode}
-            className="flex size-6 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-blue-400 hover:text-blue-600"
+      <path
+        id={id}
+        d={edgePath}
+        stroke={strokeColor}
+        strokeWidth={2}
+        fill="none"
+        strokeDasharray={strokeDash}
+      />
+
+      {isBranch && (
+        <EdgeLabelRenderer>
+          <div
+            style={{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY + 16}px)` }}
+            className="pointer-events-none absolute"
           >
-            <Plus className="size-3.5 text-slate-400" />
-          </button>
-        </div>
-      </EdgeLabelRenderer>
+            <span className={cn(
+              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold',
+              isTrueBranch ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600',
+            )}>
+              {isTrueBranch ? '✓ Yes' : '✗ No'}
+            </span>
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   )
 }

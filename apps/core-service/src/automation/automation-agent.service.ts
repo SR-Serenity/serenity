@@ -2,6 +2,22 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { AutomationRule } from '@prisma/client';
 import { AutomationTriggerType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { RealtimeEventsService } from '../realtime/realtime-events.service';
+import { RealtimeDomain } from '../realtime/config/enums/realtime-domain.enum';
+import { ChatRealtimeEvent } from '../realtime/config/enums/chat-realtime-event.enum';
+
+const aiMessageInclude = {
+  author: { select: { id: true, email: true, displayName: true } },
+  replyTo: {
+    select: {
+      id: true, authorId: true, content: true, unsentAt: true,
+      author: { select: { id: true, email: true, displayName: true } },
+    },
+  },
+  attachments: true,
+  reactions: { include: { user: { select: { id: true, displayName: true } } }, orderBy: { createdAt: 'asc' as const } },
+  replies: { select: { id: true } },
+} as const;
 
 export type AgentContext = {
   orgId: string;
@@ -14,19 +30,24 @@ export type AgentContext = {
   taskId?: string;
   taskTitle?: string;
   taskStatus?: string;
+  taskPriority?: string;
 };
 
 type ActionConfig = {
   instruction: string;
   targetType: 'CHANNEL' | 'DM_TRIGGER_USER';
   targetId?: string;
+  useWebSearch?: boolean;
 };
 
 @Injectable()
 export class AutomationAgentService {
   private readonly logger = new Logger(AutomationAgentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtimeEvents: RealtimeEventsService,
+  ) {}
 
   async execute(rule: AutomationRule, context: AgentContext, overrideConfig?: ActionConfig): Promise<void> {
     const actionConfig = overrideConfig ?? rule.actionConfig as ActionConfig;
@@ -35,7 +56,7 @@ export class AutomationAgentService {
       return;
     }
 
-    const content = await this.callAiService(rule.orgId, actionConfig.instruction, context);
+    const content = await this.callAiService(rule.orgId, actionConfig.instruction, context, actionConfig.useWebSearch ?? false);
     if (!content) {
       return;
     }
@@ -47,19 +68,23 @@ export class AutomationAgentService {
     orgId: string,
     instruction: string,
     context: AgentContext,
+    useWebSearch = false,
   ): Promise<string | null> {
     const aiBaseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8001/api/internal/v1';
-    const internalToken = process.env.INTERNAL_API_TOKEN ?? '';
+    const internalToken = process.env.AI_INTERNAL_API_TOKEN ?? '';
 
     const payload = {
       orgId,
       instruction,
+      useWebSearch,
       context: {
         triggerType: context.triggerType,
         userId: context.userId,
         displayName: context.displayName,
         orgName: context.orgName,
         messageContent: context.messageContent,
+        taskTitle: context.taskTitle,
+        taskStatus: context.taskStatus,
       },
     };
 
@@ -115,13 +140,21 @@ export class AutomationAgentService {
     }
 
     const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await this.prisma.chatMessage.create({
-      data: { id: msgId, conversationId, authorId: botUserId, content },
+    const message = await this.prisma.chatMessage.create({
+      data: { id: msgId, conversationId, authorId: botUserId, content, isCopilot: true },
+      include: aiMessageInclude,
     });
 
     await this.prisma.chatConversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },
+    });
+
+    await this.realtimeEvents.publish({
+      domain: RealtimeDomain.CHAT,
+      event: ChatRealtimeEvent.MESSAGE_CREATED,
+      target: { orgId: rule.orgId, conversationId },
+      payload: message,
     });
   }
 
