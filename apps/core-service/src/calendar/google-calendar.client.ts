@@ -31,6 +31,7 @@ export class GoogleCalendarClient {
       calendarId: 'primary',
       requestBody: this.toGoogleEvent(input),
     });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return response.data.id!;
   }
 

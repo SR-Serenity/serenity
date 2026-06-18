@@ -86,7 +86,7 @@ export default function AutomationPage() {
     }
   }
 
-  function useTemplate(template: WorkflowTemplate) {
+  function handleUseTemplate(template: WorkflowTemplate) {
     setPreviewTemplate(null)
     router.push(`/${orgSlug}/automation/new?template=${template.id}`)
   }
@@ -309,7 +309,7 @@ export default function AutomationPage() {
         <TemplatePreviewModal
           template={previewTemplate}
           onClose={() => setPreviewTemplate(null)}
-          onUse={() => useTemplate(previewTemplate)}
+          onUse={() => handleUseTemplate(previewTemplate)}
         />
       )}
     </div>
