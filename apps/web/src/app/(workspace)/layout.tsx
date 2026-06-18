@@ -681,8 +681,12 @@ function NavItemRow({
   )
 }
 
-export default function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
-  const { orgSlug } = params
+export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
+  const { orgSlug } = useParams<{ orgSlug?: string }>()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const auth = useAuthStore(
     useShallow((state) => ({
       token: state.token,
