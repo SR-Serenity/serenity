@@ -169,7 +169,7 @@ function EmailSettings() {
     mailApi
       .listAccounts(token)
       .then((r) => setAccounts(r.accounts))
-      .catch(() => {})
+      .catch(() => undefined)
       .finally(() => setLoading(false))
   }, [token])
 

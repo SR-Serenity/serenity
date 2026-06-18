@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import {
-  CalendarDays,
-  CheckCircle2,
-  Loader2,
-  MapPin,
-  Users,
-} from 'lucide-react'
+import { CalendarDays, CheckCircle2, Loader2, MapPin, Users } from 'lucide-react'
 import { calendarApi, orgApi, tasksApi } from '@serenity/api'
 import type { CalendarItem, Task } from '@serenity/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -41,22 +35,22 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_CLS: Record<string, string> = {
-  TODO: 'bg-gray-100 text-gray-600',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700',
-  DONE: 'bg-emerald-50 text-emerald-700',
-  CANCELLED: 'bg-gray-50 text-gray-400',
+  TODO: 'bg-ui text-muted-foreground',
+  IN_PROGRESS: 'bg-accent/10 text-accent-txt',
+  DONE: 'bg-success/10 text-success',
+  CANCELLED: 'bg-ui/50 text-disabled-text',
 }
 
 const PRIORITY_DOT: Record<string, string> = {
   HIGH: 'bg-red-400',
   MEDIUM: 'bg-amber-400',
-  LOW: 'bg-gray-300',
+  LOW: 'bg-dimmed',
 }
 
 const ITEM_TYPE_BAR: Record<string, string> = {
-  MEETING: 'bg-blue-400',
-  EVENT: 'bg-gray-300',
-  TASK: 'bg-amber-400',
+  MEETING: 'bg-accent',
+  EVENT: 'bg-muted-foreground',
+  TASK: 'bg-[var(--theme-warning-color)]',
 }
 
 export default function DashboardPage() {
@@ -106,12 +100,11 @@ export default function DashboardPage() {
     .slice(0, 6)
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white">
-      {/* Header */}
-      <div className="flex shrink-0 items-end justify-between border-b border-gray-100 px-7 py-5">
+    <div className="flex h-full min-h-0 flex-col bg-surface">
+      <div className="flex shrink-0 items-end justify-between border-b border-border px-7 py-5">
         <div className="min-w-0">
-          <p className="text-xs text-gray-400">{fmtDate(new Date().toISOString())}</p>
-          <h1 className="mt-0.5 truncate text-2xl font-semibold text-gray-900">
+          <p className="text-xs text-muted-foreground">{fmtDate(new Date().toISOString())}</p>
+          <h1 className="mt-0.5 truncate text-2xl font-semibold text-foreground">
             {user ? greeting(user.displayName) : 'Welcome back'}
           </h1>
         </div>
@@ -119,55 +112,52 @@ export default function DashboardPage() {
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
 
           {/* Metric cards */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-gray-100 p-5">
-              <div className="flex items-center justify-between">
-                <CheckCircle2 className="h-4 w-4 text-gray-300" />
-                <span className="text-xs text-gray-400">
-                  {dueToday.length > 0 ? `${dueToday.length} due today` : 'None due today'}
-                </span>
+            {[
+              {
+                icon: <CheckCircle2 className="h-4 w-4 text-muted-foreground" />,
+                badge: dueToday.length > 0 ? `${dueToday.length} due today` : 'None due today',
+                value: activeTasks.length,
+                label: 'Active tasks',
+              },
+              {
+                icon: <CalendarDays className="h-4 w-4 text-muted-foreground" />,
+                badge: todayItems.length === 0 ? 'No events' : `${todayItems.length} scheduled`,
+                value: todayItems.length,
+                label: 'Events today',
+              },
+              {
+                icon: <Users className="h-4 w-4 text-muted-foreground" />,
+                badge: currentOrg?.name ?? '',
+                value: memberCount ?? '—',
+                label: 'Team members',
+              },
+            ].map(({ icon, badge, value, label }) => (
+              <div key={label} className="rounded-xl border border-border bg-panel p-5 transition-all duration-150 hover:border-border/80 hover:shadow-sm">
+                <div className="flex items-center justify-between">
+                  {icon}
+                  <span className="max-w-[120px] truncate text-xs text-muted-foreground">{badge}</span>
+                </div>
+                <p className="mt-4 text-3xl font-semibold text-foreground">{value}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{label}</p>
               </div>
-              <p className="mt-4 text-3xl font-semibold text-gray-900">{activeTasks.length}</p>
-              <p className="mt-1 text-sm text-gray-500">Active tasks</p>
-            </div>
-
-            <div className="rounded-xl border border-gray-100 p-5">
-              <div className="flex items-center justify-between">
-                <CalendarDays className="h-4 w-4 text-gray-300" />
-                <span className="text-xs text-gray-400">
-                  {todayItems.length === 0 ? 'No events' : `${todayItems.length} scheduled`}
-                </span>
-              </div>
-              <p className="mt-4 text-3xl font-semibold text-gray-900">{todayItems.length}</p>
-              <p className="mt-1 text-sm text-gray-500">Events today</p>
-            </div>
-
-            <div className="rounded-xl border border-gray-100 p-5">
-              <div className="flex items-center justify-between">
-                <Users className="h-4 w-4 text-gray-300" />
-                <span className="text-xs text-gray-400 truncate max-w-[120px]">{currentOrg?.name}</span>
-              </div>
-              <p className="mt-4 text-3xl font-semibold text-gray-900">
-                {memberCount ?? '—'}
-              </p>
-              <p className="mt-1 text-sm text-gray-500">Team members</p>
-            </div>
+            ))}
           </div>
 
           {/* Main grid */}
           <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
 
             {/* Today's schedule */}
-            <div className="rounded-xl border border-gray-100">
-              <div className="border-b border-gray-100 px-5 py-4">
-                <h2 className="text-sm font-semibold text-gray-900">Today's schedule</h2>
-                <p className="mt-0.5 text-xs text-gray-400">
+            <div className="rounded-xl border border-border bg-panel">
+              <div className="border-b border-border px-5 py-4">
+                <h2 className="text-sm font-semibold text-foreground">Today's schedule</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {todayItems.length === 0
                     ? 'Nothing scheduled'
                     : `${todayItems.length} item${todayItems.length !== 1 ? 's' : ''}`}
@@ -176,29 +166,29 @@ export default function DashboardPage() {
 
               {todayItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <CalendarDays className="h-8 w-8 text-gray-100" />
-                  <p className="mt-3 text-sm text-gray-400">Your day is clear.</p>
+                  <CalendarDays className="h-8 w-8 text-border" />
+                  <p className="mt-3 text-sm text-muted-foreground">Your day is clear.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-border">
                   {todayItems.map(item => (
-                    <div key={item.id} className="flex items-start gap-4 px-5 py-4">
+                    <div key={item.id} className="flex items-start gap-4 px-5 py-4 transition-colors duration-150 hover:bg-popup-hover">
                       <div className="w-14 shrink-0 pt-0.5 text-right">
-                        <p className="text-xs font-medium tabular-nums text-gray-700">
+                        <p className="text-xs font-medium tabular-nums text-foreground">
                           {fmtTime(item.startAt)}
                         </p>
                         {item.endAt && (
-                          <p className="text-xs tabular-nums text-gray-400">
+                          <p className="text-xs tabular-nums text-muted-foreground">
                             {fmtTime(item.endAt)}
                           </p>
                         )}
                       </div>
 
-                      <div className={cn('mt-1 w-0.5 self-stretch rounded-full', ITEM_TYPE_BAR[item.type] ?? 'bg-gray-200')} />
+                      <div className={cn('mt-1 w-0.5 self-stretch rounded-full', ITEM_TYPE_BAR[item.type] ?? 'bg-border')} />
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">{item.title}</p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400">
+                        <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                           <span className="capitalize">{item.type.toLowerCase()}</span>
                           {item.location && (
                             <span className="flex items-center gap-0.5">
@@ -214,11 +204,8 @@ export default function DashboardPage() {
                           )}
                         </div>
                         {item.attendees.length > 0 && (
-                          <p className="mt-1 truncate text-xs text-gray-400">
-                            {item.attendees
-                              .slice(0, 3)
-                              .map(a => a.displayName)
-                              .join(', ')}
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            {item.attendees.slice(0, 3).map(a => a.displayName).join(', ')}
                             {item.attendees.length > 3 && ` +${item.attendees.length - 3} more`}
                           </p>
                         )}
@@ -230,10 +217,10 @@ export default function DashboardPage() {
             </div>
 
             {/* My tasks */}
-            <div className="rounded-xl border border-gray-100">
-              <div className="border-b border-gray-100 px-5 py-4">
-                <h2 className="text-sm font-semibold text-gray-900">My tasks</h2>
-                <p className="mt-0.5 text-xs text-gray-400">
+            <div className="rounded-xl border border-border bg-panel">
+              <div className="border-b border-border px-5 py-4">
+                <h2 className="text-sm font-semibold text-foreground">My tasks</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {activeTasks.length} active
                   {dueToday.length > 0 && ` · ${dueToday.length} due today`}
                 </p>
@@ -241,48 +228,35 @@ export default function DashboardPage() {
 
               {recentTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <CheckCircle2 className="h-8 w-8 text-gray-100" />
-                  <p className="mt-3 text-sm text-gray-400">No tasks yet.</p>
+                  <CheckCircle2 className="h-8 w-8 text-border" />
+                  <p className="mt-3 text-sm text-muted-foreground">No tasks yet.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-border">
                   {recentTasks.map(task => (
-                    <div key={task.id} className="flex items-start gap-3 px-5 py-3.5">
+                    <div key={task.id} className="flex items-start gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-popup-hover">
                       <span
-                        className={cn(
-                          'mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full',
-                          PRIORITY_DOT[task.priority],
-                        )}
+                        className={cn('mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full', PRIORITY_DOT[task.priority])}
                       />
                       <div className="min-w-0 flex-1">
-                        <p
-                          className={cn(
-                            'truncate text-sm text-gray-900',
-                            (task.status === 'DONE' || task.status === 'CANCELLED') &&
-                              'text-gray-400 line-through',
-                          )}
-                        >
+                        <p className={cn(
+                          'truncate text-sm text-foreground',
+                          (task.status === 'DONE' || task.status === 'CANCELLED') && 'text-muted-foreground line-through',
+                        )}>
                           {task.title}
                         </p>
                         {task.dueDate && (
-                          <p
-                            className={cn(
-                              'mt-0.5 text-xs',
-                              task.dueDate.slice(0, 10) === todayStr && task.status !== 'DONE'
-                                ? 'font-medium text-amber-600'
-                                : 'text-gray-400',
-                            )}
-                          >
+                          <p className={cn(
+                            'mt-0.5 text-xs',
+                            task.dueDate.slice(0, 10) === todayStr && task.status !== 'DONE'
+                              ? 'font-medium text-amber-500'
+                              : 'text-muted-foreground',
+                          )}>
                             Due {fmtShortDate(task.dueDate)}
                           </p>
                         )}
                       </div>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
-                          STATUS_CLS[task.status],
-                        )}
-                      >
+                      <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium', STATUS_CLS[task.status])}>
                         {STATUS_LABEL[task.status]}
                       </span>
                     </div>

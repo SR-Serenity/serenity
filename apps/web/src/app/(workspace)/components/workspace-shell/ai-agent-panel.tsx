@@ -481,11 +481,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
       return (
         <div className="flex h-full min-h-0 flex-col">
           <div className="mb-3 flex shrink-0 items-center justify-between">
-            <p className="text-sm font-semibold text-gray-900">Chats</p>
+            <p className="text-sm font-semibold text-foreground">Chats</p>
             <button
               type="button"
               onClick={startNewChat}
-              className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-popup-hover hover:text-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
               New
@@ -495,11 +495,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           <div className="min-h-0 flex-1 overflow-y-auto">
             {sessions.length === 0 ? (
               <div className="py-6 text-center">
-                <p className="text-sm text-gray-400">No conversations yet.</p>
+                <p className="text-sm text-muted-foreground">No conversations yet.</p>
                 <button
                   type="button"
                   onClick={startNewChat}
-                  className="mt-3 text-sm font-medium text-gray-700 underline-offset-2 hover:underline"
+                  className="mt-3 text-sm font-medium text-foreground underline-offset-2 hover:underline"
                 >
                   Start your first chat
                 </button>
@@ -530,18 +530,18 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           <button
             type="button"
             onClick={() => setView('history')}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-popup-hover hover:text-foreground"
             title="All chats"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
             {activeSessionId ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat') : 'New chat'}
           </p>
           <button
             type="button"
             onClick={startNewChat}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-popup-hover hover:text-foreground"
             title="New chat"
           >
             <Plus className="h-4 w-4" />
@@ -549,14 +549,14 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
         </div>
 
         {contextLabel && (
-          <p className="mb-2 truncate text-xs text-gray-400" title={contextLabel}>
+          <p className="mb-2 truncate text-xs text-muted-foreground" title={contextLabel}>
             Context: {contextLabel}
           </p>
         )}
 
         {loadingSession ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -572,10 +572,10 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ui text-muted-foreground">
                   <Bot className="h-5 w-5" />
                 </div>
-                <p className="text-sm text-gray-400">Ask Copilot anything about your workspace.</p>
+                <p className="text-sm text-muted-foreground">Ask Copilot anything about your workspace.</p>
               </div>
             )}
           </div>
@@ -602,14 +602,14 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
 
   // ── Full page mode (copilot page) ──────────────────────────────────────────
   return (
-    <div className="relative flex h-full min-h-0 bg-white text-slate-900 scheme-light">
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-slate-200 bg-slate-50/70 lg:flex">
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-3">
-          <span className="text-sm font-semibold text-slate-700">Conversations</span>
+    <div className="relative flex h-full min-h-0 bg-white text-gray-900 scheme-light">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-gray-100 bg-gray-50/60 lg:flex">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-100 px-3">
+          <span className="text-sm font-semibold text-gray-700">Conversations</span>
           <button
             type="button"
             onClick={startNewChat}
-            className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900"
+            className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors duration-150 hover:bg-white hover:text-gray-900"
             title="New chat"
           >
             <Plus className="h-4 w-4" />
@@ -617,12 +617,13 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {sessions.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-slate-500">No conversations yet.</p>
+            <p className="px-2 py-3 text-sm text-gray-400">No conversations yet.</p>
           ) : (
             <ChatSessionList
               sessions={sessions as ChatSession[]}
               activeSessionId={activeSessionId}
               compact={false}
+              lightSurface
               onOpenSession={openSession}
               onDeleteSession={openDeleteDialog}
             />
@@ -631,11 +632,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-100 px-4">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500">
             <Bot className="h-4 w-4" />
           </span>
-          <span className="text-sm font-medium text-slate-700">Copilot</span>
+          <span className="text-sm font-medium text-gray-700">Copilot</span>
           {contextLabel && (
             <span className="text-xs text-gray-400">· {contextLabel}</span>
           )}
@@ -643,7 +644,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           <button
             type="button"
             onClick={collapseToAddon}
-            className="flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            className="flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900"
           >
             <PanelRightClose className="h-3.5 w-3.5" />
             Collapse
@@ -651,7 +652,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           <button
             type="button"
             onClick={startNewChat}
-            className="flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            className="flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900"
           >
             <Plus className="h-3.5 w-3.5" />
             New chat
@@ -677,10 +678,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 />
               </div>
             </div>
-            <div className="shrink-0 px-5 pb-4">
+            <div className="shrink-0 px-5 pb-5">
               <div className="mx-auto w-full max-w-3xl">
                 <ChatComposer
                   compact={false}
+                  lightSurface
                   prompt={prompt}
                   sending={sending}
                   onPromptChange={setPrompt}
@@ -691,18 +693,20 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center px-5 py-8">
-            <div className="w-full max-w-3xl">
+            <div className="w-full max-w-2xl">
               <div className="mb-6 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white shadow-lg shadow-slate-200/70">
-                  <Bot className="h-8 w-8 text-slate-600" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-md shadow-gray-100">
+                  <Bot className="h-7 w-7 text-gray-500" />
                 </div>
               </div>
-              <h2 className="text-center text-2xl font-semibold text-gray-900">
+              <h2 className="text-center text-2xl font-semibold tracking-tight text-gray-900">
                 How can I help you?
               </h2>
-              <div className="mt-7">
+              <p className="mt-1.5 text-center text-sm text-gray-400">Ask anything about your workspace</p>
+              <div className="mt-8">
                 <ChatComposer
                   compact={false}
+                  lightSurface
                   prompt={prompt}
                   sending={sending}
                   onPromptChange={setPrompt}
@@ -710,13 +714,13 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
                 />
               </div>
               {showSuggestions && (
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
                   {suggestions.map(suggestion => (
                     <button
                       key={suggestion.label}
                       type="button"
                       onClick={() => setPrompt(suggestion.label)}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-400 hover:text-gray-900"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-500 transition-all duration-150 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95"
                     >
                       <suggestion.icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                       {suggestion.label}
