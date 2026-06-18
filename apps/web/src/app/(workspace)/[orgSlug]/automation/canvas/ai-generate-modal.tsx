@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Node, Edge } from '@xyflow/react'
 import { Loader2, Sparkles, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -15,6 +15,7 @@ type Props = {
   onGenerate: (name: string, nodes: Node[], edges: Edge[]) => void
   conversations: { id: string; name: string | null }[]
   members: { id: string; displayName: string }[]
+  initialPrompt?: string
 }
 
 const EXAMPLES = [
@@ -24,11 +25,15 @@ const EXAMPLES = [
   'Every Monday, summarize last week and post to #team-updates',
 ]
 
-export function AiGenerateModal({ open, onClose, onGenerate, conversations, members }: Props) {
+export function AiGenerateModal({ open, onClose, onGenerate, conversations, members, initialPrompt }: Props) {
   const { token } = useAuthStore(useShallow(s => ({ token: s.token })))
-  const [description, setDescription] = useState('')
+  const [description, setDescription] = useState(initialPrompt ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialPrompt) setDescription(initialPrompt)
+  }, [initialPrompt])
 
   if (!open) return null
 

@@ -395,7 +395,7 @@ export class ChatService {
     instruction: string,
   ): Promise<void> {
     const aiBaseUrl =
-      process.env.AI_SERVICE_URL ?? 'http://localhost:2998/api/internal/v1';
+      process.env.AI_SERVICE_URL ?? 'http://localhost:8001/api/internal/v1';
 
     const recent = await this.prisma.chatMessage.findMany({
       where: { conversationId, unsentAt: null, parentId: null },
@@ -404,16 +404,20 @@ export class ChatService {
       include: { author: { select: { displayName: true } } },
     });
 
-    // Build conversation context as prior messages, then user's instruction as the final message
     const priorMessages = recent
       .reverse()
       .filter((m) => m.content)
-      .map((m) => ({ role: 'user' as const, content: `${m.author.displayName}: ${m.content}` }));
+      .map((m) => `${m.author.displayName}: ${m.content}`);
 
-    const messages = [
-      ...priorMessages,
-      { role: 'user' as const, content: instruction },
-    ];
+    const prompt = [
+      'You are Copilot replying inside a group chat conversation.',
+      'Use the recent conversation context when it helps, and keep the reply concise.',
+      '',
+      'Recent conversation:',
+      priorMessages.length ? priorMessages.join('\n') : '(no prior messages)',
+      '',
+      `User request: ${instruction}`,
+    ].join('\n');
 
     const internalToken = process.env.AI_INTERNAL_API_TOKEN;
     try {
@@ -425,8 +429,12 @@ export class ChatService {
         },
         body: JSON.stringify({
           sessionId: `copilot-${conversationId}`,
-          messages,
+          message: prompt,
           authContext: { orgId: auth.orgId, userId: auth.userId },
+          context: {
+            conversationId,
+            entrypoint: 'chat_copilot_mention',
+          },
         }),
       });
 
@@ -435,8 +443,14 @@ export class ChatService {
       const replyContent = (data.answer ?? '').trim();
       if (!replyContent) return;
 
+      const botUser = await this.prisma.workspaceMember.findFirst({
+        where: { orgId: auth.orgId, role: 'OWNER' },
+        select: { userId: true },
+      });
+      const botAuthorId = botUser?.userId ?? auth.userId;
+
       const botMessage = await this.prisma.chatMessage.create({
-        data: { conversationId, authorId: auth.userId, content: replyContent, isCopilot: true },
+        data: { conversationId, authorId: botAuthorId, content: replyContent, isCopilot: true },
         include: messageInclude,
       });
 

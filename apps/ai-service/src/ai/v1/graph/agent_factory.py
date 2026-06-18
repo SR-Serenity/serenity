@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from src.ai.v1.agents.calendar_agent.agent import calendar_agent_node
 from src.ai.v1.agents.chat_agent.agent import chat_agent_node
@@ -19,7 +19,10 @@ def _chat_assist_node(state: PipelineState) -> dict:
     return {"domain_agent_response": DomainAgentResponse(domain=Domain.CHAT_ASSIST, text=result)}
 
 
-def create_all_agent_nodes() -> dict[Domain, Callable[[PipelineState], dict]]:
+AgentNode = Callable[[PipelineState], dict | Awaitable[dict]]
+
+
+def create_all_agent_nodes() -> dict[Domain, AgentNode]:
     return {
         Domain.CHAT_AGENT: chat_agent_node,
         Domain.WIKI_AGENT: wiki_agent_node,

@@ -4,7 +4,7 @@ from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
 from src.ai.v1.agents.memory_writer.prompts import EXCHANGE_PROMPT, EXTRACT_PROMPT
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 
 class MemoryWriterAgent:
@@ -14,7 +14,7 @@ class MemoryWriterAgent:
         self._llm = (
             ChatOpenAI(
                 model=settings.OPENAI_MODEL,
-                api_key=settings.OPENAI_API_KEY,
+                api_key=openai_api_key_secret(),
                 temperature=0,
             )
             if settings.OPENAI_API_KEY

@@ -229,6 +229,8 @@ export class InvitationService {
       },
     });
 
+    void this.notifyMemberJoined(invitation.orgId, user.id);
+
     await this.prisma.invitation.update({
       where: { id: invitation.id },
       data: { status: InvitationStatus.ACCEPTED },
@@ -285,6 +287,8 @@ export class InvitationService {
       return createdUser;
     });
 
+    void this.notifyMemberJoined(invitation.orgId, user.id);
+
     return this.generateAuthResponse(user, invitation);
   }
 
@@ -315,6 +319,23 @@ export class InvitationService {
     return invitation;
   }
 
+  private async notifyMemberJoined(orgId: string, userId: string): Promise<void> {
+    const coreServiceUrl = process.env.CORE_SERVICE_URL;
+    const secret = process.env.INTERNAL_SERVICE_SECRET;
+    if (!coreServiceUrl || !secret) {
+      return;
+    }
+    try {
+      await fetch(`${coreServiceUrl}/automations/internal/member-joined`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ secret, orgId, userId }),
+      });
+    } catch {
+      // fire-and-forget, don't fail invitation flow
+    }
+  }
+
   private async generateAuthResponse(user: any, invitation: any) {
     const payload = {
       sub: user.id,
@@ -322,6 +343,7 @@ export class InvitationService {
       org_id: invitation.orgId,
       role: invitation.role,
       email: user.email,
+      displayName: user.displayName,
     };
 
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? '1d') as SignOptions['expiresIn'];

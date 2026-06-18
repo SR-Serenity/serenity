@@ -16,7 +16,7 @@ export function OfficeInitializer() {
     })),
   )
 
-  const realtime = useRealtime(token, !!token)
+  const { subscribe } = useRealtime(token, !!token)
 
   useEffect(() => {
     return () => reset()
@@ -37,12 +37,12 @@ export function OfficeInitializer() {
       'office.note.updated',
     ]
     const unsubs = events.map(eventType =>
-      realtime.subscribe(eventType, (data) => {
-        applyRealtimeEvent({ type: eventType, payload: data })
+      subscribe(eventType, (data) => {
+        applyRealtimeEvent(data as { type: string; payload?: unknown })
       }),
     )
     return () => unsubs.forEach(unsub => unsub())
-  }, [realtime, applyRealtimeEvent])
+  }, [subscribe, applyRealtimeEvent])
 
   return null
 }

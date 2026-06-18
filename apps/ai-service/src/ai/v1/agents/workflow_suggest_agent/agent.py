@@ -6,7 +6,7 @@ from typing import Literal
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ class WorkflowSuggestAgent:
         self._llm = (
             ChatOpenAI(
                 model=settings.OPENAI_MODEL,
-                api_key=settings.OPENAI_API_KEY,
+                api_key=openai_api_key_secret(),
                 temperature=0,
             ).with_structured_output(WorkflowGraph)
             if settings.OPENAI_API_KEY

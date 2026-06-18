@@ -23,10 +23,16 @@ enum AutomationTriggerType {
   SCHEDULE = 'SCHEDULE',
   MEMBER_JOINED = 'MEMBER_JOINED',
   MESSAGE_KEYWORD = 'MESSAGE_KEYWORD',
+  TASK_CREATED = 'TASK_CREATED',
+  TASK_STATUS_CHANGED = 'TASK_STATUS_CHANGED',
+  TASK_ASSIGNED = 'TASK_ASSIGNED',
 }
 
 enum AutomationActionType {
   AI_AGENT = 'AI_AGENT',
+  NOTIFY = 'NOTIFY',
+  CREATE_TASK = 'CREATE_TASK',
+  POST_CHANNEL = 'POST_CHANNEL',
 }
 
 class CreateAutomationRuleBodyDto {
@@ -52,6 +58,11 @@ class CreateAutomationRuleBodyDto {
   @ApiProperty()
   @IsObject()
     actionConfig!: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+    stepsGraph?: Record<string, unknown>;
 }
 
 class UpdateAutomationRuleBodyDto {
@@ -80,6 +91,18 @@ class UpdateAutomationRuleBodyDto {
   @IsObject()
   @IsOptional()
     actionConfig?: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+    stepsGraph?: Record<string, unknown>;
+}
+
+class SuggestAutomationBodyDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+    description!: string;
 }
 
 class ToggleAutomationRuleBodyDto {
@@ -109,6 +132,14 @@ export class AutomationController {
   createRule(@Req() req: RequestWithAuth, @Body() body: CreateAutomationRuleBodyDto) {
     const authorization = req.headers.authorization as string;
     return this.apiProxy.forwardPostRequest('automations', body, authorization);
+  }
+
+  @Post('suggest')
+  @ApiOperation({ summary: 'AI-suggest an automation rule from a description' })
+  @ApiOkResponse({ description: 'Suggested automation rule' })
+  suggestRule(@Req() req: RequestWithAuth, @Body() body: SuggestAutomationBodyDto) {
+    const authorization = req.headers.authorization as string;
+    return this.apiProxy.forwardPostRequest('automations/suggest', body, authorization);
   }
 
   @Patch(':id')

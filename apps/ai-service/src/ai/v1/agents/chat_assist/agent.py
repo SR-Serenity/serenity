@@ -4,7 +4,7 @@ import logging
 
 from langchain_openai import ChatOpenAI
 
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class ChatAssistAgent:
         self._llm = (
             ChatOpenAI(
                 model=settings.OPENAI_MODEL,
-                api_key=settings.OPENAI_API_KEY,
+                api_key=openai_api_key_secret(),
                 temperature=0.7,
             )
             if settings.OPENAI_API_KEY

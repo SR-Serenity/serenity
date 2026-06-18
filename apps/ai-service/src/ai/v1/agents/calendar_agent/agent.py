@@ -14,7 +14,7 @@ from src.ai.v1.agents.calendar_agent.tools import (
 from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.ai.v1.contexts.schemas.enums import Domain
 from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState, RawAgentData
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 
 @dynamic_prompt
@@ -23,7 +23,7 @@ def _system_prompt(request: ModelRequest[AgentContext]) -> str:
 
 
 _agent = create_agent(
-    ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0),
+    ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0),
     tools=[
         list_calendar_events_tool,
         get_calendar_item_tool,

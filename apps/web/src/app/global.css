@@ -214,6 +214,14 @@
   --activity-status-dnd:    #D95757;
   --activity-status-busy:   #FCC500;
   
+  /* Brand color scale */
+  --brand:        #070738;
+  --brand-hover:  #0d0d5a;
+  --brand-light:  #ebebf8;
+  --brand-surface:#f5f5fc;
+  --brand-muted:  #5b5b8a;
+  --brand-border: #d0d0eb;
+
   /* Shared animations & transitions */
   --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -503,6 +511,14 @@
   --color-sidebar-accent-foreground:   var(--theme-caption-color);
   --color-sidebar-border:              var(--theme-navpanel-divider);
   --color-sidebar-ring:                var(--global-accent-BackgroundColor);
+
+  /* Brand utilities — generates bg-brand, text-brand, border-brand, etc. */
+  --color-brand:        var(--brand);
+  --color-brand-hover:  var(--brand-hover);
+  --color-brand-light:  var(--brand-light);
+  --color-brand-surface:var(--brand-surface);
+  --color-brand-muted:  var(--brand-muted);
+  --color-brand-border: var(--brand-border);
 
   /* Standard shadcn palette (kept for compatibility) */
   --color-background:          var(--theme-bg-color);

@@ -62,7 +62,7 @@ export class AutomationController {
   @Post('suggest')
   async suggestRule(@CurrentUser() user: AuthUser, @Body() body: { description: string }) {
     const aiBaseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8001/api/internal/v1';
-    const internalToken = process.env.INTERNAL_API_TOKEN ?? '';
+    const internalToken = process.env.AI_INTERNAL_API_TOKEN ?? '';
 
     try {
       const res = await fetch(`${aiBaseUrl}/ai/automation/suggest`, {

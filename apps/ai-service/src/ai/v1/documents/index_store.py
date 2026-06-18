@@ -11,7 +11,7 @@ from typing import Iterable
 
 import psycopg
 
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings, use_external_persistence
 
 
 _VECTOR_DIM = 1536
@@ -41,7 +41,7 @@ class SearchResult:
 
 class DocumentIndexStore:
     def __init__(self) -> None:
-        self._use_db = bool(settings.DATABASE_URL)
+        self._use_db = use_external_persistence()
         self._db_ready = False
         self._memory: dict[tuple[str, str, str, str], IndexedChunk] = {}
 
@@ -98,7 +98,10 @@ class DocumentIndexStore:
 
         try:
             self._ensure_db()
-            with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+            db_url = settings.DATABASE_URL
+            if not db_url:
+                raise RuntimeError("DATABASE_URL is not configured")
+            with psycopg.connect(db_url, autocommit=True) as conn:
                 conn.execute(
                     """
                     DELETE FROM ai_doc_chunks
@@ -113,7 +116,10 @@ class DocumentIndexStore:
     def _ensure_db(self) -> None:
         if self._db_ready or not settings.DATABASE_URL:
             return
-        with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+        db_url = settings.DATABASE_URL
+        if not db_url:
+            return
+        with psycopg.connect(db_url, autocommit=True) as conn:
             conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             conn.execute(
                 """
@@ -154,7 +160,10 @@ class DocumentIndexStore:
         source_id: str,
         chunks: list[IndexedChunk],
     ) -> int:
-        with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+        db_url = settings.DATABASE_URL
+        if not db_url:
+            raise RuntimeError("DATABASE_URL is not configured")
+        with psycopg.connect(db_url, autocommit=True) as conn:
             existing = {
                 row[0]: row[1]
                 for row in conn.execute(
@@ -253,7 +262,10 @@ class DocumentIndexStore:
     ) -> list[SearchResult]:
         embedding = self._embed_texts([query])[0]
         vector_literal = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
-        with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+        db_url = settings.DATABASE_URL
+        if not db_url:
+            raise RuntimeError("DATABASE_URL is not configured")
+        with psycopg.connect(db_url, autocommit=True) as conn:
             if source_ids:
                 rows = conn.execute(
                     """
@@ -359,7 +371,7 @@ class DocumentIndexStore:
 
                 embedder = OpenAIEmbeddings(
                     model=settings.OPENAI_EMBEDDING_MODEL,
-                    api_key=settings.OPENAI_API_KEY,
+                    api_key=openai_api_key_secret(),
                 )
                 return embedder.embed_documents(texts)
             except Exception:

@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def to_camel(value: str) -> str:
@@ -67,12 +67,46 @@ class ChatRequest(CamelModel):
     auth_context: AuthContext
     context: RequestContext = Field(default_factory=RequestContext)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_messages(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or data.get("message"):
+            return data
+
+        messages = data.get("messages")
+        if not isinstance(messages, list):
+            return data
+
+        content_lines: list[str] = []
+        for item in messages:
+            if not isinstance(item, dict):
+                continue
+            content = str(item.get("content") or "").strip()
+            if not content:
+                continue
+            role = str(item.get("role") or "user")
+            content_lines.append(f"{role}: {content}")
+
+        if content_lines:
+            return {**data, "message": "\n".join(content_lines)}
+        return data
+
 
 class ChatResponse(CamelModel):
     answer: str
     thread_id: str
     proposed_actions: list[ProposedAction] = Field(default_factory=list)
     trace_id: str | None = None
+
+
+class ChatAssistRequest(CamelModel):
+    auth_context: AuthContext
+    conversation_context: list[ChatMessage] = Field(default_factory=list)
+    prompt: str
+
+
+class ChatAssistResponse(CamelModel):
+    suggested_content: str
 
 
 class ExecuteActionRequest(CamelModel):
@@ -283,12 +317,15 @@ class AutomationContext(CamelModel):
     display_name: str | None = None
     org_name: str | None = None
     message_content: str | None = None
+    task_title: str | None = None
+    task_status: str | None = None
 
 
 class AutomationExecuteRequest(CamelModel):
     org_id: str
     instruction: str
     context: AutomationContext = Field(default_factory=AutomationContext)
+    use_web_search: bool = False
 
 
 class AutomationExecuteResponse(CamelModel):

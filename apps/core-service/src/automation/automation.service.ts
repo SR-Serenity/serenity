@@ -53,7 +53,11 @@ export class AutomationService {
     let resolvedTriggerType = dto.triggerType;
     let resolvedTriggerConfig = dto.triggerConfig;
     if (dto.stepsGraph) {
-      const extracted = this.extractTriggerFromGraph(dto.stepsGraph, dto.triggerType, dto.triggerConfig);
+      const extracted = this.extractTriggerFromGraph(
+        dto.stepsGraph,
+        dto.triggerType ?? existing.triggerType,
+        dto.triggerConfig,
+      );
       resolvedTriggerType = extracted.triggerType;
       resolvedTriggerConfig = extracted.triggerConfig;
     }

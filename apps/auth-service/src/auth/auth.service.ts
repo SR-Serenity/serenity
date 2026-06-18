@@ -38,6 +38,7 @@ type AuthTokenPayload = JwtPayload & {
   org_id: string;
   role: WorkspaceRole;
   email: string;
+  displayName: string;
 };
 
 @Injectable()
@@ -104,6 +105,7 @@ export class AuthService {
     return this.authResponse(
       created.user.id,
       created.user.email,
+      created.user.displayName,
       created.organization.id,
       WorkspaceRole.OWNER,
       {
@@ -189,6 +191,7 @@ export class AuthService {
     return this.authResponse(
       user.id,
       user.email,
+      user.displayName,
       membership.orgId,
       membership.role,
       {
@@ -276,6 +279,7 @@ export class AuthService {
     return this.authResponse(
       member.user.id,
       member.user.email,
+      member.user.displayName,
       organization.id,
       member.role,
       {
@@ -312,6 +316,7 @@ export class AuthService {
     return this.authResponse(
       membership.user.id,
       membership.user.email,
+      membership.user.displayName,
       membership.orgId,
       membership.role,
       {
@@ -379,6 +384,7 @@ export class AuthService {
   private authResponse(
     userId: string,
     email: string,
+    displayName: string,
     orgId: string,
     role: WorkspaceRole,
     extra: Record<string, unknown>
@@ -389,6 +395,7 @@ export class AuthService {
       org_id: orgId,
       role,
       email,
+      displayName,
     };
 
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? '1d') as SignOptions['expiresIn'];
@@ -518,4 +525,3 @@ export class AuthService {
     });
   }
 }
-

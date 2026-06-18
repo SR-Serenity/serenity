@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
+import pytest
 
+from src.api.internal.v1.schemas import ChatResponse, ProposedAction
 from src.main import app
 
 
@@ -37,7 +39,25 @@ def test_chat_endpoint_returns_fallback_response() -> None:
     assert data["proposedActions"] == []
 
 
-def test_task_proposal_does_not_execute_mutation() -> None:
+def _mock_chat_response(monkeypatch: pytest.MonkeyPatch, response: ChatResponse) -> None:
+    async def fake_run_chat(payload, *, auth_token=None):
+        return response
+
+    monkeypatch.setattr("src.api.internal.v1.ai.run_chat", fake_run_chat)
+
+
+def test_task_proposal_does_not_execute_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mock_chat_response(
+        monkeypatch,
+        ChatResponse(
+            answer="Nothing has been changed. Confirm before I create this task.",
+            thread_id="org-1:user-1:session-1",
+            proposed_actions=[
+                ProposedAction(type="CREATE_TASK", payload={"title": "Review Q4 docs"})
+            ],
+        ),
+    )
+
     response = client.post(
         "/api/internal/v1/ai/chat",
         headers=INTERNAL_HEADERS,
@@ -56,7 +76,18 @@ def test_task_proposal_does_not_execute_mutation() -> None:
     assert "Nothing has been changed" in data["answer"]
 
 
-def test_meeting_proposal_does_not_execute_mutation() -> None:
+def test_meeting_proposal_does_not_execute_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mock_chat_response(
+        monkeypatch,
+        ChatResponse(
+            answer="Nothing has been changed. Confirm before I book the room.",
+            thread_id="org-1:user-1:session-2",
+            proposed_actions=[
+                ProposedAction(type="BOOK_ROOM", payload={"title": "Meeting"})
+            ],
+        ),
+    )
+
     response = client.post(
         "/api/internal/v1/ai/chat",
         headers=INTERNAL_HEADERS,
@@ -74,7 +105,18 @@ def test_meeting_proposal_does_not_execute_mutation() -> None:
     assert data["proposedActions"][0]["requiresConfirmation"] is True
 
 
-def test_event_proposal_does_not_become_task_or_meeting() -> None:
+def test_event_proposal_does_not_become_task_or_meeting(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mock_chat_response(
+        monkeypatch,
+        ChatResponse(
+            answer="Nothing has been changed. Confirm before I schedule the event.",
+            thread_id="org-1:user-1:session-event",
+            proposed_actions=[
+                ProposedAction(type="CREATE_EVENT", payload={"title": "Product launch"})
+            ],
+        ),
+    )
+
     response = client.post(
         "/api/internal/v1/ai/chat",
         headers=INTERNAL_HEADERS,
@@ -124,7 +166,19 @@ def test_document_agent_returns_file_and_page_citations() -> None:
     assert data["sources"][0]["page"] == 2
 
 
-def test_long_term_memory_scoped_by_org() -> None:
+def test_long_term_memory_scoped_by_org(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_run_chat(payload, *, auth_token=None):
+        if payload.auth_context.org_id == "org-a" and "What should you know?" in payload.message:
+            answer = "I have long-term workspace context: prefers short updates."
+        else:
+            answer = "Serenity AI is connected. Send a workspace question to begin."
+        return ChatResponse(
+            answer=answer,
+            thread_id=f"{payload.auth_context.org_id}:{payload.auth_context.user_id}:{payload.session_id}",
+        )
+
+    monkeypatch.setattr("src.api.internal.v1.ai.run_chat", fake_run_chat)
+
     client.post(
         "/api/internal/v1/ai/chat",
         headers=INTERNAL_HEADERS,

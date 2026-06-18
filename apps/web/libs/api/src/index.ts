@@ -152,6 +152,7 @@ export type {
   AutomationRule,
   AutomationTriggerType,
   AutomationActionType,
+  AutomationConditionType,
   StepNode,
   StepEdge,
   StepsGraph,

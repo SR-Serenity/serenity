@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { RealtimeEventsService } from '../realtime/realtime-events.service';
+import { RedisPublisherService } from '../realtime/redis-publisher.service';
 import { AutomationController } from './automation.controller';
 import { AutomationService } from './automation.service';
 import { AutomationEngineService } from './automation-engine.service';
@@ -14,6 +16,8 @@ import { AutomationSchedulerService } from './automation-scheduler.service';
     AutomationEngineService,
     AutomationAgentService,
     AutomationSchedulerService,
+    RealtimeEventsService,
+    RedisPublisherService,
   ],
   exports: [AutomationEngineService],
 })
