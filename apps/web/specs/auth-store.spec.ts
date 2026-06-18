@@ -7,6 +7,7 @@ jest.mock('@serenity/api', () => ({
     login: jest.fn(),
     register: jest.fn(),
     switchOrg: jest.fn(),
+    profile: jest.fn(),
   },
 }))
 
@@ -128,6 +129,41 @@ it('setSession supports invite registration flow', () => {
     token,
     currentOrg: org,
     user,
+    initializing: false,
+  })
+})
+
+it('rehydrates the stored display name when an older token omits it', async () => {
+  const token = createToken({ displayName: undefined })
+  const storedUser = {
+    id: 'user-1',
+    email: 'member@serenity.test',
+    displayName: 'Stored Member',
+  }
+  localStorage.setItem(
+    'serenity-auth',
+    JSON.stringify({
+      state: { token, currentOrg: org, user: storedUser },
+      version: 0,
+    }),
+  )
+  mockedAuthApi.profile.mockResolvedValue({
+    id: 'user-1',
+    email: 'member@serenity.test',
+    displayName: 'Profile Member',
+  })
+
+  await useAuthStore.getState().initialize()
+
+  expect(mockedAuthApi.profile).toHaveBeenCalledWith(token)
+  expect(useAuthStore.getState()).toMatchObject({
+    token,
+    currentOrg: org,
+    user: {
+      id: 'user-1',
+      email: 'member@serenity.test',
+      displayName: 'Profile Member',
+    },
     initializing: false,
   })
 })

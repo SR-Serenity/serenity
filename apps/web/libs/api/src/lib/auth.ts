@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { AuthResponse, AcceptInvitationResponse, OrgSummary } from '../types'
+import type { AuthResponse, AcceptInvitationResponse, OrgSummary, User } from '../types'
 
 export const authApi = {
   login: async (email: string, password: string, orgSlug?: string): Promise<AuthResponse> => {
@@ -44,6 +44,12 @@ export const authApi = {
 
   organizations: async (token: string): Promise<{ organizations: OrgSummary[] }> => {
     return api.get('auth/organizations', {
+      token,
+    })
+  },
+
+  profile: async (token: string): Promise<User> => {
+    return api.get('users/profile', {
       token,
     })
   },
