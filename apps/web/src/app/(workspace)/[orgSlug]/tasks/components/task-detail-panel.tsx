@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Pencil, Sparkles, Trash2, X } from 'lucide-react'
+import { CalendarDays, ExternalLink, Pencil, Sparkles, Trash2, User, X } from 'lucide-react'
 import type { Task } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
+import { cn } from '@/lib/utils'
 import { AiBadge, PriorityBadge, SourceBadge, StatusBadge } from './task-badges'
 
 type TaskDetailPanelProps = {
@@ -16,100 +17,148 @@ type TaskDetailPanelProps = {
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function MetaRow({ icon: Icon, label, children }: { icon?: React.ElementType; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-right text-sm text-foreground">{children}</span>
+    <div className="flex items-center justify-between gap-4 py-2.5">
+      <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {label}
+      </div>
+      <div className="text-right text-sm text-gray-700">{children}</div>
     </div>
   )
 }
 
 export function TaskDetailPanel({ task, orgSlug, onClose, onEdit, onDelete }: TaskDetailPanelProps) {
   const sourceHref =
-    task.sourceType === 'CHAT' && task.sourceId
-      ? `/${orgSlug}/chat/${task.sourceId}`
-      : null
+    task.sourceType === 'CHAT' && task.sourceId ? `/${orgSlug}/chat/${task.sourceId}` : null
+
+  const isOverdue = task.dueDate && task.status !== 'DONE' && task.status !== 'CANCELLED'
+    && new Date(task.dueDate) < new Date()
 
   return (
-    <aside className="flex h-full w-full max-w-sm shrink-0 flex-col border-l border-gray-100 bg-white">
+    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-gray-100 bg-white shadow-[-8px_0_24px_-8px_rgba(0,0,0,0.04)]">
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Task details</h2>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Edit">
-            <Pencil className="h-4 w-4" />
+        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Detail</span>
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Edit task">
+            <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={onDelete} title="Delete">
-            <Trash2 className="h-4 w-4" />
+          <Button variant="ghost" size="icon-sm" onClick={onDelete} title="Delete task"
+            className="hover:bg-rose-50 hover:text-rose-500">
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="icon-sm" onClick={onClose} title="Close">
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <StatusBadge status={task.status} />
-          <PriorityBadge priority={task.priority} />
-          <SourceBadge sourceType={task.sourceType} />
-          {task.createdByAi ? <AiBadge /> : null}
-        </div>
-
-        <h3 className="text-base font-semibold text-foreground">{task.title}</h3>
-        {task.description ? (
-          <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-            {task.description}
-          </p>
-        ) : null}
-
-        <div className="mt-4 border-t border-gray-100 pt-2">
-          <Field label="Assignee">{task.assigneeName ?? 'Unassigned'}</Field>
-          <Field label="Due date">{formatDate(task.dueDate)}</Field>
-        </div>
-
-        {(task.sourceType !== 'MANUAL' || task.sourceTitle) ? (
-          <div className="mt-4 border-t border-gray-100 pt-3">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Source
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+        {/* Title section */}
+        <div className="border-b border-gray-50 px-5 py-5">
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <StatusBadge status={task.status} />
+            <PriorityBadge priority={task.priority} />
+            {task.createdByAi && <AiBadge />}
+          </div>
+          <h3 className={cn(
+            'text-[15px] font-semibold leading-snug',
+            task.status === 'DONE' ? 'text-gray-400 line-through' : 'text-gray-900',
+          )}>
+            {task.title}
+          </h3>
+          {task.description && (
+            <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-500">
+              {task.description}
             </p>
-            <Field label="Type">
+          )}
+        </div>
+
+        {/* Metadata */}
+        <div className="divide-y divide-gray-50 px-5 py-1">
+          <MetaRow icon={User} label="Assignee">
+            {task.assigneeName ? (
+              <span className="flex items-center justify-end gap-2">
+                <span className="inline-flex size-5 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-[9px] font-bold text-white">
+                  {task.assigneeName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                </span>
+                {task.assigneeName}
+              </span>
+            ) : (
+              <span className="text-gray-400">Unassigned</span>
+            )}
+          </MetaRow>
+
+          <MetaRow icon={CalendarDays} label="Due date">
+            {task.dueDate ? (
+              <span className={cn(
+                'inline-flex items-center gap-1.5',
+                isOverdue ? 'font-medium text-rose-600' : 'text-gray-700',
+              )}>
+                {isOverdue && <span className="size-1.5 rounded-full bg-rose-400" />}
+                {formatDate(task.dueDate)}
+              </span>
+            ) : (
+              <span className="text-gray-400">No due date</span>
+            )}
+          </MetaRow>
+        </div>
+
+        {/* Source */}
+        {(task.sourceType !== 'MANUAL' || task.sourceTitle) && (
+          <div className="border-t border-gray-100 px-5 py-4">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Source</p>
+            <div className="flex items-center justify-between">
               <SourceBadge sourceType={task.sourceType} />
-            </Field>
-            {task.sourceTitle ? <Field label="From">{task.sourceTitle}</Field> : null}
-            {sourceHref ? (
-              <div className="pt-1 text-right">
-                <Link href={sourceHref} className="text-sm text-primary hover:underline">
-                  Open source →
+              {sourceHref && (
+                <Link
+                  href={sourceHref}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                >
+                  Open <ExternalLink className="h-3 w-3" />
                 </Link>
+              )}
+            </div>
+            {task.sourceTitle && (
+              <p className="mt-1.5 text-sm text-gray-500">{task.sourceTitle}</p>
+            )}
+          </div>
+        )}
+
+        {/* AI reason */}
+        {task.createdByAi && (
+          <div className="border-t border-gray-100 px-5 py-4">
+            <div className="rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50 to-purple-50/50 p-3.5">
+              <div className="mb-2 flex items-center gap-1.5">
+                <div className="flex size-5 items-center justify-center rounded-full bg-violet-100">
+                  <Sparkles className="size-3 text-violet-600" />
+                </div>
+                <span className="text-xs font-semibold text-violet-700">AI reasoning</span>
               </div>
-            ) : null}
+              <p className="text-sm leading-relaxed text-violet-900/70">
+                {task.aiReason ?? 'Suggested based on workspace context.'}
+              </p>
+            </div>
           </div>
-        ) : null}
+        )}
 
-        {task.createdByAi ? (
-          <div className="mt-4 rounded-lg border border-violet-100 bg-violet-50/60 p-3 dark:border-violet-900 dark:bg-violet-950/40">
-            <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Sparkles className="size-3" />
-              AI reason
-            </p>
-            <p className="text-sm text-foreground">
-              {task.aiReason ?? 'Suggested by AI from workspace context.'}
-            </p>
+        {/* Activity footer */}
+        <div className="border-t border-gray-100 px-5 py-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Activity</p>
+          <div className="space-y-1.5 text-xs text-gray-400">
+            {task.createdByName && (
+              <p>Created by <span className="font-medium text-gray-600">{task.createdByName}</span></p>
+            )}
+            <p>Created {formatDate(task.createdAt)}</p>
+            {task.updatedAt !== task.createdAt && (
+              <p>Updated {formatDate(task.updatedAt)}</p>
+            )}
           </div>
-        ) : null}
-
-        <div className="mt-4 border-t border-gray-100 pt-3">
-          <Field label="Created by">{task.createdByName ?? '—'}</Field>
-          <Field label="Created">{formatDate(task.createdAt)}</Field>
-          <Field label="Updated">{formatDate(task.updatedAt)}</Field>
         </div>
       </div>
     </aside>
