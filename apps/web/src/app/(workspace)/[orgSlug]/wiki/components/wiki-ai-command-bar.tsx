@@ -81,7 +81,7 @@ export function WikiAiCommandBar({
     try {
       let accumulated = ''
       const finalAnswer = await aiApi.streamOnce(token, {
-        messages: [{ role: 'user', content: userMessage }],
+        message: userMessage,
         authContext,
         context: { entrypoint: 'wiki_edit' },
       }, {

@@ -63,7 +63,7 @@ class ProposedAction(CamelModel):
 
 class ChatRequest(CamelModel):
     session_id: str
-    messages: list[ChatMessage]
+    message: str
     auth_context: AuthContext
     context: RequestContext = Field(default_factory=RequestContext)
 

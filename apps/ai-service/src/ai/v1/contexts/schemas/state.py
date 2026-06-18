@@ -27,6 +27,12 @@ class IntentDomain(BaseModel):
 class IntentClassification(BaseModel):
     intent: list[IntentDomain] | None = None
     language: str = "English"
+    needs_memory: bool = False
+
+
+class RawAgentData(BaseModel):
+    """Raw data returned by a sub-agent — no prose, just retrieved facts."""
+    content: str
 
 
 class DomainAgentResponse(BaseModel):

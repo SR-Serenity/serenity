@@ -1,8 +1,6 @@
-"""LLM-powered schedule agent."""
-
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
 
 from src.ai.v1.agents.schedule_agent.prompts import build_system_prompt
 from src.ai.v1.agents.schedule_agent.tools import (
@@ -13,60 +11,63 @@ from src.ai.v1.agents.schedule_agent.tools import (
     propose_room_booking_tool,
     propose_task_tool,
 )
-from src.api.internal.v1.schemas import ChatMessage, ProposedAction
+from src.ai.v1.contexts.schemas.agent_context import AgentContext
+from src.ai.v1.contexts.schemas.enums import Domain
+from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState, RawAgentData
+from src.api.internal.v1.schemas import ProposedAction
 from src.core.config import settings
 
-_SCHEDULE_TOOLS = [
-    propose_task_tool,
-    propose_event_tool,
-    propose_meeting_tool,
-    propose_room_booking_tool,
-    propose_calendar_update_tool,
-    list_calendar_items_tool,
-]
+
+@dynamic_prompt
+def _system_prompt(request: ModelRequest[AgentContext]) -> str:
+    return build_system_prompt(request.runtime.context)
 
 
-class ScheduleAgent:
-    name = "ScheduleAgent"
+_agent = create_agent(
+    ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0),
+    tools=[
+        propose_task_tool,
+        propose_event_tool,
+        propose_meeting_tool,
+        propose_room_booking_tool,
+        propose_calendar_update_tool,
+        list_calendar_items_tool,
+    ],
+    middleware=[_system_prompt],
+    response_format=RawAgentData,
+    context_schema=AgentContext,
+    name="schedule_agent",
+)
 
-    def __init__(self) -> None:
-        self._agent = create_react_agent(
-            ChatOpenAI(
-                model=settings.OPENAI_MODEL,
-                api_key=settings.OPENAI_API_KEY,
-                temperature=0,
-            ),
-            tools=_SCHEDULE_TOOLS,
-        )
 
-    def health(self) -> dict[str, str]:
-        return {"agent": self.name, "status": "ready"}
+async def schedule_agent_node(state: PipelineState, **_) -> dict:
+    raw = state.get("context", {})
+    ctx = AgentContext(
+        org_id=state["org_id"],
+        user_id=state["user_id"],
+        auth_token=state.get("auth_token") or "",
+        user_context=raw.get("userContext", {}),
+        time_zone=raw.get("timeZone", ""),
+    )
+    try:
+        result = await _agent.ainvoke({"messages": list(state["messages"])}, context=ctx)
+        raw_data: RawAgentData = result["structured_response"]
 
-    def needs_clarification(
-        self,
-        messages: list[ChatMessage],
-        context: dict | None = None,
-    ) -> str | None:
-        return None
+        proposed_actions: list[ProposedAction] = []
+        if ctx.pending_proposal:
+            proposed_actions = [ProposedAction(**ctx.pending_proposal)]
 
-    def propose(
-        self,
-        messages: list[ChatMessage],
-        context: dict | None = None,
-    ) -> ProposedAction | None:
-        context = context or {}
-        agent_context: dict = {
-            "auth_token": context.get("auth_token", ""),
-            "timeZone": context.get("timeZone", ""),
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.SCHEDULE_AGENT,
+                text=raw_data.content,
+                proposed_actions=proposed_actions,
+            )
         }
-        system_message = SystemMessage(content=build_system_prompt(context))
-        lc_messages = [system_message] + [
-            HumanMessage(content=m.content) if m.role == "user" else AIMessage(content=m.content)
-            for m in messages
-            if m.role in ("user", "assistant")
-        ]
-        self._agent.invoke(
-            {"messages": lc_messages},
-            config={"configurable": {"agent_context": agent_context}},
-        )
-        return agent_context.get("proposed_action")
+    except Exception as error:
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.SCHEDULE_AGENT,
+                error=str(error),
+            )
+        }

@@ -6,12 +6,12 @@ from src.ai.v1.agents.contacts_agent.prompts import build_contacts_prompt
 from src.ai.v1.agents.contacts_agent.tools import list_contacts_tool, search_contacts_tool
 from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.ai.v1.contexts.schemas.enums import Domain
-from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState
+from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState, RawAgentData
 from src.core.config import settings
 
 
 @dynamic_prompt
-def _system_prompt(request: ModelRequest) -> str:
+def _system_prompt(request: ModelRequest[AgentContext]) -> str:
     return build_contacts_prompt(request.runtime.context)
 
 
@@ -19,17 +19,10 @@ _agent = create_agent(
     ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0),
     tools=[list_contacts_tool, search_contacts_tool],
     middleware=[_system_prompt],
+    response_format=RawAgentData,
     context_schema=AgentContext,
+    name="contacts_agent",
 )
-
-
-def _extract_content(result) -> str:
-    if isinstance(result, dict):
-        msgs = result.get("messages", [])
-        if msgs:
-            return str(getattr(msgs[-1], "content", msgs[-1]))
-        return str(result)
-    return str(getattr(result, "content", result))
 
 
 async def contacts_agent_node(state: PipelineState, **_) -> dict:
@@ -43,6 +36,17 @@ async def contacts_agent_node(state: PipelineState, **_) -> dict:
     )
     try:
         result = await _agent.ainvoke({"messages": list(state["messages"])}, context=ctx)
-        return {"domain_agent_response": DomainAgentResponse(domain=Domain.CONTACTS_AGENT, text=_extract_content(result))}
+        raw_data: RawAgentData = result["structured_response"]
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.CONTACTS_AGENT,
+                text=raw_data.content,
+            )
+        }
     except Exception as error:
-        return {"domain_agent_response": DomainAgentResponse(domain=Domain.CONTACTS_AGENT, error=str(error))}
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.CONTACTS_AGENT,
+                error=str(error),
+            )
+        }

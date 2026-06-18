@@ -1,5 +1,3 @@
-from src.ai.v1.agents.schedule_agent.agent import ScheduleAgent
+from src.ai.v1.agents.schedule_agent.agent import schedule_agent_node
 
-schedule_agent = ScheduleAgent()
-
-__all__ = ["ScheduleAgent", "schedule_agent"]
+__all__ = ["schedule_agent_node"]
