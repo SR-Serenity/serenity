@@ -6,6 +6,7 @@ import type { ChatConversation, Member } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { Input } from '@/app/shared/components/ui/input'
 import { cn } from '@/lib/utils'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 type ConversationMembersDialogProps = {
   mode: 'view' | 'add'
@@ -14,16 +15,6 @@ type ConversationMembersDialogProps = {
   onClose: () => void
   onLoadMembers: () => Promise<Member[]>
   onAddMembers: (memberIds: string[]) => Promise<void>
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'U'
 }
 
 export function ConversationMembersDialog({
@@ -110,14 +101,16 @@ export function ConversationMembersDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="flex max-h-[86vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[86vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/55 to-transparent" />
+
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-base font-semibold text-foreground">
               {mode === 'add' ? 'Add members' : 'Members'}
             </h2>
-            <p className="text-sm text-gray-500">{conversation.name ?? 'Group chat'}</p>
+            <p className="text-sm text-muted-foreground">{conversation.name ?? 'Group chat'}</p>
           </div>
           <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} title="Close">
             <X className="h-4 w-4" />
@@ -126,21 +119,21 @@ export function ConversationMembersDialog({
 
         <div className="min-h-0 overflow-y-auto p-5">
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={event => setQuery(event.target.value)}
               placeholder="Search members"
-              className="h-10 rounded-xl border-gray-200 bg-white pl-9 focus-visible:ring-blue-100"
+              className="h-10 rounded-xl pl-9"
             />
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-10 text-gray-400">
+            <div className="flex justify-center py-10 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : visibleMembers.length === 0 ? (
-            <div className="py-10 text-center text-sm text-gray-500">No members found</div>
+            <div className="py-10 text-center text-sm text-muted-foreground">No members found</div>
           ) : (
             <div className="space-y-1">
               {visibleMembers.map(member => {
@@ -152,18 +145,16 @@ export function ConversationMembersDialog({
                     onClick={() => mode === 'add' && toggleMember(member.id)}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors',
-                      mode === 'add' && selected ? 'bg-blue-50' : 'hover:bg-gray-50',
+                      mode === 'add' && selected ? 'bg-accent/10' : 'hover:bg-popup-hover',
                     )}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[11px] font-semibold text-white">
-                      {initials(member.displayName)}
-                    </div>
+                    <DiceBearAvatar seed={member.id} name={member.displayName} className="h-8 w-8 rounded-lg" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-gray-900">{member.displayName}</div>
-                      <div className="truncate text-xs text-gray-500">{member.email}</div>
+                      <div className="truncate text-sm font-semibold text-foreground">{member.displayName}</div>
+                      <div className="truncate text-xs text-muted-foreground">{member.email}</div>
                     </div>
                     {mode === 'add' && (
-                      <div className={cn('h-4 w-4 rounded border', selected ? 'border-blue-600 bg-blue-600' : 'border-gray-300')} />
+                      <div className={cn('h-4 w-4 rounded border', selected ? 'border-accent bg-accent' : 'border-border')} />
                     )}
                   </button>
                 )
@@ -171,11 +162,11 @@ export function ConversationMembersDialog({
             </div>
           )}
 
-          {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
+          {error && <div className="mt-4 text-sm text-destructive">{error}</div>}
         </div>
 
         {mode === 'add' && (
-          <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
             <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>
               Cancel
             </Button>
@@ -183,7 +174,6 @@ export function ConversationMembersDialog({
               type="button"
               onClick={() => void handleAdd()}
               disabled={selectedMemberIds.length === 0 || isSaving}
-              className="gap-2 bg-blue-600 text-white hover:bg-blue-700"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
               Add members

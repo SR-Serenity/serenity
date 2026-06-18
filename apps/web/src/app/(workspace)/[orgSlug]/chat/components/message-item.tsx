@@ -18,6 +18,7 @@ import {
 import type { ChatAttachment, ChatMessage, ChatReaction } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 type MessageItemProps = {
   message: ChatMessage
@@ -33,16 +34,6 @@ type MessageItemProps = {
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👀']
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'U'
-}
 
 function formatTime(value: string) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -241,14 +232,14 @@ export function MessageItem({
     <div className="group relative px-3 py-1 transition-colors hover:bg-gray-50/80 sm:px-4">
       <div className="flex w-full gap-2.5">
         {!compact && (
-          <div
+          <DiceBearAvatar
+            seed={message.author.id ?? message.authorId}
+            name={message.author.displayName}
             className={cn(
-              'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold text-white shadow-sm',
-              isOwnMessage ? 'bg-blue-600' : 'bg-teal-500'
+              'mt-0.5 h-8 w-8 rounded-lg shadow-sm ring-1 ring-black/5',
+              isOwnMessage && 'ring-blue-200',
             )}
-          >
-            {initials(message.author.displayName)}
-          </div>
+          />
         )}
 
         {compact && <div className="w-8 shrink-0 text-right text-[11px] leading-5 text-transparent group-hover:text-gray-400">{formatTime(message.createdAt)}</div>}

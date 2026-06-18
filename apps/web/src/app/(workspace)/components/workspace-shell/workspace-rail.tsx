@@ -32,6 +32,7 @@ import { AiChatPanel } from './ai-agent-panel'
 import { ShellDivider, ShellIconActionButton } from './workspace-shell-primitives'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 export interface WorkspaceRailItem {
   id: string
@@ -55,7 +56,6 @@ interface WorkspaceRailProps {
   switchingOrgSlug?: string | null
   onSwitchOrg: (orgSlug: string) => void
   onLogout: () => void
-  userInitials: string
 }
 
 const utilityActions = [
@@ -95,21 +95,20 @@ function NavItem({
       href={href}
       title={label}
       className={cn(
-        'group flex h-8 w-full items-center gap-3 rounded-md px-3 text-[13px] outline-none',
-        'transition-colors duration-100',
+        'group flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium outline-none select-none transition-colors duration-150',
         isActive
-          ? 'bg-accent/[0.09] font-medium text-accent-txt'
+          ? 'bg-nav-selected text-caption border-l-2 border-accent pl-2'
           : 'text-content hover:bg-ui hover:text-caption',
       )}
     >
       <Icon
         className={cn(
-          'h-[15px] w-[15px] shrink-0',
+          'h-[16px] w-[16px] shrink-0 transition-colors duration-150',
           isActive ? 'text-accent-txt' : 'text-muted group-hover:text-caption',
         )}
       />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {notify && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-highlight" />}
+      {notify && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />}
     </Link>
   )
 }
@@ -133,16 +132,16 @@ function OrgHeader({
   return (
     <Popover>
       <PopoverTrigger className={cn(
-        'group flex w-full shrink-0 items-center gap-2.5 rounded-md px-2 py-2',
-        'transition-colors duration-100 hover:bg-ui outline-none focus-visible:bg-ui',
+        'group flex w-full shrink-0 items-center gap-2.5 rounded-lg px-2 py-2',
+        'transition-colors duration-150 hover:bg-ui outline-none focus-visible:bg-ui',
       )}>
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-white">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 text-xs font-bold text-white shadow-sm">
           {currentOrg.name.slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1 text-left">
           <p className="truncate text-[13px] font-semibold text-primary-text">{currentOrg.name}</p>
         </div>
-        <ChevronsUpDown className="h-3 w-3 shrink-0 text-dimmed opacity-0 group-hover:opacity-100" />
+        <ChevronsUpDown className="h-3 w-3 shrink-0 text-dimmed opacity-0 transition-opacity group-hover:opacity-100" />
       </PopoverTrigger>
 
       <PopoverContent
@@ -205,23 +204,21 @@ function OrgHeader({
 function UserSection({
   orgSlug,
   user,
-  userInitials,
   onLogout,
 }: {
   orgSlug: string
   user: User | null
-  userInitials: string
   onLogout: () => void
 }) {
+  const avatarSeed = user?.id ?? user?.email ?? user?.displayName
+
   return (
     <Popover>
       <PopoverTrigger className={cn(
         'group flex w-full shrink-0 items-center gap-2.5 rounded-md px-2 py-2',
-        'transition-colors duration-100 hover:bg-ui outline-none focus-visible:bg-ui',
+        'transition-colors duration-150 hover:bg-ui outline-none focus-visible:bg-ui',
       )}>
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-avatar text-[10px] font-semibold text-caption">
-          {userInitials}
-        </div>
+        <DiceBearAvatar seed={avatarSeed} name={user?.displayName} className="h-6 w-6" />
         <div className="min-w-0 flex-1 text-left">
           <p className="truncate text-[13px] font-medium text-primary-text leading-snug">
             {user?.displayName ?? 'Member'}
@@ -238,9 +235,7 @@ function UserSection({
       >
         <PopoverHeader className="gap-2 rounded-lg bg-btn-hover p-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-avatar-border bg-avatar text-sm font-semibold text-caption">
-              {userInitials}
-            </div>
+            <DiceBearAvatar seed={avatarSeed} name={user?.displayName} className="h-8 w-8 border border-avatar-border" />
             <div className="min-w-0">
               <PopoverTitle className="truncate text-sm font-semibold text-primary-text">
                 {user?.displayName ?? 'Member'}
@@ -292,7 +287,6 @@ export function WorkspaceRail({
   switchingOrgSlug,
   onSwitchOrg,
   onLogout,
-  userInitials,
 }: WorkspaceRailProps) {
 
   function isActive(item: WorkspaceRailItem) {
@@ -347,8 +341,8 @@ export function WorkspaceRail({
         ))}
 
         {groups.map(group => (
-          <div key={group} className="mt-6">
-            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-dimmed">
+          <div key={group} className="mt-5">
+            <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.1em] text-dimmed/70">
               {group}
             </p>
             {(byGroup[group] ?? []).map(app => (
@@ -373,7 +367,6 @@ export function WorkspaceRail({
         <UserSection
           orgSlug={orgSlug}
           user={user}
-          userInitials={userInitials}
           onLogout={onLogout}
         />
       </div>

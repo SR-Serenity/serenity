@@ -4,30 +4,14 @@ import { useRouter, useParams } from 'next/navigation'
 import { Trash2, Video } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OfficeRoom, OfficeParticipant } from '@serenity/api'
-
-const AVATAR_COLORS = [
-  'bg-blue-400',
-  'bg-violet-400',
-  'bg-emerald-400',
-  'bg-amber-400',
-  'bg-rose-400',
-  'bg-cyan-400',
-  'bg-pink-400',
-  'bg-teal-400',
-]
-
-function initials(name: string) {
-  return name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?'
-}
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 // ── Video Slot ──────────────────────────────────────────────────────────────
 
 function VideoSlot({
   participant,
-  index,
 }: {
   participant?: OfficeParticipant
-  index: number
 }) {
   return (
     <div
@@ -37,14 +21,11 @@ function VideoSlot({
       )}
     >
       {participant && (
-        <div
-          className={cn(
-            'w-full h-full flex items-center justify-center text-[10px] font-bold text-white',
-            AVATAR_COLORS[index % AVATAR_COLORS.length],
-          )}
-        >
-          {initials(participant.user.displayName)}
-        </div>
+        <DiceBearAvatar
+          seed={participant.userId}
+          name={participant.user.displayName}
+          className="h-full w-full rounded-md"
+        />
       )}
     </div>
   )
@@ -92,7 +73,7 @@ export function SmallRoomCard({
 
       <div className="grid grid-cols-2 gap-1">
         {slots.map((p, i) => (
-          <VideoSlot key={i} participant={p} index={i} />
+          <VideoSlot key={i} participant={p} />
         ))}
       </div>
     </div>
@@ -154,7 +135,7 @@ export function LargeRoomCard({
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
       >
         {slots.map((p, i) => (
-          <VideoSlot key={i} participant={p} index={i} />
+          <VideoSlot key={i} participant={p} />
         ))}
       </div>
     </div>
