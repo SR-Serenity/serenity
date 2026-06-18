@@ -10,8 +10,6 @@ import { WorkspaceRole } from '@prisma/client';
 import { AccessToken } from 'livekit-server-sdk';
 import { PrismaService } from '../database/prisma.service';
 import { OfficeRealtimeEvent } from '../realtime/config/enums/office-realtime-event.enum';
-import { WikiService } from '../wiki/wiki.service';
-import { WikiPageVisibility } from '@prisma/client';
 import { OfficeEventsService } from './office-events.service';
 import type {
   CreateRoomDto,
@@ -71,7 +69,6 @@ export class OfficeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: OfficeEventsService,
-    private readonly wiki: WikiService,
   ) {}
 
   async listRooms(auth: AuthContext) {
@@ -222,20 +219,9 @@ export class OfficeService {
     });
 
     if (remainingCount === 0) {
-      const note = await this.prisma.meetingNote.findFirst({
-        where: { roomId, sessionEndAt: null },
-        orderBy: { sessionStartAt: 'desc' },
-      });
-
-      if (note?.contentMarkdown) {
-        this.saveMeetingNoteToWiki(auth, roomId, note.contentMarkdown).catch((err) =>
-          this.logger.warn(`Failed to save meeting note to wiki: ${err}`),
-        );
-      }
-
       await this.prisma.meetingNote.updateMany({
         where: { roomId, sessionEndAt: null },
-        data: { sessionEndAt: new Date(), contentMarkdown: '' },
+        data: { sessionEndAt: new Date() },
       });
     }
 
@@ -728,52 +714,6 @@ export class OfficeService {
     }
     return this.prisma.meetingNote.create({
       data: { roomId, orgId },
-    });
-  }
-
-  private async saveMeetingNoteToWiki(
-    auth: AuthContext,
-    roomId: string,
-    contentMarkdown: string,
-  ): Promise<void> {
-    const hasContent = contentMarkdown.replace(/<!--[\s\S]*?-->/g, '').trim().length > 0;
-    if (!hasContent) return;
-
-    let summaryMarkdown = contentMarkdown;
-    const aiBlock = this.extractManagedBlock(
-      contentMarkdown,
-      AI_NOTES_BLOCK_START,
-      AI_NOTES_BLOCK_END,
-    );
-
-    if (!aiBlock) {
-      try {
-        const aiNotes = await this.callMeetingNotesAi(auth, roomId, {
-          transcriptMarkdown: contentMarkdown,
-          existingNotesMarkdown: contentMarkdown,
-        });
-        const block = `${AI_NOTES_BLOCK_START}\n${aiNotes.markdown.trim()}\n${AI_NOTES_BLOCK_END}`;
-        summaryMarkdown = this.mergeAiNotesBlock(contentMarkdown, block);
-      } catch (err) {
-        this.logger.warn(`saveMeetingNoteToWiki: summary generation failed: ${err}`);
-      }
-    }
-
-    const room = await this.prisma.officeRoom.findUnique({ where: { id: roomId } });
-    const date = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-    const title = `Meeting: ${room?.name ?? 'Room'} — ${date}`;
-
-    const summary = this.extractManagedBlock(summaryMarkdown, AI_NOTES_BLOCK_START, AI_NOTES_BLOCK_END);
-
-    await this.wiki.createPage(auth.orgId, auth.userId, {
-      title,
-      contentMarkdown: summary || summaryMarkdown,
-      visibility: WikiPageVisibility.ORG,
-      icon: '📝',
     });
   }
 

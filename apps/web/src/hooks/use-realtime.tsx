@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export type RealtimeEvent = {
   type: string
@@ -9,11 +9,71 @@ export type RealtimeEvent = {
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
 
+const DEFAULT_EVENT_TYPES = [
+  'ready',
+  'heartbeat',
+  'message.created',
+  'message.edited',
+  'message.unsent',
+  'reaction.added',
+  'reaction.removed',
+]
+
+function parseEventData(event: Event) {
+  const data = (event as MessageEvent<string>).data
+  if (typeof data !== 'string') {
+    return data
+  }
+
+  try {
+    return JSON.parse(data)
+  } catch {
+    return data
+  }
+}
+
 export function useRealtime(token: string | null, enabled = true) {
   const [status, setStatus] = useState<RealtimeStatus>('disconnected')
   const [lastEvent, setLastEvent] = useState<RealtimeEvent | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const listenersRef = useRef<Map<string, Set<(data: unknown) => void>>>(new Map())
+  const eventHandlersRef = useRef<Map<string, EventListener>>(new Map())
+
+  const notifyListeners = useCallback((eventType: string, data: unknown) => {
+    const listeners = listenersRef.current.get(eventType)
+    if (listeners) {
+      listeners.forEach(callback => callback(data))
+    }
+  }, [])
+
+  const attachEventListener = useCallback((eventType: string) => {
+    const eventSource = eventSourceRef.current
+    if (!eventSource || eventHandlersRef.current.has(eventType)) {
+      return
+    }
+
+    const handler: EventListener = (event) => {
+      const data = parseEventData(event)
+      if (eventType !== 'heartbeat') {
+        setLastEvent({ type: eventType, data })
+      }
+      notifyListeners(eventType, data)
+    }
+
+    eventHandlersRef.current.set(eventType, handler)
+    eventSource.addEventListener(eventType, handler)
+  }, [notifyListeners])
+
+  const detachEventListener = useCallback((eventType: string) => {
+    const eventSource = eventSourceRef.current
+    const handler = eventHandlersRef.current.get(eventType)
+    if (!eventSource || !handler) {
+      return
+    }
+
+    eventSource.removeEventListener(eventType, handler)
+    eventHandlersRef.current.delete(eventType)
+  }, [])
 
   useEffect(() => {
     if (!enabled || !token) {
@@ -29,6 +89,7 @@ export function useRealtime(token: string | null, enabled = true) {
     const url = `${endpoint}?token=${encodeURIComponent(token)}`
     const eventSource = new EventSource(url)
     eventSourceRef.current = eventSource
+    const eventHandlers = eventHandlersRef.current
 
     eventSource.onopen = () => {
       setStatus('connected')
@@ -37,63 +98,30 @@ export function useRealtime(token: string | null, enabled = true) {
     eventSource.onerror = () => {
       setStatus('error')
       eventSource.close()
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null
+      }
     }
 
-    eventSource.addEventListener('ready', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'ready', data })
-      notifyListeners('ready', data)
-    })
-
-    eventSource.addEventListener('heartbeat', (e) => {
-      const data = JSON.parse(e.data)
-      notifyListeners('heartbeat', data)
-    })
-
-    eventSource.addEventListener('message.created', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'message.created', data })
-      notifyListeners('message.created', data)
-    })
-
-    eventSource.addEventListener('message.edited', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'message.edited', data })
-      notifyListeners('message.edited', data)
-    })
-
-    eventSource.addEventListener('message.unsent', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'message.unsent', data })
-      notifyListeners('message.unsent', data)
-    })
-
-    eventSource.addEventListener('reaction.added', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'reaction.added', data })
-      notifyListeners('reaction.added', data)
-    })
-
-    eventSource.addEventListener('reaction.removed', (e) => {
-      const data = JSON.parse(e.data)
-      setLastEvent({ type: 'reaction.removed', data })
-      notifyListeners('reaction.removed', data)
-    })
+    const eventTypes = new Set([...DEFAULT_EVENT_TYPES, ...listenersRef.current.keys()])
+    eventTypes.forEach(attachEventListener)
 
     return () => {
       eventSource.close()
       eventSourceRef.current = null
+      eventHandlers.clear()
       setStatus('disconnected')
     }
-  }, [token, enabled])
+  }, [token, enabled, attachEventListener])
 
-  const subscribe = (eventType: string, callback: (data: unknown) => void) => {
+  const subscribe = useCallback((eventType: string, callback: (data: unknown) => void) => {
     if (!listenersRef.current.has(eventType)) {
       listenersRef.current.set(eventType, new Set())
     }
     const listeners = listenersRef.current.get(eventType)
     if (!listeners) return () => undefined
     listeners.add(callback)
+    attachEventListener(eventType)
 
     return () => {
       const currentListeners = listenersRef.current.get(eventType)
@@ -101,21 +129,17 @@ export function useRealtime(token: string | null, enabled = true) {
         currentListeners.delete(callback)
         if (currentListeners.size === 0) {
           listenersRef.current.delete(eventType)
+          if (!DEFAULT_EVENT_TYPES.includes(eventType)) {
+            detachEventListener(eventType)
+          }
         }
       }
     }
-  }
+  }, [attachEventListener, detachEventListener])
 
-  const notifyListeners = (eventType: string, data: unknown) => {
-    const listeners = listenersRef.current.get(eventType)
-    if (listeners) {
-      listeners.forEach(callback => callback(data))
-    }
-  }
-
-  return {
+  return useMemo(() => ({
     status,
     lastEvent,
     subscribe,
-  }
+  }), [lastEvent, status, subscribe])
 }

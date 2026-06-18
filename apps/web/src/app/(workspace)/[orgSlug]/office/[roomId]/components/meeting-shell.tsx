@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ParticipantTile,
   RoomAudioRenderer,
@@ -12,9 +12,25 @@ import {
   useParticipants,
 } from '@livekit/components-react'
 import { Track } from 'livekit-client'
-import { Clock, FileText, PanelRightClose, PanelRightOpen, Sparkles, Users } from 'lucide-react'
+import {
+  Captions,
+  Clock,
+  FileText,
+  Loader2,
+  PanelRightClose,
+  PanelRightOpen,
+  Sparkles,
+  Square,
+  Users,
+} from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
+import { officeApi } from '@serenity/api'
 import { MeetingNotesPanel } from './meeting-notes-panel'
+import { getTranscriptCaptions, getTranscriptMarkdown, type TranscriptCaption } from './meeting-note-blocks'
+import { useAuthStore } from '@/stores/auth-store'
+import { useOfficeStore } from '@/stores/office-store'
 import { cn } from '@/lib/utils'
+import type { MeetingCaptionState } from './meeting-notes-panel'
 
 function gridCols(count: number) {
   if (count <= 1) return 'grid-cols-1'
@@ -56,13 +72,77 @@ function sortMeetingTracks(tracks: MeetingTrack[]) {
   })
 }
 
+function CaptionLine({ caption, current }: { caption: TranscriptCaption; current: boolean }) {
+  return (
+    <p
+      className={cn(
+        'break-words leading-relaxed text-white',
+        current ? 'text-base font-medium md:text-lg' : 'mb-1 text-sm text-white/55',
+      )}
+    >
+      {caption.speaker && (
+        <span className={cn('mr-2 font-semibold text-sky-200', current ? 'text-xs' : 'text-[11px]')}>
+          {caption.speaker}
+        </span>
+      )}
+      {caption.text}
+    </p>
+  )
+}
+
+function LiveCaptionOverlay({
+  captions,
+  visible,
+  raised,
+}: {
+  captions: TranscriptCaption[]
+  visible: boolean
+  raised: boolean
+}) {
+  if (!visible || captions.length === 0) {
+    return null
+  }
+
+  const visibleCaptions = captions.slice(-2)
+
+  return (
+    <div
+      className={cn(
+        'pointer-events-none absolute inset-x-4 z-20 flex justify-center',
+        raised ? 'bottom-32' : 'bottom-5',
+      )}
+    >
+      <div className="max-h-28 w-full max-w-3xl overflow-hidden rounded-md bg-black/75 px-4 py-3 text-left shadow-2xl backdrop-blur-md">
+        {visibleCaptions.map((caption, index) => (
+          <CaptionLine
+            key={`${caption.raw}-${index}`}
+            caption={caption}
+            current={index === visibleCaptions.length - 1}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 type MeetingShellProps = { roomId: string }
 
 export function MeetingShell({ roomId }: MeetingShellProps) {
   const [notesOpen, setNotesOpen] = useState(true)
+  const [captionsVisible, setCaptionsVisible] = useState(true)
+  const [captionState, setCaptionState] = useState<MeetingCaptionState>('idle')
+  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false)
+  const [meetingError, setMeetingError] = useState<string | null>(null)
   const [meetingTime, setMeetingTime] = useState('')
   const layoutContext = useCreateLayoutContext()
   const participants = useParticipants()
+  const { token } = useAuthStore(useShallow(state => ({ token: state.token })))
+  const { meetingNote, loadMeetingNote } = useOfficeStore(
+    useShallow(state => ({
+      meetingNote: state.meetingNote,
+      loadMeetingNote: state.loadMeetingNote,
+    })),
+  )
 
   useEffect(() => {
     const updateClock = () => {
@@ -100,6 +180,84 @@ export function MeetingShell({ roomId }: MeetingShellProps) {
         t => !(t.participant.sid === focusedTrack.participant.sid && t.source === focusedTrack.source),
       )
     : []
+  const liveCaptions = useMemo(
+    () => getTranscriptCaptions(meetingNote?.contentMarkdown ?? '', 'live'),
+    [meetingNote?.contentMarkdown],
+  )
+  const isCaptionPending = captionState === 'starting' || captionState === 'stopping'
+
+  const regenerateNotes = useCallback(async () => {
+    if (!token) {
+      return
+    }
+
+    setIsGeneratingNotes(true)
+    setMeetingError(null)
+
+    try {
+      const currentNote = await officeApi.getMeetingNote(token, roomId)
+      const transcriptMarkdown = getTranscriptMarkdown(currentNote?.contentMarkdown ?? '')
+      if (!transcriptMarkdown.trim()) {
+        setMeetingError('No captions are available to summarize.')
+        return
+      }
+      await officeApi.summarizeMeetingNote(token, roomId, transcriptMarkdown)
+      await loadMeetingNote(token, roomId)
+      setNotesOpen(true)
+    } catch {
+      setMeetingError('AI notes could not be generated.')
+    } finally {
+      setIsGeneratingNotes(false)
+    }
+  }, [loadMeetingNote, roomId, token])
+
+  const startCaptions = async () => {
+    if (!token || isCaptionPending || captionState === 'live') {
+      return
+    }
+
+    setCaptionState('starting')
+    setMeetingError(null)
+
+    try {
+      await officeApi.startLiveTranscription(token, roomId)
+      await loadMeetingNote(token, roomId)
+      setCaptionsVisible(true)
+      setCaptionState('live')
+    } catch {
+      setMeetingError('Captions could not start. Check LiveKit, AI service, and OpenAI settings.')
+      setCaptionState('idle')
+    }
+  }
+
+  const stopCaptions = async () => {
+    if (!token || isCaptionPending || captionState !== 'live') {
+      return
+    }
+
+    setCaptionState('stopping')
+    setMeetingError(null)
+
+    try {
+      await officeApi.stopLiveTranscription(token, roomId)
+      setCaptionState('idle')
+      await regenerateNotes()
+    } catch {
+      setMeetingError('Captions could not stop. The worker may already be stopped.')
+      setCaptionState('live')
+    }
+  }
+
+  const handleCaptionButton = () => {
+    if (captionState === 'idle') {
+      void startCaptions()
+      return
+    }
+
+    if (captionState === 'live') {
+      setCaptionsVisible(value => !value)
+    }
+  }
 
   return (
     <LayoutContextProvider value={layoutContext}>
@@ -130,6 +288,40 @@ export function MeetingShell({ roomId }: MeetingShellProps) {
                 <Sparkles className="h-3.5 w-3.5 text-sky-300" />
                 Assistant notes
               </div>
+              <div className="flex items-center rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+                <button
+                  onClick={handleCaptionButton}
+                  disabled={isCaptionPending}
+                  className={cn(
+                    'inline-flex h-8 items-center justify-center gap-2 rounded-full px-2.5 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white',
+                    captionState === 'live' && captionsVisible && 'bg-white/10 text-white',
+                    isCaptionPending && 'cursor-wait opacity-70',
+                  )}
+                  title={
+                    captionState === 'idle'
+                      ? 'Start captions'
+                      : captionsVisible
+                        ? 'Hide captions'
+                        : 'Show captions'
+                  }
+                >
+                  {isCaptionPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Captions className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">Captions</span>
+                </button>
+                {captionState === 'live' && (
+                  <button
+                    onClick={() => void stopCaptions()}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/55 transition hover:bg-red-500/15 hover:text-red-100"
+                    title="Stop captions"
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setNotesOpen(o => !o)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
@@ -141,7 +333,7 @@ export function MeetingShell({ roomId }: MeetingShellProps) {
           </div>
 
           {/* ── Video area ─────────────────────────────────────────── */}
-          <div className="flex-1 overflow-hidden bg-[#202124]">
+          <div className="relative flex-1 overflow-hidden bg-[#202124]">
             {sortedTracks.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <div className="flex flex-col items-center gap-3 text-white/55">
@@ -193,6 +385,11 @@ export function MeetingShell({ roomId }: MeetingShellProps) {
                 ))}
               </div>
             )}
+            <LiveCaptionOverlay
+              captions={liveCaptions}
+              visible={captionsVisible}
+              raised={isFocusMode && carouselTracks.length > 0}
+            />
           </div>
 
           {/* ── Control bar ────────────────────────────────────────── */}
@@ -210,6 +407,10 @@ export function MeetingShell({ roomId }: MeetingShellProps) {
           roomId={roomId}
           isOpen={notesOpen}
           onToggle={() => setNotesOpen(o => !o)}
+          captionState={captionState}
+          isGeneratingNotes={isGeneratingNotes}
+          meetingError={meetingError}
+          onRegenerateNotes={regenerateNotes}
         />
       </div>
     </LayoutContextProvider>

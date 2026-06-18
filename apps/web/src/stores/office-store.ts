@@ -23,7 +23,7 @@ type OfficeStore = {
   leaveRoom: (token: string, roomId: string) => Promise<void>
   loadMeetingNote: (token: string, roomId: string) => Promise<void>
   updateMeetingNote: (token: string, roomId: string, content: string) => void
-  applyRealtimeEvent: (event: { type: string; payload?: unknown }) => void
+  applyRealtimeEvent: (event: { type?: string; event?: string; payload?: unknown }) => void
   reset: () => void
 }
 
@@ -98,7 +98,12 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   },
 
   applyRealtimeEvent: (event) => {
-    const { type, payload } = event as { type: string; payload: Record<string, unknown> }
+    const type = event.type ?? event.event
+    const payload = event.payload
+    if (!type) {
+      return
+    }
+
     switch (type) {
       case 'office.room.created': {
         const room = payload as OfficeRoom
