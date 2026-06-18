@@ -56,14 +56,20 @@ export class AutomationEngineService {
 
   async runScheduled(ruleId: string): Promise<void> {
     const rule = await this.prisma.automationRule.findUnique({ where: { id: ruleId } });
-    if (!rule || !rule.enabled) return;
+    if (!rule || !rule.enabled) {
+      return;
+    }
 
     const org = await this.prisma.organization.findUnique({
       where: { id: rule.orgId },
       select: { name: true },
     });
 
-    const context: AgentContext = { orgId: rule.orgId, orgName: org?.name, triggerType: AutomationTriggerType.SCHEDULE };
+    const context: AgentContext = {
+      orgId: rule.orgId,
+      orgName: org?.name,
+      triggerType: AutomationTriggerType.SCHEDULE,
+    };
 
     if (rule.stepsGraph) {
       await this.walkGraph(rule, rule.stepsGraph as unknown as StepsGraph, context);
@@ -76,7 +82,9 @@ export class AutomationEngineService {
     const rules = await this.prisma.automationRule.findMany({
       where: { orgId, triggerType: AutomationTriggerType.MEMBER_JOINED, enabled: true },
     });
-    if (!rules.length) return;
+    if (!rules.length) {
+      return;
+    }
 
     const [user, org] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } }),
@@ -104,7 +112,9 @@ export class AutomationEngineService {
     const rules = await this.prisma.automationRule.findMany({
       where: { orgId, triggerType: AutomationTriggerType.MESSAGE_KEYWORD, enabled: true },
     });
-    if (!rules.length) return;
+    if (!rules.length) {
+      return;
+    }
 
     const lowerContent = message.content.toLowerCase();
 
@@ -114,9 +124,13 @@ export class AutomationEngineService {
           ? (rule.stepsGraph as unknown as StepsGraph).nodes.find(n => n.type === 'trigger')?.config
           : rule.triggerConfig) as { keywords?: string[]; channelIds?: string[] } | undefined;
         const keywords: string[] = triggerConfig?.keywords ?? [];
-        if (!keywords.some(kw => lowerContent.includes(kw.toLowerCase()))) continue;
+        if (!keywords.some(kw => lowerContent.includes(kw.toLowerCase()))) {
+          continue;
+        }
         const channelIds: string[] = triggerConfig?.channelIds ?? [];
-        if (channelIds.length > 0 && !channelIds.includes(message.conversationId)) continue;
+        if (channelIds.length > 0 && !channelIds.includes(message.conversationId)) {
+          continue;
+        }
 
         const context: AgentContext = {
           orgId, conversationId: message.conversationId,
@@ -138,7 +152,9 @@ export class AutomationEngineService {
     const rules = await this.prisma.automationRule.findMany({
       where: { orgId: event.orgId, triggerType: event.triggerType, enabled: true },
     });
-    if (!rules.length) return;
+    if (!rules.length) {
+      return;
+    }
 
     const org = await this.prisma.organization.findUnique({
       where: { id: event.orgId },
@@ -151,7 +167,9 @@ export class AutomationEngineService {
           ? (rule.stepsGraph as unknown as StepsGraph).nodes.find(n => n.type === 'trigger')?.config
           : rule.triggerConfig) as Record<string, unknown> | undefined;
 
-        if (!this.matchesTaskTrigger(event, triggerConfig ?? {})) continue;
+        if (!this.matchesTaskTrigger(event, triggerConfig ?? {})) {
+          continue;
+        }
 
         const context: AgentContext = {
           orgId: event.orgId,
@@ -178,31 +196,50 @@ export class AutomationEngineService {
   private matchesTaskTrigger(event: TaskTriggerEvent, config: Record<string, unknown>): boolean {
     if (event.triggerType === AutomationTriggerType.TASK_STATUS_CHANGED) {
       const requiredStatus = config.status as string | undefined;
-      if (requiredStatus && event.status !== requiredStatus) return false;
+      if (requiredStatus && event.status !== requiredStatus) {
+        return false;
+      }
     }
     if (event.triggerType === AutomationTriggerType.TASK_ASSIGNED) {
       const requiredAssignee = config.assigneeId as string | undefined;
-      if (requiredAssignee && event.assigneeId !== requiredAssignee) return false;
-      if (event.assigneeId === event.previousAssigneeId) return false;
+      if (requiredAssignee && event.assigneeId !== requiredAssignee) {
+        return false;
+      }
+      if (event.assigneeId === event.previousAssigneeId) {
+        return false;
+      }
     }
     return true;
   }
 
-  private async walkGraph(rule: AutomationRule, graph: StepsGraph, context: AgentContext): Promise<void> {
+  private async walkGraph(
+    rule: AutomationRule,
+    graph: StepsGraph,
+    context: AgentContext,
+  ): Promise<void> {
     const triggerNode = graph.nodes.find(n => n.type === 'trigger');
-    if (!triggerNode) return;
+    if (!triggerNode) {
+      return;
+    }
 
     const startIds = graph.edges.filter(e => e.source === triggerNode.id).map(e => e.target);
     const visited = new Set<string>();
     const queue = [...startIds];
 
     while (queue.length) {
-      const nodeId = queue.shift()!;
-      if (visited.has(nodeId)) continue;
+      const nodeId = queue.shift();
+      if (!nodeId) {
+        break;
+      }
+      if (visited.has(nodeId)) {
+        continue;
+      }
       visited.add(nodeId);
 
       const node = graph.nodes.find(n => n.id === nodeId);
-      if (!node) continue;
+      if (!node) {
+        continue;
+      }
 
       if (node.type === 'condition') {
         const passed = await this.evaluateCondition(node, context);
@@ -236,19 +273,25 @@ export class AutomationEngineService {
 
       case AutomationConditionType.CHANNEL_IS: {
         const channelIds = (config.channelIds as string[]) ?? [];
-        if (channelIds.length === 0) return true;
+        if (channelIds.length === 0) {
+          return true;
+        }
         return !!context.conversationId && channelIds.includes(context.conversationId);
       }
 
       case AutomationConditionType.TASK_PRIORITY_IS: {
         const required = config.priority as string | undefined;
-        if (!required) return true;
+        if (!required) {
+          return true;
+        }
         return context.taskPriority === required;
       }
 
       case AutomationConditionType.USER_IN_DEPARTMENT: {
         const departmentId = config.departmentId as string | undefined;
-        if (!departmentId || !context.userId) return false;
+        if (!departmentId || !context.userId) {
+          return false;
+        }
         const member = await this.prisma.workspaceMember.findFirst({
           where: { userId: context.userId, orgId: context.orgId, departmentId },
           select: { userId: true },
@@ -262,16 +305,28 @@ export class AutomationEngineService {
     }
   }
 
-  private async executeActionNode(rule: AutomationRule, node: StepNode, context: AgentContext): Promise<void> {
+  private async executeActionNode(
+    rule: AutomationRule,
+    node: StepNode,
+    context: AgentContext,
+  ): Promise<void> {
     const actionType = node.nodeType as AutomationActionType;
 
     switch (actionType) {
       case AutomationActionType.AI_AGENT:
-        await this.agent.execute(rule, context, node.config as { instruction: string; targetType: 'CHANNEL' | 'DM_TRIGGER_USER'; targetId?: string });
+        await this.agent.execute(rule, context, node.config as {
+          instruction: string;
+          targetType: 'CHANNEL' | 'DM_TRIGGER_USER';
+          targetId?: string;
+        });
         break;
 
       case AutomationActionType.NOTIFY:
-        await this.executeNotify(rule.orgId, node.config as { userId?: string; message: string }, context);
+        await this.executeNotify(
+          rule.orgId,
+          node.config as { userId?: string; message: string },
+          context,
+        );
         break;
 
       case AutomationActionType.CREATE_TASK:
@@ -281,7 +336,11 @@ export class AutomationEngineService {
         break;
 
       case AutomationActionType.POST_CHANNEL:
-        await this.executePostChannel(rule.orgId, node.config as { channelId: string; message: string }, context);
+        await this.executePostChannel(
+          rule.orgId,
+          node.config as { channelId: string; message: string },
+          context,
+        );
         break;
 
       default:
@@ -289,15 +348,23 @@ export class AutomationEngineService {
     }
   }
 
-  private async executeNotify(orgId: string, config: { userId?: string; message: string }, context: AgentContext): Promise<void> {
+  private async executeNotify(
+    orgId: string,
+    config: { userId?: string; message: string },
+    context: AgentContext,
+  ): Promise<void> {
     const targetUserId = config.userId ?? context.userId;
-    if (!targetUserId || !config.message) return;
+    if (!targetUserId || !config.message) {
+      return;
+    }
 
     const botUser = await this.prisma.workspaceMember.findFirst({
       where: { orgId, role: 'OWNER' },
       select: { userId: true },
     });
-    if (!botUser) return;
+    if (!botUser) {
+      return;
+    }
 
     const content = config.message
       .replace('{task.title}', context.taskTitle ?? '')
@@ -306,12 +373,23 @@ export class AutomationEngineService {
 
     const ids = [botUser.userId, targetUserId].sort();
     const dmKey = ids.join(':');
-    let dm = await this.prisma.chatConversation.findFirst({ where: { orgId, dmKey }, select: { id: true } });
+    let dm = await this.prisma.chatConversation.findFirst({
+      where: { orgId, dmKey },
+      select: { id: true },
+    });
     if (!dm) {
       dm = await this.prisma.chatConversation.create({
         data: {
-          orgId, type: 'DM', dmKey, createdById: botUser.userId,
-          members: { createMany: { data: ids.map(userId => ({ userId })), skipDuplicates: true } },
+          orgId,
+          type: 'DM',
+          dmKey,
+          createdById: botUser.userId,
+          members: {
+            createMany: {
+              data: ids.map(userId => ({ userId })),
+              skipDuplicates: true,
+            },
+          },
         },
         select: { id: true },
       });
@@ -319,10 +397,19 @@ export class AutomationEngineService {
 
     const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const message = await this.prisma.chatMessage.create({
-      data: { id: msgId, conversationId: dm.id, authorId: botUser.userId, content, isCopilot: true },
+      data: {
+        id: msgId,
+        conversationId: dm.id,
+        authorId: botUser.userId,
+        content,
+        isCopilot: true,
+      },
       include: aiMessageInclude,
     });
-    await this.prisma.chatConversation.update({ where: { id: dm.id }, data: { updatedAt: new Date() } });
+    await this.prisma.chatConversation.update({
+      where: { id: dm.id },
+      data: { updatedAt: new Date() },
+    });
     await this.realtimeEvents.publish({
       domain: RealtimeDomain.CHAT,
       event: ChatRealtimeEvent.MESSAGE_CREATED,
@@ -336,13 +423,17 @@ export class AutomationEngineService {
     config: { title: string; status?: TaskStatus; priority?: TaskPriority; assigneeId?: string },
     context: AgentContext,
   ): Promise<void> {
-    if (!config.title) return;
+    if (!config.title) {
+      return;
+    }
 
     const botUser = await this.prisma.workspaceMember.findFirst({
       where: { orgId, role: 'OWNER' },
       select: { userId: true },
     });
-    if (!botUser) return;
+    if (!botUser) {
+      return;
+    }
 
     const title = config.title
       .replace('{task.title}', context.taskTitle ?? '')
@@ -368,13 +459,17 @@ export class AutomationEngineService {
     config: { channelId: string; message: string },
     context: AgentContext,
   ): Promise<void> {
-    if (!config.channelId || !config.message) return;
+    if (!config.channelId || !config.message) {
+      return;
+    }
 
     const botUser = await this.prisma.workspaceMember.findFirst({
       where: { orgId, role: 'OWNER' },
       select: { userId: true },
     });
-    if (!botUser) return;
+    if (!botUser) {
+      return;
+    }
 
     const content = config.message
       .replace('{task.title}', context.taskTitle ?? '')
@@ -383,10 +478,19 @@ export class AutomationEngineService {
 
     const msgId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const message = await this.prisma.chatMessage.create({
-      data: { id: msgId, conversationId: config.channelId, authorId: botUser.userId, content, isCopilot: true },
+      data: {
+        id: msgId,
+        conversationId: config.channelId,
+        authorId: botUser.userId,
+        content,
+        isCopilot: true,
+      },
       include: aiMessageInclude,
     });
-    await this.prisma.chatConversation.update({ where: { id: config.channelId }, data: { updatedAt: new Date() } });
+    await this.prisma.chatConversation.update({
+      where: { id: config.channelId },
+      data: { updatedAt: new Date() },
+    });
     await this.realtimeEvents.publish({
       domain: RealtimeDomain.CHAT,
       event: ChatRealtimeEvent.MESSAGE_CREATED,

@@ -461,7 +461,7 @@ export default function ChatPage() {
                   onEditMessage={handleEditMessage}
                   onUnsendMessage={handleUnsendMessage}
                   onDeleteMessage={handleDeleteMessage}
-                  realtimeSubscribe={realtime.subscribe}
+                  realtimeSubscribe={subscribe}
                 />
               ) : (
                 <>

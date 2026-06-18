@@ -33,7 +33,9 @@ export class AutomationService {
         triggerConfig: (triggerConfig ?? {}) as Prisma.InputJsonValue,
         actionType: dto.actionType,
         actionConfig: dto.actionConfig as Prisma.InputJsonValue,
-        stepsGraph: dto.stepsGraph ? (dto.stepsGraph as unknown as Prisma.InputJsonValue) : undefined,
+        stepsGraph: dto.stepsGraph
+          ? (dto.stepsGraph as unknown as Prisma.InputJsonValue)
+          : undefined,
       },
     });
 

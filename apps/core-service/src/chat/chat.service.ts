@@ -438,10 +438,14 @@ export class ChatService {
         }),
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        return;
+      }
       const data = (await res.json()) as { answer?: string };
       const replyContent = (data.answer ?? '').trim();
-      if (!replyContent) return;
+      if (!replyContent) {
+        return;
+      }
 
       const botUser = await this.prisma.workspaceMember.findFirst({
         where: { orgId: auth.orgId, role: 'OWNER' },
