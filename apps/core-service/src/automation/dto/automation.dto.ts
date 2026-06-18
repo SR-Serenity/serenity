@@ -9,7 +9,8 @@ export const AutomationConditionType = {
   TASK_PRIORITY_IS: 'TASK_PRIORITY_IS',
   USER_IN_DEPARTMENT: 'USER_IN_DEPARTMENT',
 } as const;
-export type AutomationConditionType = (typeof AutomationConditionType)[keyof typeof AutomationConditionType];
+export type AutomationConditionType =
+  (typeof AutomationConditionType)[keyof typeof AutomationConditionType];
 
 export type StepNode = {
   id: string;

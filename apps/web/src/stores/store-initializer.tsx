@@ -13,17 +13,15 @@ type StoreInitializerProps = {
 }
 
 export function StoreInitializer({ defaultTheme = 'theme-light' }: StoreInitializerProps) {
-  const initializeAuth = useAuthStore((state) => state.initialize)
-  const initializeTheme = useThemeStore((state) => state.initialize)
+  useEffect(() => {
+    void useAuthStore.getState().initialize()
+  }, [])
 
   useEffect(() => {
-    void initializeAuth()
-  }, [initializeAuth])
-
-  useEffect(() => {
+    const initializeTheme = useThemeStore.getState().initialize
     initializeTheme(defaultTheme)
     return listenForSystemThemeChanges()
-  }, [defaultTheme, initializeTheme])
+  }, [defaultTheme])
 
   return null
 }

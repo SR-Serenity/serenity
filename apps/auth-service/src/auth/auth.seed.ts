@@ -399,7 +399,7 @@ export async function seedOrganizationData(
   // ── 6. Office Rooms ───────────────────────────────────────────────────────
   const roomA = await tx.officeRoom.create({ data: { orgId, name: 'Room A', type: OfficeRoomType.FOCUS, createdById: creatorUser.id } });
   const roomB = await tx.officeRoom.create({ data: { orgId, name: 'Room B', type: OfficeRoomType.OPEN, createdById: creatorUser.id } });
-  const mainHall = await tx.officeRoom.create({ data: { orgId, name: 'Main Hall', type: OfficeRoomType.OPEN, createdById: creatorUser.id } });
+  await tx.officeRoom.create({ data: { orgId, name: 'Main Hall', type: OfficeRoomType.OPEN, createdById: creatorUser.id } });
   const conferenceRoom = await tx.officeRoom.create({ data: { orgId, name: 'Main Conference Room', type: OfficeRoomType.OPEN, createdById: creatorUser.id } });
 
   // ── 7. Wiki Pages ─────────────────────────────────────────────────────────

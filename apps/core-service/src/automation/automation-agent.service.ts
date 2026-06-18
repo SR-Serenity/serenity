@@ -49,14 +49,23 @@ export class AutomationAgentService {
     private readonly realtimeEvents: RealtimeEventsService,
   ) {}
 
-  async execute(rule: AutomationRule, context: AgentContext, overrideConfig?: ActionConfig): Promise<void> {
+  async execute(
+    rule: AutomationRule,
+    context: AgentContext,
+    overrideConfig?: ActionConfig,
+  ): Promise<void> {
     const actionConfig = overrideConfig ?? rule.actionConfig as ActionConfig;
     if (!actionConfig?.instruction) {
       this.logger.warn(`Rule ${rule.id} has no instruction in actionConfig`);
       return;
     }
 
-    const content = await this.callAiService(rule.orgId, actionConfig.instruction, context, actionConfig.useWebSearch ?? false);
+    const content = await this.callAiService(
+      rule.orgId,
+      actionConfig.instruction,
+      context,
+      actionConfig.useWebSearch ?? false,
+    );
     if (!content) {
       return;
     }
