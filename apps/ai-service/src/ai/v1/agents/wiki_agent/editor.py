@@ -5,7 +5,7 @@ import logging
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +57,11 @@ _EXPLAIN_HUMAN = "Instruction: {prompt}\nDescribe what was done in one sentence.
 
 class WikiEditorLogic:
     def __init__(self) -> None:
+        self._llm: ChatOpenAI | None
+        self._llm_explain: ChatOpenAI | None
         if settings.OPENAI_API_KEY:
-            self._llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0.7)
-            self._llm_explain = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0.3)
+            self._llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0.7)
+            self._llm_explain = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0.3)
         else:
             self._llm = None
             self._llm_explain = None

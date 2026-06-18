@@ -18,7 +18,7 @@ from typing import Any
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
-from src.ai.v1.graph.builder import get_main_graph
+from src.ai.v1.graph.builder import get_main_graph_async
 from src.ai.v1.graph.constants import STREAMING_NODES
 from src.ai.v1.memory.namespaces import make_thread_id
 from src.api.internal.v1.schemas import ChatRequest, ChatResponse
@@ -150,7 +150,7 @@ async def _prepare_run(payload: ChatRequest, *, auth_token: str | None = None) -
         "recursion_limit": 20,
     }
 
-    graph = await get_main_graph()
+    graph = await get_main_graph_async()
     user_context = _build_user_context(payload, auth_token=auth_token)
 
     current_state = await graph.aget_state(thread_config)

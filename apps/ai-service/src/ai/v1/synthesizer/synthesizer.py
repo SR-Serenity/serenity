@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 
 from src.ai.v1.contexts.schemas.enums import Domain
 from src.ai.v1.contexts.schemas.state import PipelineState
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 _SYNTHESIZER_PROMPT = """\
 You are the answer composer for Serenity AI, a team workspace assistant.
@@ -86,7 +86,7 @@ def _compose(raw_data: str, user_request: str, language: str) -> str:
     if not settings.OPENAI_API_KEY:
         return raw_data or "Serenity AI is connected. Send a workspace question to begin."
     try:
-        llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0.3)
+        llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0.3)
         result = llm.invoke(
             _SYNTHESIZER_PROMPT.format(
                 language=language,
@@ -124,7 +124,7 @@ def _generate_greeting(state: PipelineState, language: str) -> str:
     if not settings.OPENAI_API_KEY:
         return "Serenity AI is connected. Send a workspace question to begin."
     try:
-        llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0.7)
+        llm = ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0.7)
         result = llm.invoke(_GREETING_PROMPT.format(language=language, message=last))
         return str(result.content).strip()
     except Exception:

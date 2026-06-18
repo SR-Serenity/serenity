@@ -46,7 +46,7 @@ class ConversationContextManager:
 
         # Add recent messages until we hit the limit
         for msg in reversed(messages):
-            msg_tokens = self.estimate_tokens(msg.content)
+            msg_tokens = self.estimate_tokens(str(msg.content))
             if token_count + msg_tokens > self.max_tokens:
                 break
             recent_messages.append(msg)
