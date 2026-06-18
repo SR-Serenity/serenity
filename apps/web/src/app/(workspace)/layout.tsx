@@ -4,7 +4,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import Link from 'next/link'
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { ChatConversation } from '@serenity/api'
 import {
   Bot,
@@ -43,7 +42,12 @@ import {
 import { AiChatPanel } from '@/app/(workspace)/components/workspace-shell/ai-agent-panel'
 import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
-type WorkspaceLayoutProps = { children: ReactNode }
+type WorkspaceLayoutProps = {
+  children: ReactNode
+  params: {
+    orgSlug?: string
+  }
+}
 
 interface NavItem {
   id: string
@@ -705,15 +709,53 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const chatConversations = useChatStore((state) => state.conversations)
   const loadChatConversations = useChatStore((state) => state.loadConversations)
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const [location, setLocation] = useState({ pathname: '', search: '' })
+
+  useEffect(() => {
+    const syncLocation = () => {
+      setLocation({
+        pathname: window.location.pathname,
+        search: window.location.search,
+      })
+    }
+
+    syncLocation()
+
+    const originalPushState = window.history.pushState
+    const originalReplaceState = window.history.replaceState
+
+    window.history.pushState = function pushState(...args) {
+      const result = originalPushState.apply(this, args as Parameters<History['pushState']>)
+      syncLocation()
+      return result
+    }
+
+    window.history.replaceState = function replaceState(...args) {
+      const result = originalReplaceState.apply(this, args as Parameters<History['replaceState']>)
+      syncLocation()
+      return result
+    }
+
+    window.addEventListener('popstate', syncLocation)
+
+    return () => {
+      window.history.pushState = originalPushState
+      window.history.replaceState = originalReplaceState
+      window.removeEventListener('popstate', syncLocation)
+    }
+  }, [])
+
+  const pathname = location.pathname
+  const searchParams = new URLSearchParams(location.search)
 
   useEffect(() => {
     if (auth.initializing) return
     if (!auth.isAuthenticated) {
-      router.replace('/login')
+      window.location.replace('/login')
       return
     }
     if (orgSlug && auth.currentOrg?.slug !== orgSlug) {
-      auth.selectOrg(orgSlug).catch(() => router.replace('/login'))
+      auth.selectOrg(orgSlug).catch(() => window.location.replace('/login'))
     }
   }, [
     auth.currentOrg?.slug,
@@ -721,7 +763,6 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     auth.isAuthenticated,
     auth.selectOrg,
     orgSlug,
-    router,
   ])
 
   useEffect(() => {
@@ -756,7 +797,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     setSwitchingOrgSlug(nextOrgSlug)
     try {
       await auth.selectOrg(nextOrgSlug)
-      router.replace(`/${nextOrgSlug}/dashboard`)
+      window.location.replace(`/${nextOrgSlug}/dashboard`)
     } finally {
       setSwitchingOrgSlug(null)
     }
@@ -764,7 +805,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   function handleLogout() {
     auth.logout()
-    router.replace('/login')
+    window.location.replace('/login')
   }
 
   return (
@@ -857,7 +898,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
                     icon={Maximize2}
                     onClick={() => {
                       setCopilotOpen(false)
-                      router.push(`${basePath}/copilot`)
+                      window.location.assign(`${basePath}/copilot`)
                     }}
                   />
                   <ShellIconActionButton title="Close" icon={X} onClick={() => setCopilotOpen(false)} />
