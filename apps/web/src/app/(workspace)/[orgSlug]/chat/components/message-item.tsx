@@ -1,6 +1,10 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
+import remarkGfm from 'remark-gfm'
 import {
   Bot,
   Check,
@@ -34,6 +38,68 @@ type MessageItemProps = {
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👀']
+const mentionPattern = /(@[A-Za-z0-9][A-Za-z0-9._-]*)/g
+const exactMentionPattern = /^@[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+function highlightMentions(children: ReactNode): ReactNode {
+  if (typeof children === 'string') {
+    return children.split(mentionPattern).map((part, index) => (
+      exactMentionPattern.test(part)
+        ? (
+            <span
+              key={`${part}-${index}`}
+              className="rounded bg-blue-50 px-1 font-medium text-blue-700 ring-1 ring-blue-100"
+            >
+              {part}
+            </span>
+          )
+        : part
+    ))
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child, index) => (
+      <span key={index}>{highlightMentions(child)}</span>
+    ))
+  }
+
+  return children
+}
+
+function ChatMarkdown({ content, muted = false }: { content: string; muted?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'prose prose-sm prose-slate max-w-none min-w-0 overflow-hidden break-words text-sm leading-5',
+        '[&_a]:break-all [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline-offset-2 hover:[&_a]:underline',
+        '[&_blockquote]:my-1.5 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-200 [&_blockquote]:pl-3 [&_blockquote]:text-gray-600',
+        '[&_code]:break-words [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.85em]',
+        '[&_li]:my-0.5 [&_ol]:my-1 [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-1.5 [&_pre]:my-1.5 [&_pre]:max-w-full [&_pre]:overflow-x-auto',
+        '[&_pre]:rounded-lg [&_pre]:bg-gray-950 [&_pre]:p-3 [&_pre]:text-gray-50 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+        '[&_table]:my-1.5 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_td]:border [&_td]:border-gray-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-200 [&_th]:px-2 [&_th]:py-1',
+        '[&_ul]:my-1 [&_ul]:pl-5',
+        muted ? 'text-gray-700' : 'text-gray-800',
+      )}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{
+          p: ({ children }) => <p>{highlightMentions(children)}</p>,
+          li: ({ children }) => <li>{highlightMentions(children)}</li>,
+          strong: ({ children }) => <strong>{highlightMentions(children)}</strong>,
+          em: ({ children }) => <em>{highlightMentions(children)}</em>,
+          a: ({ children, href }) => (
+            <a href={href} target="_blank" rel="noreferrer">
+              {highlightMentions(children)}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 function formatTime(value: string) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -219,9 +285,7 @@ export function MessageItem({
                 <span className="shrink-0 text-xs text-gray-400">{formatTime(message.createdAt)}</span>
               </div>
             )}
-            <div className="whitespace-pre-wrap wrap-break-word text-sm leading-5 text-gray-700">
-              {message.content}
-            </div>
+            <ChatMarkdown content={message.content} muted />
           </div>
         </div>
       </div>
@@ -293,14 +357,13 @@ export function MessageItem({
             <>
               {!isUnsent && <ReplyPreview message={message} />}
 
-              <div
-                className={cn(
-                  'whitespace-pre-wrap wrap-break-word text-sm leading-5',
-                  isUnsent ? 'italic text-gray-500' : 'text-gray-800'
-                )}
-              >
-                {isUnsent ? 'Message unsent' : message.content}
-              </div>
+              {isUnsent ? (
+                <div className="whitespace-pre-wrap wrap-break-word text-sm leading-5 italic text-gray-500">
+                  Message unsent
+                </div>
+              ) : (
+                <ChatMarkdown content={message.content} />
+              )}
 
               {!isUnsent && message.attachments.length > 0 && (
                 <div className="mt-1.5 space-y-1.5">
