@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices
 
 
 def to_camel(value: str) -> str:
@@ -238,6 +238,41 @@ class LiveMeetingStatusResponse(CamelModel):
     room_id: str
     status: str
     model: str | None = None
+
+
+# ── Workflow Suggest ──────────────────────────────────────────────────────────
+
+class WorkflowSuggestRequest(BaseModel):
+    description: str
+    org_id: str
+
+
+class WorkflowSuggestStepNode(BaseModel):
+    id: str
+    type: Literal["trigger", "action"]
+    node_type: str = Field(alias="nodeType")
+    config: dict = Field(default_factory=dict)
+    position: dict = Field(default_factory=lambda: {"x": 250, "y": 80})
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class WorkflowSuggestStepEdge(BaseModel):
+    id: str
+    source: str
+    target: str
+
+
+class WorkflowSuggestStepsGraph(BaseModel):
+    nodes: list[WorkflowSuggestStepNode]
+    edges: list[WorkflowSuggestStepEdge]
+
+
+class WorkflowSuggestResponse(BaseModel):
+    name: str
+    steps_graph: WorkflowSuggestStepsGraph = Field(alias="stepsGraph")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # ── Automation Execute ────────────────────────────────────────────────────────
