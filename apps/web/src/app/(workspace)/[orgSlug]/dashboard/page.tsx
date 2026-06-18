@@ -100,11 +100,12 @@ export default function DashboardPage() {
     .slice(0, 6)
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="flex shrink-0 items-end justify-between border-b border-border px-7 py-5">
+    <div className="flex h-full min-h-0 flex-col bg-panel">
+      {/* Header */}
+      <div className="flex shrink-0 items-end justify-between px-7 pb-4 pt-6">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">{fmtDate(new Date().toISOString())}</p>
-          <h1 className="mt-0.5 truncate text-2xl font-semibold text-foreground">
+          <h1 className="mt-1 truncate text-xl font-semibold text-foreground">
             {user ? greeting(user.displayName) : 'Welcome back'}
           </h1>
         </div>
@@ -115,49 +116,49 @@ export default function DashboardPage() {
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-7 pb-8">
 
           {/* Metric cards */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
               {
-                icon: <CheckCircle2 className="h-4 w-4 text-muted-foreground" />,
+                icon: <CheckCircle2 className="h-4 w-4 text-accent-txt" />,
                 badge: dueToday.length > 0 ? `${dueToday.length} due today` : 'None due today',
                 value: activeTasks.length,
                 label: 'Active tasks',
               },
               {
-                icon: <CalendarDays className="h-4 w-4 text-muted-foreground" />,
+                icon: <CalendarDays className="h-4 w-4 text-accent-txt" />,
                 badge: todayItems.length === 0 ? 'No events' : `${todayItems.length} scheduled`,
                 value: todayItems.length,
                 label: 'Events today',
               },
               {
-                icon: <Users className="h-4 w-4 text-muted-foreground" />,
+                icon: <Users className="h-4 w-4 text-accent-txt" />,
                 badge: currentOrg?.name ?? '',
                 value: memberCount ?? '—',
                 label: 'Team members',
               },
             ].map(({ icon, badge, value, label }) => (
-              <div key={label} className="rounded-xl border border-border bg-panel p-5 transition-all duration-150 hover:border-border/80 hover:shadow-sm">
+              <div key={label} className="rounded-lg border border-black/10 p-4 transition-all duration-150 hover:shadow-sm">
                 <div className="flex items-center justify-between">
                   {icon}
-                  <span className="max-w-[120px] truncate text-xs text-muted-foreground">{badge}</span>
+                  <span className="max-w-[120px] truncate text-[11px] text-muted-foreground">{badge}</span>
                 </div>
-                <p className="mt-4 text-3xl font-semibold text-foreground">{value}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+                <p className="mt-3 text-2xl font-semibold text-foreground tabular-nums">{value}</p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">{label}</p>
               </div>
             ))}
           </div>
 
           {/* Main grid */}
-          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
+          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
 
             {/* Today's schedule */}
-            <div className="rounded-xl border border-border bg-panel">
-              <div className="border-b border-border px-5 py-4">
-                <h2 className="text-sm font-semibold text-foreground">Today's schedule</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-black/10">
+              <div className="border-b border-black/10 px-4 py-3">
+                <h2 className="text-[13px] font-semibold text-foreground">Today's schedule</h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {todayItems.length === 0
                     ? 'Nothing scheduled'
                     : `${todayItems.length} item${todayItems.length !== 1 ? 's' : ''}`}
@@ -165,30 +166,30 @@ export default function DashboardPage() {
               </div>
 
               {todayItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <CalendarDays className="h-8 w-8 text-border" />
-                  <p className="mt-3 text-sm text-muted-foreground">Your day is clear.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <CalendarDays className="h-7 w-7 text-divider" />
+                  <p className="mt-2 text-[13px] text-muted-foreground">Your day is clear.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-black/[0.06]">
                   {todayItems.map(item => (
-                    <div key={item.id} className="flex items-start gap-4 px-5 py-4 transition-colors duration-150 hover:bg-popup-hover">
-                      <div className="w-14 shrink-0 pt-0.5 text-right">
-                        <p className="text-xs font-medium tabular-nums text-foreground">
+                    <div key={item.id} className="flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-ui/50">
+                      <div className="w-12 shrink-0 pt-0.5 text-right">
+                        <p className="text-[11px] font-medium tabular-nums text-foreground">
                           {fmtTime(item.startAt)}
                         </p>
                         {item.endAt && (
-                          <p className="text-xs tabular-nums text-muted-foreground">
+                          <p className="text-[11px] tabular-nums text-muted-foreground">
                             {fmtTime(item.endAt)}
                           </p>
                         )}
                       </div>
 
-                      <div className={cn('mt-1 w-0.5 self-stretch rounded-full', ITEM_TYPE_BAR[item.type] ?? 'bg-border')} />
+                      <div className={cn('mt-1 w-0.5 self-stretch rounded-full', ITEM_TYPE_BAR[item.type] ?? 'bg-divider')} />
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        <p className="truncate text-[13px] font-medium text-foreground">{item.title}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
                           <span className="capitalize">{item.type.toLowerCase()}</span>
                           {item.location && (
                             <span className="flex items-center gap-0.5">
@@ -204,7 +205,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         {item.attendees.length > 0 && (
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                             {item.attendees.slice(0, 3).map(a => a.displayName).join(', ')}
                             {item.attendees.length > 3 && ` +${item.attendees.length - 3} more`}
                           </p>
@@ -217,37 +218,37 @@ export default function DashboardPage() {
             </div>
 
             {/* My tasks */}
-            <div className="rounded-xl border border-border bg-panel">
-              <div className="border-b border-border px-5 py-4">
-                <h2 className="text-sm font-semibold text-foreground">My tasks</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-black/10">
+              <div className="border-b border-black/10 px-4 py-3">
+                <h2 className="text-[13px] font-semibold text-foreground">My tasks</h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {activeTasks.length} active
                   {dueToday.length > 0 && ` · ${dueToday.length} due today`}
                 </p>
               </div>
 
               {recentTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <CheckCircle2 className="h-8 w-8 text-border" />
-                  <p className="mt-3 text-sm text-muted-foreground">No tasks yet.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <CheckCircle2 className="h-7 w-7 text-divider" />
+                  <p className="mt-2 text-[13px] text-muted-foreground">No tasks yet.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-black/[0.06]">
                   {recentTasks.map(task => (
-                    <div key={task.id} className="flex items-start gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-popup-hover">
+                    <div key={task.id} className="flex items-start gap-2.5 px-4 py-3 transition-colors duration-150 hover:bg-ui/50">
                       <span
                         className={cn('mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full', PRIORITY_DOT[task.priority])}
                       />
                       <div className="min-w-0 flex-1">
                         <p className={cn(
-                          'truncate text-sm text-foreground',
+                          'truncate text-[13px] text-foreground',
                           (task.status === 'DONE' || task.status === 'CANCELLED') && 'text-muted-foreground line-through',
                         )}>
                           {task.title}
                         </p>
                         {task.dueDate && (
                           <p className={cn(
-                            'mt-0.5 text-xs',
+                            'mt-0.5 text-[11px]',
                             task.dueDate.slice(0, 10) === todayStr && task.status !== 'DONE'
                               ? 'font-medium text-amber-500'
                               : 'text-muted-foreground',

@@ -30,7 +30,7 @@ export function ShellIconActionButton({
 
   const classes = cn(
     'relative flex items-center justify-center shrink-0 cursor-pointer group',
-    'w-9 h-9 rounded-xl border border-transparent outline-none',
+    'w-8 h-8 rounded-lg border border-transparent outline-none',
     'transition-all duration-150 ease-out',
     'focus-visible:border-focus focus-visible:bg-primary/10',
     isCopilot
@@ -43,7 +43,7 @@ export function ShellIconActionButton({
   )
 
   const iconClasses = cn(
-    'h-[18px] w-[18px]',
+    'h-4 w-4',
     isCopilot ? 'text-gray-600 group-hover:text-gray-900' : ''
   )
 
@@ -78,10 +78,10 @@ export function ShellSectionHeader({ title, actions }: ShellSectionHeaderProps) 
     <div
       className={cn(
         'flex items-center justify-between shrink-0',
-        'px-5 py-4',
-        'font-semibold leading-6 text-lg',
+        'px-4 py-3',
+        'font-semibold leading-5 text-sm',
         'text-primary-text',
-        actions ? '' : 'min-h-16',
+        actions ? '' : 'min-h-12',
       )}
       style={{ textRendering: 'optimizeLegibility' }}
     >
