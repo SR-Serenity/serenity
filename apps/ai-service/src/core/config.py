@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,3 +54,15 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
+def openai_api_key_secret() -> SecretStr | None:
+    return SecretStr(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
+
+
+def openai_api_key_value() -> str | None:
+    return settings.OPENAI_API_KEY
+
+
+def use_external_persistence() -> bool:
+    return bool(settings.DATABASE_URL) and settings.APP_ENV not in {"local", "test"}

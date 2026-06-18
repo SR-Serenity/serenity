@@ -99,7 +99,7 @@ export default function ChatPage() {
       applyRealtimeEvent: state.applyRealtimeEvent,
     })),
   )
-  const realtime = useRealtime(token, isAuthenticated)
+  const { subscribe } = useRealtime(token, isAuthenticated)
   const loadWorkspaceMembers = useWorkspaceStore((state) => state.loadMembers)
   const membersByOrgId = useWorkspaceStore((state) => state.membersByOrgId)
   const workspaceMembers = currentOrg ? (membersByOrgId[currentOrg.id] ?? []) : []
@@ -189,11 +189,11 @@ export default function ChatPage() {
 
     const applyChatEvent = (data: unknown) => applyRealtimeEvent(data as ChatRealtimeEvent)
 
-    const unsubscribeCreated = realtime.subscribe('message.created', applyChatEvent)
-    const unsubscribeEdited = realtime.subscribe('message.edited', applyChatEvent)
-    const unsubscribeUnsent = realtime.subscribe('message.unsent', applyChatEvent)
-    const unsubscribeReactionAdded = realtime.subscribe('reaction.added', applyChatEvent)
-    const unsubscribeReactionRemoved = realtime.subscribe('reaction.removed', applyChatEvent)
+    const unsubscribeCreated = subscribe('message.created', applyChatEvent)
+    const unsubscribeEdited = subscribe('message.edited', applyChatEvent)
+    const unsubscribeUnsent = subscribe('message.unsent', applyChatEvent)
+    const unsubscribeReactionAdded = subscribe('reaction.added', applyChatEvent)
+    const unsubscribeReactionRemoved = subscribe('reaction.removed', applyChatEvent)
 
     return () => {
       unsubscribeCreated()
@@ -202,7 +202,7 @@ export default function ChatPage() {
       unsubscribeReactionAdded()
       unsubscribeReactionRemoved()
     }
-  }, [applyRealtimeEvent, realtime, token])
+  }, [applyRealtimeEvent, subscribe, token])
 
   const selectConversation = (conversationId: string) => {
     router.push(`/${orgSlug}/chat/${encodeURIComponent(conversationId)}`)

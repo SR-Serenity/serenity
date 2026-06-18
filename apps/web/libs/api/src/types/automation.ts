@@ -12,10 +12,16 @@ export type AutomationActionType =
   | 'CREATE_TASK'
   | 'POST_CHANNEL'
 
+export type AutomationConditionType =
+  | 'TIME_WINDOW'
+  | 'CHANNEL_IS'
+  | 'TASK_PRIORITY_IS'
+  | 'USER_IN_DEPARTMENT'
+
 export type StepNode = {
   id: string
-  type: 'trigger' | 'action'
-  nodeType: AutomationTriggerType | AutomationActionType
+  type: 'trigger' | 'condition' | 'action'
+  nodeType: AutomationTriggerType | AutomationConditionType | AutomationActionType
   config: Record<string, unknown>
   position: { x: number; y: number }
 }
@@ -24,6 +30,7 @@ export type StepEdge = {
   id: string
   source: string
   target: string
+  sourceHandle?: 'true' | 'false'
 }
 
 export type StepsGraph = {

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from src.ai.v1.contexts.schemas.enums import Domain
 from src.ai.v1.contexts.schemas.state import IntentClassification, IntentDomain, PipelineState
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 
 # ── Structured output schema ──────────────────────────────────────────────────
@@ -97,7 +97,7 @@ def _get_agent():
     global _agent
     if _agent is None and settings.OPENAI_API_KEY:
         _agent = create_agent(
-            ChatOpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY, temperature=0),
+            ChatOpenAI(model=settings.OPENAI_MODEL, api_key=openai_api_key_secret(), temperature=0),
             tools=[],
             middleware=[_classifier_prompt],
             response_format=IntentClassifierOutput,

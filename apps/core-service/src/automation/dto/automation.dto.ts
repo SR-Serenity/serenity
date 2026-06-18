@@ -3,10 +3,18 @@ import { AutomationActionType, AutomationTriggerType } from '@prisma/client';
 
 export { AutomationTriggerType, AutomationActionType };
 
+export const AutomationConditionType = {
+  TIME_WINDOW: 'TIME_WINDOW',
+  CHANNEL_IS: 'CHANNEL_IS',
+  TASK_PRIORITY_IS: 'TASK_PRIORITY_IS',
+  USER_IN_DEPARTMENT: 'USER_IN_DEPARTMENT',
+} as const;
+export type AutomationConditionType = (typeof AutomationConditionType)[keyof typeof AutomationConditionType];
+
 export type StepNode = {
   id: string;
-  type: 'trigger' | 'action';
-  nodeType: AutomationTriggerType | AutomationActionType;
+  type: 'trigger' | 'condition' | 'action';
+  nodeType: AutomationTriggerType | AutomationConditionType | AutomationActionType;
   config: Record<string, unknown>;
   position: { x: number; y: number };
 };
@@ -15,6 +23,7 @@ export type StepEdge = {
   id: string;
   source: string;
   target: string;
+  sourceHandle?: 'true' | 'false';
 };
 
 export type StepsGraph = {

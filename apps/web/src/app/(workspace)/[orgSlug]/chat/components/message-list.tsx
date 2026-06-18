@@ -32,6 +32,7 @@ function sameAuthorCluster(current: ChatMessage, previous?: ChatMessage) {
   const previousDate = new Date(previous.createdAt).getTime()
   return (
     current.authorId === previous.authorId &&
+    Boolean(current.isCopilot) === Boolean(previous.isCopilot) &&
     sameDay(current.createdAt, previous.createdAt) &&
     currentDate - previousDate < 5 * 60 * 1000
   )

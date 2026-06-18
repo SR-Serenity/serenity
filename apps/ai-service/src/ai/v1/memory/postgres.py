@@ -2,17 +2,18 @@
 
 from typing import Any
 
-from src.core.config import settings
+from src.core.config import settings, use_external_persistence
 
 
 async def create_checkpointer() -> Any:
-    if settings.DATABASE_URL:
+    if use_external_persistence() and settings.DATABASE_URL:
         try:
             import psycopg
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+            from psycopg.rows import dict_row
 
             conn = await psycopg.AsyncConnection.connect(
-                settings.DATABASE_URL, autocommit=True
+                settings.DATABASE_URL, autocommit=True, row_factory=dict_row
             )
             saver = AsyncPostgresSaver(conn)
             await saver.setup()
@@ -29,13 +30,14 @@ async def create_checkpointer() -> Any:
 
 
 async def create_store() -> Any:
-    if settings.DATABASE_URL:
+    if use_external_persistence() and settings.DATABASE_URL:
         try:
             import psycopg
             from langgraph.store.postgres.aio import AsyncPostgresStore
+            from psycopg.rows import dict_row
 
             conn = await psycopg.AsyncConnection.connect(
-                settings.DATABASE_URL, autocommit=True
+                settings.DATABASE_URL, autocommit=True, row_factory=dict_row
             )
             store = AsyncPostgresStore(conn)
             await store.setup()

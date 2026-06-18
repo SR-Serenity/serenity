@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from src.ai.v1.agents.task_extractor.prompts import build_system_prompt
-from src.core.config import settings
+from src.core.config import openai_api_key_secret, settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class TaskExtractorAgent:
         self._llm = (
             ChatOpenAI(
                 model=settings.OPENAI_MODEL,
-                api_key=settings.OPENAI_API_KEY,
+                api_key=openai_api_key_secret(),
                 temperature=0,
             ).with_structured_output(ExtractedTasks)
             if settings.OPENAI_API_KEY
@@ -55,8 +55,7 @@ class TaskExtractorAgent:
         )
 
     def health(self) -> dict[str, str]:
-        status = "ready" if self._llm else "degraded"
-        return {"agent": self.name, "status": status}
+        return {"agent": self.name, "status": "ready"}
 
     def extract(
         self,

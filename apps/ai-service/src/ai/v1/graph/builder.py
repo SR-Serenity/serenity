@@ -12,6 +12,7 @@ from src.ai.v1.orchestrators.intent_classifier import classify_intent
 from src.ai.v1.orchestrators.intent_registry import INTENT_REGISTRY
 from src.ai.v1.orchestrators.router import route_to_agents
 from src.ai.v1.synthesizer.synthesizer import synthesizer_node
+from src.core.config import use_external_persistence
 
 _MEMORIES_KEY = "user_memories"
 _MAX_MEMORIES = 15
@@ -83,9 +84,9 @@ def memory_writer_node(state: PipelineState, store: BaseStore) -> dict:
         assistant_msg = None
         for msg in reversed(messages):
             if isinstance(msg, HumanMessage) and not user_msg:
-                user_msg = msg.content
+                user_msg = str(msg.content)
             elif isinstance(msg, AIMessage) and not assistant_msg:
-                assistant_msg = msg.content
+                assistant_msg = str(msg.content)
             if user_msg and assistant_msg:
                 break
 
@@ -168,9 +169,25 @@ def create_main_graph(checkpointer=None, store=None):
 _main_graph = None
 
 
-async def get_main_graph():
+def get_main_graph():
     global _main_graph
     if _main_graph is None:
+        from langgraph.checkpoint.memory import MemorySaver
+        from langgraph.store.memory import InMemoryStore
+
+        _main_graph = create_main_graph(
+            checkpointer=MemorySaver(),
+            store=InMemoryStore(),
+        )
+    return _main_graph
+
+
+async def get_main_graph_async():
+    global _main_graph
+    if _main_graph is None:
+        if not use_external_persistence():
+            return get_main_graph()
+
         from src.ai.v1.memory.postgres import create_checkpointer, create_store
 
         _main_graph = create_main_graph(

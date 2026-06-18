@@ -52,7 +52,7 @@ Today: {TODAY}"""
 
 def build_system_prompt(ctx: AgentContext) -> str:
     try:
-        tz = ZoneInfo(ctx.time_zone or "UTC")
+        tz: datetime.tzinfo = ZoneInfo(ctx.time_zone or "UTC")
     except ZoneInfoNotFoundError:
         tz = datetime.timezone.utc
     today = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M %Z")

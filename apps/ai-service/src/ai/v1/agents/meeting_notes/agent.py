@@ -14,6 +14,10 @@ class MeetingNotesResult(BaseModel):
     """Structured meeting note returned by the LLM."""
 
     summary: list[str] = Field(default_factory=list)
+    decisions: list[str] = Field(default_factory=list)
+    action_items: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    key_transcript_highlights: list[str] = Field(default_factory=list)
 
 
 class MeetingNotesAgent:
@@ -45,10 +49,10 @@ class MeetingNotesAgent:
 
         system_prompt = (
             "You are a meeting notes assistant for Serenity, a workspace collaboration app. "
-            "Write a concise summary of the meeting as bullet points. "
-            "Each bullet should capture one key point, topic discussed, or outcome. "
-            "Ground every bullet in the transcript. Do not invent facts. "
-            "Write at most 10 bullets. Keep each bullet clear and self-contained."
+            "Turn a meeting transcript into structured notes. Ground every item in the transcript. "
+            "Do not invent decisions, owners, deadlines, or questions. "
+            "Use empty lists when the transcript does not support a section. "
+            "Keep every item clear and self-contained."
         )
 
         user_prompt = (
@@ -56,7 +60,8 @@ class MeetingNotesAgent:
             f"{transcript or '(empty transcript)'}\n\n"
             "Existing meeting note content, if any:\n"
             f"{existing_notes or '(none)'}\n\n"
-            "Write the meeting summary bullets."
+            "Return structured notes with meeting summary, decisions, action items, "
+            "open questions, and key transcript highlights."
         )
 
         try:
@@ -74,12 +79,32 @@ class MeetingNotesAgent:
         return self._fallback(transcript)
 
     def to_markdown(self, result: MeetingNotesResult) -> str:
-        bullets = "\n".join(f"- {item}" for item in result.summary) or "- No summary available."
-        return f"## Meeting Summary\n\n{bullets}"
+        return "\n\n".join(
+            [
+                self._section("Meeting Summary", result.summary, "No meeting summary available."),
+                self._section("Decisions", result.decisions, "No decisions captured."),
+                self._section(
+                    "Action Items",
+                    result.action_items,
+                    "No action items captured.",
+                    task_list=True,
+                ),
+                self._section("Open Questions", result.open_questions, "No open questions captured."),
+                self._section(
+                    "Key Transcript Highlights",
+                    result.key_transcript_highlights,
+                    "No transcript highlights captured.",
+                ),
+            ]
+        )
 
     def _limit(self, result: MeetingNotesResult) -> MeetingNotesResult:
         return MeetingNotesResult(
             summary=self._clean(result.summary, 10),
+            decisions=self._clean(result.decisions, 8),
+            action_items=self._clean(result.action_items, 10),
+            open_questions=self._clean(result.open_questions, 8),
+            key_transcript_highlights=self._clean(result.key_transcript_highlights, 8),
         )
 
     def _clean(self, items: list[str], limit: int) -> list[str]:
@@ -96,18 +121,70 @@ class MeetingNotesAgent:
                 break
         return cleaned
 
-    def _section(self, title: str, items: list[str], empty: str) -> str:
+    def _section(
+        self,
+        title: str,
+        items: list[str],
+        empty: str,
+        *,
+        task_list: bool = False,
+    ) -> str:
         bullets = items or [empty]
-        return f"### {title}\n" + "\n".join(f"- {item}" for item in bullets)
+        if task_list and items:
+            body = "\n".join(f"- [ ] {item}" for item in bullets)
+        else:
+            body = "\n".join(f"- {item}" for item in bullets)
+        return f"## {title}\n\n{body}"
 
     def _fallback(self, transcript: str) -> MeetingNotesResult:
         lines = [
-            line.split(":", 1)[-1].strip()
+            line.strip().lstrip("-").strip()
             for line in transcript.splitlines()
             if line.strip().startswith("- ")
         ]
-        summary = [line for line in lines if len(line) > 24][:10]
-        return MeetingNotesResult(summary=summary)
+        spoken_lines = [
+            self._spoken_text(line)
+            for line in lines
+            if line and not line.startswith("##")
+        ]
+
+        if not spoken_lines:
+            return MeetingNotesResult(summary=["No transcript provided."])
+
+        decisions = self._matches(
+            spoken_lines,
+            ["decided", "decision", "agreed", "approved", "confirmed", "chose"],
+            8,
+        )
+        action_items = self._matches(
+            spoken_lines,
+            ["action", "todo", "to do", "follow up", "next step", "will ", "owner"],
+            10,
+        )
+        open_questions = [
+            line for line in spoken_lines
+            if "?" in line or any(word in line.lower() for word in ["blocked", "unknown", "need to clarify"])
+        ][:8]
+
+        return MeetingNotesResult(
+            summary=spoken_lines[:5],
+            decisions=decisions,
+            action_items=action_items,
+            open_questions=open_questions,
+            key_transcript_highlights=spoken_lines[:8],
+        )
+
+    def _spoken_text(self, line: str) -> str:
+        timestamped = line.split(maxsplit=1)
+        if len(timestamped) == 2 and ":" in timestamped[0]:
+            speaker_line = timestamped[1]
+            if ":" in speaker_line:
+                return speaker_line.split(":", 1)[1].strip()
+
+        if ":" in line:
+            return line.split(":", 1)[1].strip()
+
+        return line
 
     def _matches(self, lines: list[str], needles: list[str], limit: int) -> list[str]:
         matches: list[str] = []

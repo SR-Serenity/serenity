@@ -75,6 +75,15 @@ function deriveDisplayName(payload: JwtUserPayload, fallback?: string): string {
   return 'Member'
 }
 
+function tokenHasDisplayName(token: string): boolean {
+  try {
+    const payload = jwtDecode<JwtUserPayload>(token)
+    return Boolean(payload.displayName?.trim())
+  } catch {
+    return false
+  }
+}
+
 export function decodeJwt(token: string, fallbackDisplayName?: string): User | null {
   try {
     const payload = jwtDecode<JwtUserPayload>(token)
@@ -181,16 +190,28 @@ export const useAuthStore = create<AuthStore>()(
 
         const persistedToken = get().token
         const persistedOrg = get().currentOrg
+        const persistedUser = get().user
         if (persistedToken && persistedOrg) {
           if (isTokenExpired(persistedToken)) {
             clearExpiredSession(set)
             return
           }
 
-          const user = decodeJwt(persistedToken)
+          let user = decodeJwt(persistedToken, persistedUser?.displayName)
           if (!user) {
             clearExpiredSession(set)
             return
+          }
+
+          if (!tokenHasDisplayName(persistedToken)) {
+            try {
+              const profile = await authApi.profile(persistedToken)
+              if (profile?.id && profile.email && profile.displayName) {
+                user = profile
+              }
+            } catch {
+              // Keep the locally decoded session when profile refresh is unavailable.
+            }
           }
 
           clearLegacyAuthStorage()
@@ -297,6 +318,7 @@ export const useAuthStore = create<AuthStore>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,
+        user: state.user,
         currentOrg: state.currentOrg,
       }),
       skipHydration: true,

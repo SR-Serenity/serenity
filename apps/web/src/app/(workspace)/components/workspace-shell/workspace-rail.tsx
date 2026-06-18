@@ -95,15 +95,15 @@ function NavItem({
       href={href}
       title={label}
       className={cn(
-        'group flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium outline-none select-none transition-colors duration-150',
+        'group flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-[13px] font-medium outline-none select-none transition-all duration-150',
         isActive
-          ? 'bg-nav-selected text-caption border-l-2 border-accent pl-2'
-          : 'text-content hover:bg-ui hover:text-caption',
+          ? 'bg-accent/10 text-accent-txt'
+          : 'text-content hover:bg-nav-hover hover:text-caption',
       )}
     >
       <Icon
         className={cn(
-          'h-[16px] w-[16px] shrink-0 transition-colors duration-150',
+          'h-4 w-4 shrink-0 transition-colors duration-150',
           isActive ? 'text-accent-txt' : 'text-muted group-hover:text-caption',
         )}
       />
@@ -132,10 +132,10 @@ function OrgHeader({
   return (
     <Popover>
       <PopoverTrigger className={cn(
-        'group flex w-full shrink-0 items-center gap-2.5 rounded-lg px-2 py-2',
+        'group flex w-full shrink-0 items-center gap-2 rounded-md px-2 py-1.5',
         'transition-colors duration-150 hover:bg-ui outline-none focus-visible:bg-ui',
       )}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 text-xs font-bold text-white shadow-sm">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-[10px] font-bold text-white">
           {currentOrg.name.slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1 text-left">
@@ -215,12 +215,12 @@ function UserSection({
   return (
     <Popover>
       <PopoverTrigger className={cn(
-        'group flex w-full shrink-0 items-center gap-2.5 rounded-md px-2 py-2',
+        'group flex w-full shrink-0 items-center gap-2 rounded-md px-2 py-1.5',
         'transition-colors duration-150 hover:bg-ui outline-none focus-visible:bg-ui',
       )}>
-        <DiceBearAvatar seed={avatarSeed} name={user?.displayName} className="h-6 w-6" />
+        <DiceBearAvatar seed={avatarSeed} name={user?.displayName} className="h-5 w-5" />
         <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-[13px] font-medium text-primary-text leading-snug">
+          <p className="truncate text-[12px] font-medium text-primary-text leading-snug">
             {user?.displayName ?? 'Member'}
           </p>
         </div>
@@ -308,9 +308,9 @@ export function WorkspaceRail({
   const dashboardHref = `/${orgSlug}/dashboard`
 
   return (
-    <aside className="flex h-full w-[220px] shrink-0 flex-col border-r border-nav-divider bg-nav">
+    <aside className="flex h-full w-[172px] shrink-0 flex-col border-r border-nav-divider bg-nav">
       {/* Org header */}
-      <div className="shrink-0 px-3 pt-3 pb-1">
+      <div className="shrink-0 px-2.5 pt-2.5 pb-0.5">
         <OrgHeader
           orgSlug={orgSlug}
           currentOrg={currentOrg}
@@ -321,7 +321,7 @@ export function WorkspaceRail({
       </div>
 
       {/* Nav */}
-      <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-2">
+      <nav className="no-scrollbar flex-1 overflow-y-auto px-2.5 py-1.5 space-y-0.5">
         <NavItem
           icon={Home}
           label="Home"
@@ -341,8 +341,8 @@ export function WorkspaceRail({
         ))}
 
         {groups.map(group => (
-          <div key={group} className="mt-5">
-            <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.1em] text-dimmed/70">
+          <div key={group} className="mt-4 first:mt-2">
+            <p className="mb-0.5 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-dimmed/60">
               {group}
             </p>
             {(byGroup[group] ?? []).map(app => (
@@ -360,10 +360,10 @@ export function WorkspaceRail({
       </nav>
 
       {/* Subtle separator */}
-      <div className="mx-3 h-px bg-nav-divider opacity-60" />
+      <div className="mx-2.5 h-px bg-nav-divider opacity-50" />
 
       {/* User section */}
-      <div className="shrink-0 px-3 py-3">
+      <div className="shrink-0 px-2.5 py-2">
         <UserSection
           orgSlug={orgSlug}
           user={user}
@@ -603,10 +603,10 @@ export function WorkspaceUtilityRail({ basePath, currentPath }: { basePath: stri
 
       {/* Right icon strip */}
       <aside
-        className="flex h-full w-[52px] shrink-0 flex-col items-center border-l border-nav-divider bg-nav"
+        className="flex h-full w-[44px] shrink-0 flex-col items-center border-l border-nav-divider bg-nav"
         aria-label="Quick actions"
       >
-        <div className="flex w-full flex-col items-center gap-0.5 px-1.5 pt-3">
+        <div className="flex w-full flex-col items-center gap-0.5 px-1 pt-2.5">
           <ShellIconActionButton
             title={panelOpen ? 'Close panel' : 'Open panel'}
             icon={PanelRight}

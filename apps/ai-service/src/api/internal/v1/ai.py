@@ -11,6 +11,7 @@ from src.ai.v1.documents.index_store import IndexedChunk, get_index_store
 from src.ai.v1.graph.runtime import run_chat, stream_chat
 from src.ai.v1.agents.automation_agent.agent import automation_agent
 from src.ai.v1.agents.automation_agent.store import save_execution
+from src.ai.v1.agents.chat_assist.agent import create_chat_assist_agent
 from src.ai.v1.agents.workflow_suggest_agent import workflow_suggest_agent
 from src.ai.v1.agents.meeting_notes import meeting_notes_agent
 from src.ai.v1.agents.meeting_live_transcription import (
@@ -26,6 +27,8 @@ from src.api.internal.v1.schemas import (
     WorkflowSuggestStepsGraph,
     WorkflowSuggestStepNode,
     WorkflowSuggestStepEdge,
+    ChatAssistRequest,
+    ChatAssistResponse,
     ChatRequest,
     ChatResponse,
     ExecuteActionRequest,
@@ -57,6 +60,7 @@ from src.core.config import settings
 from src.ai.v1.agents.meeting_live_transcription.agent import LiveMeetingStart
 
 router = APIRouter(prefix="/ai")
+chat_assist_agent = create_chat_assist_agent()
 
 
 def _assert_internal_token(request: Request) -> None:
@@ -94,6 +98,22 @@ async def chat_stream(payload: ChatRequest, request: Request) -> StreamingRespon
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/chat/assist", response_model=ChatAssistResponse)
+async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssistResponse:
+    _assert_internal_token(request)
+
+    context = "\n".join(
+        f"{message.role}: {message.content}"
+        for message in payload.conversation_context
+        if message.content
+    )
+    prompt = (
+        f"Conversation context:\n{context or '(none)'}\n\n"
+        f"User request:\n{payload.prompt}"
+    )
+    return ChatAssistResponse(suggested_content=chat_assist_agent.run(prompt))
 
 
 @router.post("/tasks/extract", response_model=TaskExtractResponse)
@@ -235,6 +255,9 @@ async def automation_execute(
         trigger_type=payload.context.trigger_type,
         display_name=payload.context.display_name,
         message_content=payload.context.message_content,
+        task_title=payload.context.task_title,
+        task_status=payload.context.task_status,
+        use_web_search=payload.use_web_search,
     )
 
     execution_id = save_execution(
