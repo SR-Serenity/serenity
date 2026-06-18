@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AutomationTriggerType } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import type { CreateAutomationRuleDto, UpdateAutomationRuleDto } from './dto/automation.dto';
+import type { CreateAutomationRuleDto, StepsGraph, UpdateAutomationRuleDto } from './dto/automation.dto';
 import { AutomationSchedulerService } from './automation-scheduler.service';
 
 @Injectable()
@@ -21,14 +21,19 @@ export class AutomationService {
   }
 
   async createRule(orgId: string, dto: CreateAutomationRuleDto) {
+    const { triggerType, triggerConfig } = dto.stepsGraph
+      ? this.extractTriggerFromGraph(dto.stepsGraph, dto.triggerType, dto.triggerConfig)
+      : { triggerType: dto.triggerType, triggerConfig: dto.triggerConfig };
+
     const rule = await this.prisma.automationRule.create({
       data: {
         orgId,
         name: dto.name,
-        triggerType: dto.triggerType,
-        triggerConfig: (dto.triggerConfig ?? {}) as Prisma.InputJsonValue,
+        triggerType,
+        triggerConfig: (triggerConfig ?? {}) as Prisma.InputJsonValue,
         actionType: dto.actionType,
         actionConfig: dto.actionConfig as Prisma.InputJsonValue,
+        stepsGraph: dto.stepsGraph ? (dto.stepsGraph as unknown as Prisma.InputJsonValue) : undefined,
       },
     });
 
@@ -45,17 +50,28 @@ export class AutomationService {
   async updateRule(orgId: string, ruleId: string, dto: UpdateAutomationRuleDto) {
     const existing = await this.findRule(orgId, ruleId);
 
+    let resolvedTriggerType = dto.triggerType;
+    let resolvedTriggerConfig = dto.triggerConfig;
+    if (dto.stepsGraph) {
+      const extracted = this.extractTriggerFromGraph(dto.stepsGraph, dto.triggerType, dto.triggerConfig);
+      resolvedTriggerType = extracted.triggerType;
+      resolvedTriggerConfig = extracted.triggerConfig;
+    }
+
     const rule = await this.prisma.automationRule.update({
       where: { id: ruleId },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.triggerType !== undefined && { triggerType: dto.triggerType }),
-        ...(dto.triggerConfig !== undefined && {
-          triggerConfig: dto.triggerConfig as Prisma.InputJsonValue,
+        ...(resolvedTriggerType !== undefined && { triggerType: resolvedTriggerType }),
+        ...(resolvedTriggerConfig !== undefined && {
+          triggerConfig: resolvedTriggerConfig as Prisma.InputJsonValue,
         }),
         ...(dto.actionType !== undefined && { actionType: dto.actionType }),
         ...(dto.actionConfig !== undefined && {
           actionConfig: dto.actionConfig as Prisma.InputJsonValue,
+        }),
+        ...(dto.stepsGraph !== undefined && {
+          stepsGraph: dto.stepsGraph as unknown as Prisma.InputJsonValue,
         }),
       },
     });
@@ -115,5 +131,20 @@ export class AutomationService {
       throw new NotFoundException('Automation rule not found');
     }
     return rule;
+  }
+
+  private extractTriggerFromGraph(
+    graph: StepsGraph,
+    fallbackTriggerType: AutomationTriggerType,
+    fallbackTriggerConfig?: Record<string, unknown>,
+  ): { triggerType: AutomationTriggerType; triggerConfig: Record<string, unknown> | undefined } {
+    const triggerNode = graph.nodes.find(n => n.type === 'trigger');
+    if (!triggerNode) {
+      return { triggerType: fallbackTriggerType, triggerConfig: fallbackTriggerConfig };
+    }
+    return {
+      triggerType: triggerNode.nodeType as AutomationTriggerType,
+      triggerConfig: triggerNode.config,
+    };
   }
 }

@@ -1,5 +1,35 @@
-export type AutomationTriggerType = 'SCHEDULE' | 'MEMBER_JOINED' | 'MESSAGE_KEYWORD'
-export type AutomationActionType = 'AI_AGENT'
+export type AutomationTriggerType =
+  | 'SCHEDULE'
+  | 'MEMBER_JOINED'
+  | 'MESSAGE_KEYWORD'
+  | 'TASK_CREATED'
+  | 'TASK_STATUS_CHANGED'
+  | 'TASK_ASSIGNED'
+
+export type AutomationActionType =
+  | 'AI_AGENT'
+  | 'NOTIFY'
+  | 'CREATE_TASK'
+  | 'POST_CHANNEL'
+
+export type StepNode = {
+  id: string
+  type: 'trigger' | 'action'
+  nodeType: AutomationTriggerType | AutomationActionType
+  config: Record<string, unknown>
+  position: { x: number; y: number }
+}
+
+export type StepEdge = {
+  id: string
+  source: string
+  target: string
+}
+
+export type StepsGraph = {
+  nodes: StepNode[]
+  edges: StepEdge[]
+}
 
 export type AutomationRule = {
   id: string
@@ -10,6 +40,7 @@ export type AutomationRule = {
   triggerConfig: Record<string, unknown>
   actionType: AutomationActionType
   actionConfig: Record<string, unknown>
+  stepsGraph: StepsGraph | null
   createdAt: string
   updatedAt: string
 }
@@ -24,6 +55,12 @@ export type CreateAutomationRuleInput = {
   triggerConfig?: Record<string, unknown>
   actionType: AutomationActionType
   actionConfig: Record<string, unknown>
+  stepsGraph?: StepsGraph
 }
 
 export type UpdateAutomationRuleInput = Partial<CreateAutomationRuleInput>
+
+export type SuggestRuleResponse = {
+  name: string
+  stepsGraph: StepsGraph | null
+}

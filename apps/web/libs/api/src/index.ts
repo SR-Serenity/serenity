@@ -152,7 +152,11 @@ export type {
   AutomationRule,
   AutomationTriggerType,
   AutomationActionType,
+  StepNode,
+  StepEdge,
+  StepsGraph,
   CreateAutomationRuleInput,
   UpdateAutomationRuleInput,
   ListAutomationRulesResponse,
+  SuggestRuleResponse,
 } from './types/automation'

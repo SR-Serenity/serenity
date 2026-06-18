@@ -4,12 +4,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import {
+  AutomationTriggerType,
   Prisma,
   TaskPriority,
   TaskSourceType,
   TaskStatus,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { AutomationEngineService } from '../automation/automation-engine.service';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 
 export type ListTasksFilters = {
@@ -37,7 +39,10 @@ const TASK_INCLUDE = {
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly automationEngine: AutomationEngineService,
+  ) {}
 
   async listTasks(orgId: string, userId: string, filters: ListTasksFilters = {}) {
     await this.ensureOrgAccess(orgId, userId);
@@ -118,6 +123,27 @@ export class TasksService {
       include: TASK_INCLUDE,
     });
 
+    this.automationEngine.runTaskTrigger({
+      taskId: task.id,
+      orgId,
+      title: task.title,
+      status: task.status,
+      assigneeId: task.assigneeId,
+      triggerType: AutomationTriggerType.TASK_CREATED,
+    }).catch(() => undefined);
+
+    if (task.assigneeId) {
+      this.automationEngine.runTaskTrigger({
+        taskId: task.id,
+        orgId,
+        title: task.title,
+        status: task.status,
+        assigneeId: task.assigneeId,
+        previousAssigneeId: null,
+        triggerType: AutomationTriggerType.TASK_ASSIGNED,
+      }).catch(() => undefined);
+    }
+
     return this.toExternalTask(task);
   }
 
@@ -168,6 +194,30 @@ export class TasksService {
       data,
       include: TASK_INCLUDE,
     });
+
+    if (input.status !== undefined && input.status !== existing.status) {
+      this.automationEngine.runTaskTrigger({
+        taskId: task.id,
+        orgId,
+        title: task.title,
+        status: task.status,
+        assigneeId: task.assigneeId,
+        previousStatus: existing.status,
+        triggerType: AutomationTriggerType.TASK_STATUS_CHANGED,
+      }).catch(() => undefined);
+    }
+
+    if (input.assigneeId !== undefined && input.assigneeId !== existing.assigneeId) {
+      this.automationEngine.runTaskTrigger({
+        taskId: task.id,
+        orgId,
+        title: task.title,
+        status: task.status,
+        assigneeId: task.assigneeId,
+        previousAssigneeId: existing.assigneeId,
+        triggerType: AutomationTriggerType.TASK_ASSIGNED,
+      }).catch(() => undefined);
+    }
 
     return this.toExternalTask(task);
   }

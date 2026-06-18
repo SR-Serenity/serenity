@@ -8,6 +8,9 @@ const TRIGGER_LABELS: Record<AutomationTriggerType, string> = {
   SCHEDULE: 'Schedule',
   MEMBER_JOINED: 'Member joins',
   MESSAGE_KEYWORD: 'Keyword match',
+  TASK_CREATED: 'Task created',
+  TASK_STATUS_CHANGED: 'Task status changed',
+  TASK_ASSIGNED: 'Task assigned',
 }
 
 type Props = {

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/auth.types';
@@ -18,6 +19,8 @@ import type { CreateAutomationRuleDto, UpdateAutomationRuleDto, ToggleAutomation
 @Controller('automations')
 @UseGuards(JwtAuthGuard)
 export class AutomationController {
+  private readonly logger = new Logger(AutomationController.name);
+
   constructor(
     private readonly automationService: AutomationService,
     private readonly engine: AutomationEngineService,
@@ -54,6 +57,30 @@ export class AutomationController {
   @Delete(':id')
   deleteRule(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.automationService.deleteRule(user.orgId, id);
+  }
+
+  @Post('suggest')
+  async suggestRule(@CurrentUser() user: AuthUser, @Body() body: { description: string }) {
+    const aiBaseUrl = process.env.AI_SERVICE_URL ?? 'http://localhost:8001/api/internal/v1';
+    const internalToken = process.env.INTERNAL_API_TOKEN ?? '';
+
+    try {
+      const res = await fetch(`${aiBaseUrl}/ai/automation/suggest`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-internal-api-token': internalToken },
+        body: JSON.stringify({ description: body.description, org_id: user.orgId }),
+      });
+
+      if (!res.ok) {
+        this.logger.error(`AI suggest error ${res.status}: ${await res.text()}`);
+        return { name: '', stepsGraph: null };
+      }
+
+      return res.json();
+    } catch (err) {
+      this.logger.error(`Failed to call AI suggest: ${err}`);
+      return { name: '', stepsGraph: null };
+    }
   }
 
   @Post('internal/member-joined')

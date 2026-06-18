@@ -3,6 +3,7 @@ import type {
   AutomationRule,
   CreateAutomationRuleInput,
   ListAutomationRulesResponse,
+  SuggestRuleResponse,
   UpdateAutomationRuleInput,
 } from '../types/automation'
 
@@ -21,4 +22,7 @@ export const automationApi = {
 
   deleteRule: (token: string, id: string): Promise<{ success: boolean }> =>
     api.delete(`automations/${id}`, { token }),
+
+  suggestRule: (token: string, description: string): Promise<SuggestRuleResponse> =>
+    api.post('automations/suggest', { token, body: { description } }),
 }
