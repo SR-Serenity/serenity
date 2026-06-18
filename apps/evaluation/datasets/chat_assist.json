@@ -1,0 +1,93 @@
+{
+  "name": "Chat Assist Evaluation",
+  "feature": "chat_assist",
+  "agent": "chat_assist",
+  "description": "Evaluation dataset for the chat assist agent covering translation, grammar correction, tone adjustment, rephrasing, drafting, and making text concise.",
+  "cases": [
+    {
+      "input": "Translate this to Vietnamese: 'The sprint goal is to complete the AI evaluation pipeline. All agents must be above 75% by end of sprint.'",
+      "expected_output": "The assistant provides the Vietnamese translation: 'Mục tiêu của sprint là hoàn thành pipeline đánh giá AI. Tất cả các agent phải đạt trên 75% trước khi kết thúc sprint.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Translate this to English: 'Chúng tôi đã triển khai phiên bản v2.2.0 lên môi trường staging và tất cả các bài kiểm thử khói đều đã qua.'",
+      "expected_output": "The assistant provides the English translation: 'We have deployed version v2.2.0 to the staging environment and all smoke tests have passed.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Translate this to French: 'Your whole team, one place. Serenity helps teams communicate and ship faster.'",
+      "expected_output": "The assistant provides the French translation: 'Toute votre équipe, au même endroit. Serenity aide les équipes à communiquer et à livrer plus rapidement.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Fix the grammar in this message: 'We has been working on the evaluation pipeline since last sprint and the result is showing great improvement across all of the agent we tested.'",
+      "expected_output": "The assistant corrects the grammar: 'We have been working on the evaluation pipeline since last sprint and the results are showing great improvement across all of the agents we tested.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Make this message sound more professional: 'hey just wanted to check if the pr is done yet, been waiting a bit'",
+      "expected_output": "The assistant rewrites the message professionally, e.g.: 'Hi, I wanted to follow up on the status of the PR. Please let me know when it is ready for review. Thank you.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Make this message warmer and more encouraging: 'QA is complete. Two bugs were found. They will be fixed before release.'",
+      "expected_output": "The assistant rewrites the message with a warmer tone, e.g.: 'Great news — QA is complete! We found two bugs that we will take care of before the release. Almost there!'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Make this more direct and concise: 'I was wondering if it might be possible for us to perhaps consider scheduling a meeting at some point next week to go over the Q3 OKRs together if everyone is available and it works for the team.'",
+      "expected_output": "The assistant rewrites it concisely, e.g.: 'Can we schedule a meeting next week to review the Q3 OKRs?'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Rephrase this update so it sounds more enthusiastic: 'Evaluation results are in. Contacts agent scored 91%. All agents are above the 75% threshold.'",
+      "expected_output": "The assistant rephrases the message with more enthusiasm, e.g.: 'Exciting news — the evaluation results are in! The contacts agent hit an impressive 91%, and every single agent is now above the 75% threshold. Great work, team!'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft a polite message to decline a meeting invitation for next Monday's 9 AM Weekly Team Standup because I have a conflict.",
+      "expected_output": "The assistant drafts a polite decline message, e.g.: 'Hi, thank you for the invitation. Unfortunately I have a conflict and will not be able to attend the Weekly Team Standup on Monday at 9 AM. I will catch up on any updates afterwards. Apologies for the inconvenience.'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft a brief status update message to send to #general saying that the evaluation notebook is now stable and all 7 agents are green.",
+      "expected_output": "The assistant drafts a short #general update, e.g.: 'Good news — the evaluation notebook is now stable. All 7 agents have passed the 75% threshold and are green. Thanks everyone for your contributions this sprint!'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft a friendly reminder to send to Bob Chen about reviewing PR #52.",
+      "expected_output": "The assistant drafts a friendly reminder, e.g.: 'Hey Bob, just a friendly reminder to take a look at PR #52 when you get a chance. Let me know if you have any questions. Thanks!'",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "I need to reply to this message. Help me write a professional reply.",
+      "expected_output": "The assistant asks what the original message said and what key points the user wants to include in the reply before drafting it.",
+      "retrieval_context": [],
+      "conversation_context": [
+        {
+          "role": "user",
+          "content": "Sarah sent: 'Can you confirm the AI infrastructure cost for Q3 and prepare a summary for the board?'"
+        },
+        {
+          "role": "assistant",
+          "content": "Sure, I can help you draft a professional reply to Sarah. What key points would you like to include — for example, the cost figure and any context you want to provide?"
+        },
+        {
+          "role": "user",
+          "content": "The cost is $2,400/month. It covers GPU instances and OpenAI API usage. It will drop 30% once we switch to our own model for G-Eval. I need to reply to this message. Help me write a professional reply."
+        }
+      ]
+    }
+  ]
+}

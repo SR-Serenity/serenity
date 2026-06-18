@@ -41,6 +41,7 @@ import {
   type WorkspaceRailItem,
 } from '@/app/(workspace)/components/workspace-shell/workspace-rail'
 import { AiChatPanel } from '@/app/(workspace)/components/workspace-shell/ai-agent-panel'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 type WorkspaceLayoutProps = { children: ReactNode }
 
@@ -49,7 +50,8 @@ interface NavItem {
   label: string
   href: string
   icon?: LucideIcon
-  avatarLabel?: string
+  avatarSeed?: string
+  avatarName?: string
   count?: number
   children?: NavItem[]
 }
@@ -81,14 +83,9 @@ function getChatConversationName(conversation: ChatConversation, currentUserId?:
     .join(', ') || 'You'
 }
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'U'
+function getChatConversationAvatarUser(conversation: ChatConversation, currentUserId?: string) {
+  return conversation.members.find(member => member.userId !== currentUserId)?.user
+    ?? conversation.members[0]?.user
 }
 
 function buildSections(
@@ -128,12 +125,18 @@ function buildSections(
         {
           id: 'direct-messages',
           label: 'Direct Messages',
-          items: directMessages.map(conversation => ({
-            id: conversation.id,
-            label: getChatConversationName(conversation, currentUserId),
-            href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
-            avatarLabel: initials(getChatConversationName(conversation, currentUserId)),
-          })),
+          items: directMessages.map(conversation => {
+            const label = getChatConversationName(conversation, currentUserId)
+            const avatarUser = getChatConversationAvatarUser(conversation, currentUserId)
+
+            return {
+              id: conversation.id,
+              label,
+              href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
+              avatarSeed: avatarUser?.id ?? conversation.id,
+              avatarName: avatarUser?.displayName ?? label,
+            }
+          }),
         },
       ]
     }
@@ -413,7 +416,8 @@ function ChatSubnav({
               id: conversation.id,
               label: getChatConversationName(conversation, currentUserId),
               href: `${basePath}/chat/${encodeURIComponent(conversation.id)}`,
-              avatarLabel: initials(getChatConversationName(conversation, currentUserId)),
+              avatarSeed: getChatConversationAvatarUser(conversation, currentUserId)?.id ?? conversation.id,
+              avatarName: getChatConversationAvatarUser(conversation, currentUserId)?.displayName ?? getChatConversationName(conversation, currentUserId),
             }))}
             currentPath={currentPath}
           />
@@ -469,7 +473,8 @@ function ChatSubnavSection({
                 currentPath={currentPath}
                 label={item.label}
                 icon={item.icon}
-                avatarLabel={item.avatarLabel}
+                avatarSeed={item.avatarSeed}
+                avatarName={item.avatarName}
               />
             ))
           )}
@@ -484,13 +489,15 @@ function ChatSubnavLink({
   currentPath,
   label,
   icon: Icon,
-  avatarLabel,
+  avatarSeed,
+  avatarName,
 }: {
   href: string
   currentPath: string
   label: string
   icon?: LucideIcon
-  avatarLabel?: string
+  avatarSeed?: string
+  avatarName?: string
 }) {
   const active = currentPath.split('?')[0] === href
 
@@ -502,10 +509,12 @@ function ChatSubnavLink({
         active && 'bg-white text-primary shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-primary',
       )}
     >
-      {avatarLabel ? (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-500 text-[10px] font-semibold text-white">
-          {avatarLabel}
-        </span>
+      {avatarSeed ? (
+        <DiceBearAvatar
+          seed={avatarSeed}
+          name={avatarName ?? label}
+          className="h-5 w-5 rounded-md"
+        />
       ) : Icon ? (
         <Icon className={cn('h-4 w-4 shrink-0 text-gray-400', active && 'text-primary')} />
       ) : null}
@@ -739,11 +748,6 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const sections = buildSections(activeApp?.id, basePath, chatConversations, auth.user?.id)
   const currentQuery = searchParams.toString()
   const currentPath = currentQuery ? `${pathname}?${currentQuery}` : pathname
-  const userInitials = (auth.user?.displayName ?? auth.user?.email ?? 'U')
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word: string) => word[0]?.toUpperCase() ?? '')
-    .join('')
   const availableOrganizations = organizations.length > 0 ? organizations : [auth.currentOrg]
 
   async function handleSwitchOrg(nextOrgSlug: string) {
@@ -776,7 +780,6 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
         switchingOrgSlug={switchingOrgSlug}
         onSwitchOrg={handleSwitchOrg}
         onLogout={handleLogout}
-        userInitials={userInitials}
       />
 
       {/* ── Center column: header + subnav + content ── */}

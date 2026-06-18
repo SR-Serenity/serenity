@@ -32,6 +32,7 @@ import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 type ContactFormState = {
   type: Exclude<ContactType, 'EMPLOYEE'>
@@ -67,15 +68,6 @@ function contactIcon(type: ContactType) {
   if (type === 'AI_AGENT') return Bot
   if (type === 'GUEST') return UserRound
   return Users
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
-    .join('') || 'C'
 }
 
 function normalize(value: string | null | undefined) {
@@ -430,14 +422,21 @@ function ContactRow({
         active && 'bg-blue-50/80 hover:bg-blue-50',
       )}
     >
-      <span className={cn(
-        'flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ring-1 ring-inset',
-        contact.type === 'EMPLOYEE' && 'bg-emerald-600 text-white ring-emerald-600',
-        contact.type === 'GUEST' && 'bg-blue-100 text-blue-700',
-        contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
-      )}>
-        {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : <Icon className="size-4" />}
-      </span>
+      {contact.type === 'EMPLOYEE' ? (
+        <DiceBearAvatar
+          seed={contact.sourceUserId ?? contact.id}
+          name={contact.displayName}
+          className="size-10 rounded-lg ring-1 ring-inset ring-emerald-100"
+        />
+      ) : (
+        <span className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ring-1 ring-inset',
+          contact.type === 'GUEST' && 'bg-blue-100 text-blue-700',
+          contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
+        )}>
+          <Icon className="size-4" />
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-slate-950">{contact.displayName}</span>
         <span className="mt-0.5 block truncate text-xs text-slate-500">
@@ -486,14 +485,21 @@ function ContactDetail({
     <aside className="hidden min-h-0 border-l border-slate-200 bg-white xl:flex xl:flex-col">
       <div className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-3">
-          <div className={cn(
-            'flex size-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ring-1 ring-inset',
-            contact.type === 'EMPLOYEE' && 'bg-emerald-600 text-white ring-emerald-600',
-            contact.type === 'GUEST' && 'bg-blue-100 text-blue-700 ring-blue-200',
-            contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
-          )}>
-            {contact.type === 'EMPLOYEE' ? initials(contact.displayName) : <Icon className="size-5" />}
-          </div>
+          {contact.type === 'EMPLOYEE' ? (
+            <DiceBearAvatar
+              seed={contact.sourceUserId ?? contact.id}
+              name={contact.displayName}
+              className="size-12 rounded-lg ring-1 ring-inset ring-emerald-100"
+            />
+          ) : (
+            <div className={cn(
+              'flex size-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ring-1 ring-inset',
+              contact.type === 'GUEST' && 'bg-blue-100 text-blue-700 ring-blue-200',
+              contact.type === 'AI_AGENT' && 'bg-violet-100 text-violet-700 ring-violet-200',
+            )}>
+              <Icon className="size-5" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-semibold text-slate-950">{contact.displayName}</h2>
             <p className="mt-1 text-sm text-slate-500">{typeLabels[contact.type]}</p>

@@ -11,6 +11,9 @@ export type AgentContext = {
   messageContent?: string;
   orgName?: string;
   triggerType?: string;
+  taskId?: string;
+  taskTitle?: string;
+  taskStatus?: string;
 };
 
 type ActionConfig = {
@@ -25,8 +28,8 @@ export class AutomationAgentService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(rule: AutomationRule, context: AgentContext): Promise<void> {
-    const actionConfig = rule.actionConfig as ActionConfig;
+  async execute(rule: AutomationRule, context: AgentContext, overrideConfig?: ActionConfig): Promise<void> {
+    const actionConfig = overrideConfig ?? rule.actionConfig as ActionConfig;
     if (!actionConfig?.instruction) {
       this.logger.warn(`Rule ${rule.id} has no instruction in actionConfig`);
       return;

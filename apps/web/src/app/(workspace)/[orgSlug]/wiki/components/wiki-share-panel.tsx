@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useWikiStore } from '@/stores/wiki-store'
+import { DiceBearAvatar } from '@/components/dicebear-avatar'
 
 const PERMISSION_LABELS: Record<WikiSharePermission, string> = {
   VIEW: 'Can view',
@@ -27,22 +28,7 @@ function visibilityIcon(visibility: WikiPageVisibility) {
   return <Globe className="h-3.5 w-3.5" />
 }
 
-function initials(name: string) {
-  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
-}
-
-const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500',
-  'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-indigo-500',
-]
-
 const EMPTY_MEMBERS: Member[] = []
-
-function avatarColor(userId: string) {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) | 0
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
 
 export function WikiSharePanel({
   page,
@@ -178,9 +164,7 @@ export function WikiSharePanel({
                           onClick={() => handleAddShare(member.id, member.displayName)}
                           className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f7f7f5]"
                         >
-                          <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white', avatarColor(member.id))}>
-                            {initials(member.displayName)}
-                          </span>
+                          <DiceBearAvatar seed={member.id} name={member.displayName} className="h-6 w-6" />
                           <div className="min-w-0">
                             <p className="truncate text-sm text-[#37352f]">{member.displayName}</p>
                             <p className="truncate text-xs text-[#9b9a97]">{member.email}</p>
@@ -212,9 +196,11 @@ export function WikiSharePanel({
 
           {/* Creator */}
           <div className="flex h-9 items-center gap-2">
-            <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white', avatarColor(page.createdById))}>
-              {creator ? initials(creator.displayName) : '?'}
-            </span>
+            <DiceBearAvatar
+              seed={page.createdById}
+              name={creator?.displayName ?? 'Unknown'}
+              className="h-7 w-7"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-[#37352f]">
                 {creator?.displayName ?? 'Unknown'}
@@ -232,9 +218,7 @@ export function WikiSharePanel({
           ) : (
             shares.map(share => (
               <div key={share.userId} className="flex h-9 items-center gap-2">
-                <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white', avatarColor(share.userId))}>
-                  {initials(share.userName)}
-                </span>
+                <DiceBearAvatar seed={share.userId} name={share.userName} className="h-7 w-7" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-[#37352f]">
                     {share.userName}

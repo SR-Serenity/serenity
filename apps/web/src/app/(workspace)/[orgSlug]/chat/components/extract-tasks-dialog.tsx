@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Sparkles, X } from 'lucide-react'
+import { ChevronDown, Loader2, Sparkles, X } from 'lucide-react'
 import { aiApi, orgApi, tasksApi } from '@serenity/api'
 import type { Member, ProposedTask, TaskPriority } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
@@ -58,61 +58,46 @@ export function ExtractTasksDialog({
 
     orgApi
       .listMembers(authContext.orgId, token)
-      .then((res) => active && setMembers(res.members))
+      .then(res => active && setMembers(res.members))
       .catch(() => undefined)
 
     aiApi
-      .extractTasks(token, {
-        authContext,
-        conversationContext,
-        sourceTitle: conversationTitle,
-      })
-      .then((res) => {
+      .extractTasks(token, { authContext, conversationContext, sourceTitle: conversationTitle })
+      .then(res => {
         if (!active) return
-        setDrafts(res.proposedTasks.map((t) => ({ ...t, selected: true })))
+        setDrafts(res.proposedTasks.map(t => ({ ...t, selected: true })))
         setLoading(false)
       })
-      .catch((err) => {
+      .catch(err => {
         if (!active) return
         setError(err instanceof Error ? err.message : 'Failed to generate tasks')
         setLoading(false)
       })
 
-    return () => {
-      active = false
-    }
+    return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const selectedCount = useMemo(
-    () => drafts.filter((d) => d.selected).length,
-    [drafts],
-  )
+  const selectedCount = useMemo(() => drafts.filter(d => d.selected).length, [drafts])
 
   function patchDraft(index: number, patch: Partial<DraftTask>) {
-    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)))
+    setDrafts(prev => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)))
   }
 
   function resolveAssigneeId(name: string | null): string | null {
     if (!name) return null
-    const match = members.find(
-      (m) => m.displayName.toLowerCase() === name.toLowerCase(),
-    )
-    return match?.id ?? null
+    return members.find(m => m.displayName.toLowerCase() === name.toLowerCase())?.id ?? null
   }
 
   async function handleConfirm() {
     if (confirming) return
-    const selected = drafts.filter((d) => d.selected)
-    if (selected.length === 0) {
-      onClose()
-      return
-    }
+    const selected = drafts.filter(d => d.selected)
+    if (selected.length === 0) { onClose(); return }
     setConfirming(true)
     setError(null)
     try {
       await Promise.all(
-        selected.map((d) =>
+        selected.map(d =>
           tasksApi.createTask(token, {
             title: d.title,
             description: d.description,
@@ -135,20 +120,22 @@ export function ExtractTasksDialog({
     }
   }
 
+  const selectClass = "h-7 w-full appearance-none rounded-lg border border-border bg-[var(--input-BackgroundColor)] px-2 pr-6 text-xs text-foreground outline-none transition-all duration-150 focus:ring-1 focus:ring-accent/30 focus:border-accent/60 cursor-pointer"
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.04]">
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+            <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">
               <Sparkles className="size-4 text-primary" />
               AI Suggested Tasks
             </h2>
-            <p className="truncate text-sm text-muted-foreground">
-              Based on: {conversationTitle}
-            </p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">Based on: {conversationTitle}</p>
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} title="Close">
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -160,83 +147,73 @@ export function ExtractTasksDialog({
               Analyzing the conversation…
             </div>
           ) : drafts.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <p className="py-12 text-center text-sm text-muted-foreground">
               No clear follow-up tasks were found in this conversation.
-            </div>
+            </p>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                The AI found {drafts.length} possible follow-up task
-                {drafts.length === 1 ? '' : 's'}.
+              <p className="text-xs text-muted-foreground">
+                {drafts.length} possible follow-up task{drafts.length === 1 ? '' : 's'} found.
               </p>
               {drafts.map((draft, index) => (
                 <div
                   key={index}
                   className={cn(
-                    'rounded-xl border p-3 transition-colors',
-                    draft.selected ? 'border-primary/40 bg-primary/5' : 'border-border',
+                    'rounded-xl border p-3 transition-all duration-150',
+                    draft.selected ? 'border-accent/35 bg-accent/[0.06]' : 'border-border',
                   )}
                 >
                   <div className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
                       checked={draft.selected}
-                      onChange={(e) => patchDraft(index, { selected: e.target.checked })}
-                      className="mt-1"
+                      onChange={e => patchDraft(index, { selected: e.target.checked })}
+                      className="mt-1 accent-[var(--global-accent-BackgroundColor)] cursor-pointer"
                     />
                     <div className="min-w-0 flex-1 space-y-2">
                       <Input
                         value={draft.title}
-                        onChange={(e) => patchDraft(index, { title: e.target.value })}
-                        className="h-8 font-medium"
+                        onChange={e => patchDraft(index, { title: e.target.value })}
+                        className="h-8 font-medium focus-visible:ring-1 focus-visible:ring-accent/30 focus-visible:border-accent/60"
                       />
                       <div className="grid grid-cols-3 gap-2">
-                        <select
-                          value={draft.assigneeName ?? ''}
-                          onChange={(e) =>
-                            patchDraft(index, { assigneeName: e.target.value || null })
-                          }
-                          className="h-7 rounded-lg border border-input bg-background px-2 text-xs outline-none"
-                        >
-                          <option value="">Unassigned</option>
-                          {members.map((m) => (
-                            <option key={m.id} value={m.displayName}>
-                              {m.displayName}
-                            </option>
-                          ))}
-                          {draft.assigneeName &&
-                          !members.some(
-                            (m) =>
-                              m.displayName.toLowerCase() ===
-                              draft.assigneeName!.toLowerCase(),
-                          ) ? (
-                            <option value={draft.assigneeName}>{draft.assigneeName}</option>
-                          ) : null}
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={draft.assigneeName ?? ''}
+                            onChange={e => patchDraft(index, { assigneeName: e.target.value || null })}
+                            className={selectClass}
+                          >
+                            <option value="">Unassigned</option>
+                            {members.map(m => (
+                              <option key={m.id} value={m.displayName}>{m.displayName}</option>
+                            ))}
+                            {draft.assigneeName && !members.some(m => m.displayName.toLowerCase() === draft.assigneeName!.toLowerCase()) && (
+                              <option value={draft.assigneeName}>{draft.assigneeName}</option>
+                            )}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                        </div>
                         <Input
                           type="date"
                           value={toDateInput(draft.dueDate)}
-                          onChange={(e) =>
-                            patchDraft(index, { dueDate: e.target.value || null })
-                          }
-                          className="h-7 text-xs"
+                          onChange={e => patchDraft(index, { dueDate: e.target.value || null })}
+                          className="h-7 text-xs focus-visible:ring-1 focus-visible:ring-accent/30 focus-visible:border-accent/60"
                         />
-                        <select
-                          value={draft.priority}
-                          onChange={(e) =>
-                            patchDraft(index, { priority: e.target.value as TaskPriority })
-                          }
-                          className="h-7 rounded-lg border border-input bg-background px-2 text-xs outline-none"
-                        >
-                          {PRIORITIES.map((p) => (
-                            <option key={p} value={p}>
-                              {p.toLowerCase()}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={draft.priority}
+                            onChange={e => patchDraft(index, { priority: e.target.value as TaskPriority })}
+                            className={selectClass}
+                          >
+                            {PRIORITIES.map(p => (
+                              <option key={p} value={p}>{p.toLowerCase()}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        <span className="font-medium">Reason:</span> {draft.reason}
+                        <span className="font-medium text-foreground">Reason:</span> {draft.reason}
                       </p>
                     </div>
                   </div>
@@ -249,15 +226,10 @@ export function ExtractTasksDialog({
         </div>
 
         <div className="flex items-center justify-between border-t border-border px-5 py-3">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            disabled={confirming}
-            className="text-muted-foreground"
-          >
+          <Button variant="ghost" onClick={onClose} disabled={confirming} className="text-muted-foreground">
             Reject All
           </Button>
-          <Button onClick={handleConfirm} disabled={loading || confirming || selectedCount === 0}>
+          <Button onClick={handleConfirm} disabled={loading || confirming || selectedCount === 0} className="active:scale-[0.97]">
             {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Confirm Selected ({selectedCount})
           </Button>

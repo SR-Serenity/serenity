@@ -3,6 +3,25 @@ import { AutomationActionType, AutomationTriggerType } from '@prisma/client';
 
 export { AutomationTriggerType, AutomationActionType };
 
+export type StepNode = {
+  id: string;
+  type: 'trigger' | 'action';
+  nodeType: AutomationTriggerType | AutomationActionType;
+  config: Record<string, unknown>;
+  position: { x: number; y: number };
+};
+
+export type StepEdge = {
+  id: string;
+  source: string;
+  target: string;
+};
+
+export type StepsGraph = {
+  nodes: StepNode[];
+  edges: StepEdge[];
+};
+
 export class CreateAutomationRuleDto {
   @IsString()
   @MinLength(1)
@@ -20,6 +39,10 @@ export class CreateAutomationRuleDto {
 
   @IsObject()
     actionConfig!: Record<string, unknown>;
+
+  @IsObject()
+  @IsOptional()
+    stepsGraph?: StepsGraph;
 }
 
 export class UpdateAutomationRuleDto {
@@ -43,6 +66,10 @@ export class UpdateAutomationRuleDto {
   @IsObject()
   @IsOptional()
     actionConfig?: Record<string, unknown>;
+
+  @IsObject()
+  @IsOptional()
+    stepsGraph?: StepsGraph;
 }
 
 export class ToggleAutomationRuleDto {
