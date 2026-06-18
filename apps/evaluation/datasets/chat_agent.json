@@ -1,0 +1,103 @@
+{
+  "name": "Chat Agent Evaluation",
+  "feature": "chat",
+  "agent": "chat_agent",
+  "description": "Evaluation dataset for the chat agent covering channel message search, DM recap, message attribution, topic search, and conversation summary.",
+  "cases": [
+    {
+      "input": "Who announced that Sprint 12's goal is the AI evaluation pipeline?",
+      "expected_output": "Alex Vance announced in #general that the Sprint 12 goal is the AI evaluation pipeline and all agents should be above 75% by end of sprint.",
+      "retrieval_context": [
+        "#general — Alex Vance: Sprint 12 goal is AI evaluation pipeline, all agents above 75% by end of sprint."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What did Bob say about v2.2.0 in #general?",
+      "expected_output": "Bob Chen posted in #general that v2.2.0 was deployed to staging and smoke tests passed, and later confirmed v2.2.0 is live on production with zero incidents.",
+      "retrieval_context": [
+        "#general — Bob Chen: v2.2.0 deployed to staging, smoke tests passed.",
+        "#general — Bob Chen: v2.2.0 live on production, zero incidents."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What bugs did Mary report after QA on v2.2.0?",
+      "expected_output": "Mary Watson reported two bugs in #general: a wiki editor cursor issue on Firefox and the calendar modal not responding to the Escape key.",
+      "retrieval_context": [
+        "#general — Mary Watson: QA complete on v2.2.0, two bugs — wiki editor cursor on Firefox, calendar modal Escape key."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What evaluation scores did Huy post in #general?",
+      "expected_output": "Huy Phan posted in #general: wiki 78%, chat 81%, contacts 91%, calendar 82%, schedule 87% (first pass), and later that contacts is at 91%, mail at 76%, and all agents are now green.",
+      "retrieval_context": [
+        "#general — Huy Phan: evaluation first pass — wiki 78%, chat 81%, contacts 91%, calendar 82%, schedule 87%.",
+        "#general — Huy Phan: full report in wiki, contacts at 91%, mail at 76%, all agents now green."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What did Sarah announce about Q2 results in #general?",
+      "expected_output": "Sarah Connor posted in #general that Q2 results are in: 2,300 new signups, 14% above target, and retention at 68%, up 5 points from Q1.",
+      "retrieval_context": [
+        "#general — Sarah Connor: Q2 results are in: 2,300 new signups, 14% above target. Retention at 68%, up 5 points from Q1. Incredible work everyone — this is the best quarter we have had."
+      ]
+    },
+    {
+      "input": "What did David post about the race condition in #engineering?",
+      "expected_output": "David Miller posted in #engineering that the race condition in the token refresh endpoint occurs when two requests within 100ms both generate tokens and only the second write wins. His fix in PR #44 uses a Redis SETNX lock with a 500ms TTL.",
+      "retrieval_context": [
+        "#engineering — David Miller: race condition in token refresh — two requests within 100ms both generate tokens, only second write wins. PR #44 uses Redis SETNX lock with 500ms TTL."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What is Alex's proposal for the AI service in Sprint 13?",
+      "expected_output": "Alex Vance proposed in #engineering to move the AI service behind the gateway in Sprint 13 so there is no direct access to port 8000.",
+      "retrieval_context": [
+        "#engineering — Alex Vance: proposal to move AI service behind gateway in Sprint 13, no direct port 8000 access."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What did Sarah and Alice discuss about the Q3 campaign CTA in #marketing?",
+      "expected_output": "Sarah Connor shared the Q3 campaign brief in #marketing with the theme 'Your whole team, one place.' and a September 15 launch date. Alice Nguyen replied that the CTA should be 'Start free' instead of 'Get started' because it showed 23% better click-through in A/B tests.",
+      "retrieval_context": [
+        "#marketing — Sarah Connor: Q3 campaign brief, theme 'Your whole team, one place.', launch date September 15.",
+        "#marketing — Alice Nguyen: CTA should be 'Start free' not 'Get started', 23% better click-through in A/B tests."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Summarize the DM conversation between me and Sarah.",
+      "expected_output": "In the DM, Sarah Connor asked Huy Phan about availability for a call on the Q3 board presentation, confirmed 2 PM works. Sarah asked to confirm AI infrastructure costs for Q3; Huy replied $2,400/month (GPU instances + OpenAI API), expected to drop 30% when using their own model for G-Eval. Sarah noted the ROI story is strong with NovaTech saving 40 min/day. Sarah requested total AI interactions per week and breakdown by agent type; Huy sent a CSV showing 12,400 AI interactions last week — wiki agent 34%, chat assist 28%.",
+      "retrieval_context": [
+        "DM creator↔Sarah — Sarah: are you available for a quick call about Q3 board presentation.",
+        "DM creator↔Sarah — Huy: yes, 2 PM works.",
+        "DM creator↔Sarah — Sarah: confirm AI infrastructure cost for Q3.",
+        "DM creator↔Sarah — Huy: $2,400/month — GPU instances + OpenAI API costs, will drop 30% when we use own model for G-Eval.",
+        "DM creator↔Sarah — Sarah: ROI story strong, NovaTech saving 40 min/day average.",
+        "DM creator↔Sarah — Huy: can pull usage data from analytics DB.",
+        "DM creator↔Sarah — Sarah: wants total AI interactions per week and breakdown by agent type.",
+        "DM creator↔Sarah — Huy: sent CSV, 12,400 AI interactions last week, wiki agent 34%, chat assist 28%."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "What did Alice say about the landing page in our DMs?",
+      "expected_output": "Alice Nguyen asked Huy Phan in DMs to review the new landing page copy on staging. Huy said the headline was great but the CTA should be 'Start free'. Alice updated it and Huy asked her to add the NovaTech testimonial ('Serenity cut our meeting overhead by 40%. We ship twice as fast.' — Michael Torres). Alice added it, deployed to production, and reported a 6% improvement in hero click-through rate.",
+      "retrieval_context": [
+        "DM creator↔Alice — Alice: did you review the new landing page copy on staging?",
+        "DM creator↔Alice — Huy: headline great, CTA should be 'Start free'.",
+        "DM creator↔Alice — Alice: will update and push to staging.",
+        "DM creator↔Alice — Huy: add NovaTech testimonial — 'Serenity cut our meeting overhead by 40%. We ship twice as fast.' — Michael Torres gave permission.",
+        "DM creator↔Alice — Alice: will add with Michael's name and title, staging ready in 20 minutes.",
+        "DM creator↔Alice — Huy: looks great, ship it.",
+        "DM creator↔Alice — Alice: deployed to production, 6% improvement in hero click-through rate."
+      ],
+      "conversation_context": []
+    }
+  ]
+}

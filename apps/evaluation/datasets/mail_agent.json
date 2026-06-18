@@ -1,0 +1,94 @@
+{
+  "name": "Mail Agent Evaluation",
+  "feature": "mail",
+  "agent": "mail_agent",
+  "description": "Evaluation dataset for the mail agent covering email search by topic, listing recent emails, finding by sender, summarizing threads, drafting replies, and drafting new emails.",
+  "cases": [
+    {
+      "input": "Find emails about the Q3 board presentation.",
+      "expected_output": "The assistant returns at least one email about the Q3 board presentation, including the email from Sarah Connor asking Huy Phan to confirm the AI infrastructure cost for the Q3 board presentation.",
+      "retrieval_context": [
+        "From: sarah.connor@workspace.com\nTo: huy.phan@workspace.com\nSubject: Q3 Board Presentation — AI Infrastructure Cost\nDate: Monday\nBody: Hi Huy, could you confirm the AI infrastructure cost for Q3 so I can include it in the board presentation? Also, do you have a breakdown of usage by agent type? Thanks, Sarah."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Show me recent emails from Alice Nguyen.",
+      "expected_output": "The assistant lists recent emails from Alice Nguyen, including the email about the landing page copy review and the one about the August content calendar.",
+      "retrieval_context": [
+        "From: alice.nguyen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: Landing Page Copy — Staging Review\nDate: Tuesday\nBody: Hi Huy, the new landing page copy is live on staging. Could you take a look and let me know your thoughts? Particularly the hero headline and CTA. Thanks, Alice.",
+        "From: alice.nguyen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: August Content Calendar Published\nDate: Wednesday\nBody: Hi team, the August content calendar is now published. We have 3 blog posts, 12 social posts, and 1 press release draft scheduled. Let me know if anything needs adjusting. Alice."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Find emails from Michael Torres.",
+      "expected_output": "The assistant returns the email from Michael Torres at michael.torres@novatech.io regarding the NovaTech testimonial permission.",
+      "retrieval_context": [
+        "From: michael.torres@novatech.io\nTo: huy.phan@workspace.com\nSubject: Testimonial Permission — NovaTech Solutions\nDate: Thursday\nBody: Hi Huy, happy to grant permission to use the NovaTech testimonial on your landing page: 'Serenity cut our meeting overhead by 40%. We ship twice as fast.' Feel free to attribute it to me with my name and title. Best, Michael Torres, Head of Engineering, NovaTech Solutions."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Summarize the email thread about the Redis graceful fallback PR.",
+      "expected_output": "The thread started with Huy Phan requesting a review of PR #52 (Redis session layer). Bob Chen reviewed and found that the error path when Redis goes down threw a 500 error instead of degrading gracefully. Huy updated the code to fall back to the Prisma session store with a warning log. Bob then asked to verify the health endpoint reports degraded mode. Huy added a degraded status response. Bob approved and merged the PR.",
+      "retrieval_context": [
+        "From: huy.phan@workspace.com\nTo: bob.chen-{orgSlug}@example.com\nSubject: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Hey Bob, PR #52 is up for the Redis session layer implementation. Would appreciate a second pair of eyes. Thanks.",
+        "From: bob.chen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: Re: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Reviewing now. One issue: the error path when Redis goes down throws a 500. It should degrade gracefully to the DB session store instead.",
+        "From: huy.phan@workspace.com\nTo: bob.chen-{orgSlug}@example.com\nSubject: Re: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Updated. Redis failure now falls back to Prisma session store with a warning log.",
+        "From: bob.chen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: Re: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Looks good. One last thing — does the health endpoint report degraded mode?",
+        "From: huy.phan@workspace.com\nTo: bob.chen-{orgSlug}@example.com\nSubject: Re: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Added. Response is: {\"status\":\"degraded\",\"redis\":\"unavailable\",\"session\":\"db-fallback\"}",
+        "From: bob.chen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: Re: PR #52 — Redis Session Layer — Review Request\nDate: Monday\nBody: Approved and merged. Graceful degradation should apply to all Redis-dependent paths going forward."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft a reply to Sarah's email about the Q3 board presentation, confirming the AI infrastructure cost is $2,400/month covering GPU instances and OpenAI API costs, and that it will drop 30% when we switch to our own model.",
+      "expected_output": "The assistant drafts a professional reply to sarah.connor@workspace.com confirming the AI infrastructure cost is $2,400/month (GPU instances + OpenAI API costs) and noting the expected 30% reduction once the team switches to their own model for G-Eval.",
+      "retrieval_context": [
+        "From: sarah.connor@workspace.com\nTo: huy.phan@workspace.com\nSubject: Q3 Board Presentation — AI Infrastructure Cost\nDate: Monday\nBody: Hi Huy, could you confirm the AI infrastructure cost for Q3 so I can include it in the board presentation? Also, do you have a breakdown of usage by agent type? Thanks, Sarah."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft a new email to Linda Park at Venture X Capital introducing Serenity and requesting a 30-minute introductory call.",
+      "expected_output": "The assistant drafts an email to linda.park@venture-x.com with a subject such as 'Introduction — Serenity Platform', introducing Serenity briefly (including the tagline 'Your whole team, one place.'), and requesting a 30-minute introductory call at Linda's convenience.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Search for emails related to the September 15 product launch.",
+      "expected_output": "The assistant returns emails related to the September 15 product launch, including the email from Sarah Connor requesting a ~500-word technical summary of AI evaluation results for the product launch blog post.",
+      "retrieval_context": [
+        "From: sarah.connor@workspace.com\nTo: huy.phan@workspace.com\nSubject: Product Launch Blog Post — AI Evaluation Summary\nDate: Wednesday\nBody: Hi Huy, we are finalizing the product launch blog for September 15. The post needs a technical summary of the AI evaluation results — around 500 words. Could you draft this by next Wednesday? Thanks, Sarah."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Find emails about the NovaTech testimonial.",
+      "expected_output": "The assistant returns the email from Michael Torres at michael.torres@novatech.io giving permission to use the testimonial 'Serenity cut our meeting overhead by 40%. We ship twice as fast.'",
+      "retrieval_context": [
+        "From: michael.torres@novatech.io\nTo: huy.phan@workspace.com\nSubject: Testimonial Permission — NovaTech Solutions\nDate: Thursday\nBody: Hi Huy, happy to grant permission to use the NovaTech testimonial on your landing page: 'Serenity cut our meeting overhead by 40%. We ship twice as fast.' Feel free to attribute it to me with my name and title. Best, Michael Torres, Head of Engineering, NovaTech Solutions."
+      ],
+      "conversation_context": []
+    },
+    {
+      "input": "Draft an email to James Okafor at DesignHub asking about his availability for a freelance design consultation next week.",
+      "expected_output": "The assistant drafts a professional email to j.okafor@designhub.co with a subject such as 'Design Consultation — Availability Next Week', asking James Okafor about his availability for a freelance design consultation during the following week.",
+      "retrieval_context": [],
+      "conversation_context": []
+    },
+    {
+      "input": "Show me all emails I received this week.",
+      "expected_output": "The assistant lists the emails received this week, including: Sarah Connor's email about the Q3 board presentation cost, Alice Nguyen's email about the landing page copy review, Alice Nguyen's email about the August content calendar, and Michael Torres' testimonial permission email.",
+      "retrieval_context": [
+        "From: sarah.connor@workspace.com\nTo: huy.phan@workspace.com\nSubject: Q3 Board Presentation — AI Infrastructure Cost\nDate: Monday",
+        "From: alice.nguyen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: Landing Page Copy — Staging Review\nDate: Tuesday",
+        "From: alice.nguyen-{orgSlug}@example.com\nTo: huy.phan@workspace.com\nSubject: August Content Calendar Published\nDate: Wednesday",
+        "From: michael.torres@novatech.io\nTo: huy.phan@workspace.com\nSubject: Testimonial Permission — NovaTech Solutions\nDate: Thursday",
+        "From: sarah.connor@workspace.com\nTo: huy.phan@workspace.com\nSubject: Product Launch Blog Post — AI Evaluation Summary\nDate: Wednesday"
+      ],
+      "conversation_context": []
+    }
+  ]
+}
