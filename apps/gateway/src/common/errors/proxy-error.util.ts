@@ -1,6 +1,10 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { AxiosError } from 'axios';
 
+function isStream(value: object): boolean {
+  return typeof (value as { pipe?: unknown }).pipe === 'function';
+}
+
 type ErrorPayload = {
   message: string;
   code: string;
@@ -62,7 +66,7 @@ export function mapProxyError(error: unknown, upstreamName: string): HttpExcepti
           : `UPSTREAM_${status}`,
     };
 
-    if (typeof upstreamData === 'object' && upstreamData) {
+    if (typeof upstreamData === 'object' && upstreamData && !isStream(upstreamData)) {
       payload.details = upstreamData;
     }
 

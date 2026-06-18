@@ -1,29 +1,28 @@
-"""Serenity AI graph runtime adapter."""
+"""Serenity AI graph runtime adapter.
+
+Responsibilities:
+  - Build thread_id and trace metadata
+  - Construct LangGraph run config
+  - Wrap the latest user message as HumanMessage (no full history)
+  - Invoke / stream the compiled graph
+  - Return ChatResponse or yield streaming events
+
+LangGraph checkpointer is the source of truth for conversation history.
+Long-term user memories are persisted in the LangGraph store.
+"""
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
-from src.ai.v1.contexts.message_manager import ConversationContextManager
 from src.ai.v1.graph.builder import get_main_graph
+from src.ai.v1.graph.constants import STREAMING_NODES
 from src.ai.v1.memory.namespaces import make_thread_id
 from src.api.internal.v1.schemas import ChatRequest, ChatResponse
 from src.integrations.langfuse import callbacks, langchain_metadata, new_trace_id, span, trace_metadata
-
-
-@dataclass
-class RuntimeState:
-    thread_messages: dict[str, list[str]] = field(default_factory=dict)
-    user_memories: dict[tuple[str, str], list[str]] = field(default_factory=dict)
-    workspace_facts: dict[str, list[str]] = field(default_factory=dict)
-    context_manager: ConversationContextManager = field(
-        default_factory=lambda: ConversationContextManager(max_tokens=8000, message_window=20)
-    )
-
-
-runtime_state = RuntimeState()
 
 
 async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> ChatResponse:
@@ -32,7 +31,7 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
     with span("chat.graph", prepared.metadata):
         if prepared.has_pending_interrupt:
             final_state = await prepared.graph.ainvoke(
-                Command(resume=prepared.latest_user_msg),
+                Command(resume=payload.message),
                 config=prepared.run_config,
             )
         else:
@@ -43,9 +42,8 @@ async def run_chat(payload: ChatRequest, *, auth_token: str | None = None) -> Ch
 
     state_after = await prepared.graph.aget_state(prepared.thread_config)
     if state_after.next:
-        interrupt_question = _extract_interrupt_question(state_after)
         return ChatResponse(
-            answer=interrupt_question,
+            answer=_extract_interrupt_question(state_after),
             thread_id=prepared.thread_id,
             trace_id=prepared.trace_id,
         )
@@ -66,16 +64,9 @@ async def stream_chat(payload: ChatRequest, *, auth_token: str | None = None) ->
     final_answer = _fallback_answer()
     proposed_actions: list[Any] = []
 
-    # Nodes whose LLM output is the final user-facing response.
-    # Synthesizer is included for the greeting/proposal-summary path.
-    _STREAMING_NODES = {
-        "chat_agent", "wiki_agent", "calendar_agent",
-        "contacts_agent", "mail_agent", "synthesizer",
-    }
-
     with span("chat.graph.stream", prepared.metadata):
         stream_input: Any = (
-            Command(resume=prepared.latest_user_msg)
+            Command(resume=payload.message)
             if prepared.has_pending_interrupt
             else prepared.graph_input
         )
@@ -86,15 +77,15 @@ async def stream_chat(payload: ChatRequest, *, auth_token: str | None = None) ->
             version="v2",
         ):
             if part["type"] == "messages":
-                message_chunk, metadata = part["data"]
-                if metadata.get("langgraph_node") not in _STREAMING_NODES:
+                message_chunk, meta = part["data"]
+                if meta.get("langgraph_node") not in STREAMING_NODES:
                     continue
                 content = getattr(message_chunk, "content", "")
                 if isinstance(content, str) and content:
                     streamed_answer += content
                     yield {"type": "token", "content": content}
             elif part["type"] == "updates":
-                for _node_name, update in part["data"].items():
+                for _node, update in part["data"].items():
                     if not isinstance(update, dict):
                         continue
                     if "answer" in update:
@@ -111,12 +102,12 @@ async def stream_chat(payload: ChatRequest, *, auth_token: str | None = None) ->
         final_answer = values.get("answer", final_answer)
         proposed_actions = values.get("proposed_actions", proposed_actions)
 
-    if final_answer and final_answer != streamed_answer:
-        yield {"type": "answer", "answer": final_answer}
-
+    # replace=True tells the frontend to swap streamed tokens with the authoritative
+    # answer (handles synthesizer rewrites or output-guardrail overrides).
     yield {
         "type": "final",
         "answer": final_answer,
+        "replace": final_answer != streamed_answer,
         "threadId": prepared.thread_id,
         "proposedActions": proposed_actions,
         "traceId": prepared.trace_id,
@@ -128,7 +119,6 @@ class PreparedRun:
     graph: Any
     graph_input: dict
     has_pending_interrupt: bool
-    latest_user_msg: str
     metadata: dict
     run_config: dict
     thread_config: dict
@@ -160,35 +150,9 @@ async def _prepare_run(payload: ChatRequest, *, auth_token: str | None = None) -
         "recursion_limit": 20,
     }
 
-    graph = get_main_graph()
-    latest_user_msg = _latest_user_message(payload)
-    user_key = (payload.auth_context.org_id, payload.auth_context.user_id)
+    graph = await get_main_graph()
     user_context = _build_user_context(payload, auth_token=auth_token)
 
-    runtime_state.thread_messages.setdefault(thread_id, []).append(latest_user_msg)
-
-    converted_messages: list[AnyMessage] = [
-        HumanMessage(content=message.content)
-        if message.role == "user"
-        else AIMessage(content=message.content)
-        for message in payload.messages
-    ]
-
-    user_memories = runtime_state.user_memories.get(user_key, [])
-
-    trimmed_messages, updated_memories = runtime_state.context_manager.trim_messages(
-        converted_messages,
-        org_id=payload.auth_context.org_id,
-        user_id=payload.auth_context.user_id,
-        memories=user_memories,
-    )
-
-    if updated_memories:
-        runtime_state.user_memories[user_key] = updated_memories
-
-    final_messages = runtime_state.context_manager.build_context_with_memories(
-        trimmed_messages, memories=updated_memories
-    )
     current_state = await graph.aget_state(thread_config)
     has_pending_interrupt = bool(current_state.next)
 
@@ -205,10 +169,10 @@ async def _prepare_run(payload: ChatRequest, *, auth_token: str | None = None) -
                 **payload.context.model_dump(by_alias=True, exclude_none=True),
                 "userContext": user_context,
             },
-            "messages": final_messages,
+            # Only the current user message — previous turns come from the checkpointer.
+            "messages": [HumanMessage(content=payload.message)],
         },
         has_pending_interrupt=has_pending_interrupt,
-        latest_user_msg=latest_user_msg,
         metadata=metadata,
         run_config=run_config,
         thread_config=thread_config,
@@ -217,8 +181,7 @@ async def _prepare_run(payload: ChatRequest, *, auth_token: str | None = None) -
     )
 
 
-def _extract_interrupt_question(state) -> str:
-    """Pull the interrupt value (clarifying question) from a paused graph state."""
+def _extract_interrupt_question(state: Any) -> str:
     for task in getattr(state, "tasks", []):
         for it in getattr(task, "interrupts", []):
             val = it.value
@@ -231,13 +194,6 @@ def _extract_interrupt_question(state) -> str:
 
 def _fallback_answer() -> str:
     return "Serenity AI is connected. Send a workspace question to begin."
-
-
-def _latest_user_message(payload: ChatRequest) -> str:
-    for message in reversed(payload.messages):
-        if message.role == "user":
-            return message.content.strip()
-    return ""
 
 
 def _build_user_context(payload: ChatRequest, *, auth_token: str | None) -> dict:

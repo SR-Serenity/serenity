@@ -332,12 +332,9 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     void aiApi.appendMessages(token, sessionId, [{ role: 'user', content }]).catch(() => undefined)
 
     try {
-      const history = messages.filter(m => !m.pending).map(m => ({ role: m.role, content: m.content }))
-      history.push({ role: 'user', content })
-
       const response = await aiApi.streamChat(token, {
         sessionId,
-        messages: history,
+        message: content,
         authContext: {
           orgId: currentOrg.id,
           userId: user.id,

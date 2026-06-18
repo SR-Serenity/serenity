@@ -12,12 +12,12 @@ from src.ai.v1.agents.chat_agent.tools import (
 )
 from src.ai.v1.contexts.schemas.agent_context import AgentContext
 from src.ai.v1.contexts.schemas.enums import Domain
-from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState
+from src.ai.v1.contexts.schemas.state import DomainAgentResponse, PipelineState, RawAgentData
 from src.core.config import settings
 
 
 @dynamic_prompt
-def _system_prompt(request: ModelRequest) -> str:
+def _system_prompt(request: ModelRequest[AgentContext]) -> str:
     return build_chat_prompt(request.runtime.context)
 
 
@@ -31,17 +31,10 @@ _agent = create_agent(
         get_messages_from_person_tool,
     ],
     middleware=[_system_prompt],
+    response_format=RawAgentData,
     context_schema=AgentContext,
+    name="chat_agent",
 )
-
-
-def _extract_content(result) -> str:
-    if isinstance(result, dict):
-        msgs = result.get("messages", [])
-        if msgs:
-            return str(getattr(msgs[-1], "content", msgs[-1]))
-        return str(result)
-    return str(getattr(result, "content", result))
 
 
 async def chat_agent_node(state: PipelineState, **_) -> dict:
@@ -55,7 +48,21 @@ async def chat_agent_node(state: PipelineState, **_) -> dict:
         conversation_id=raw.get("conversationId"),
     )
     try:
-        result = await _agent.ainvoke({"messages": list(state["messages"])}, context=ctx)
-        return {"domain_agent_response": DomainAgentResponse(domain=Domain.CHAT_AGENT, text=_extract_content(result))}
+        result = await _agent.ainvoke(
+            {"messages": list(state["messages"])},
+            context=ctx,
+        )
+        raw_data: RawAgentData = result["structured_response"]
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.CHAT_AGENT,
+                text=raw_data.content,
+            )
+        }
     except Exception as error:
-        return {"domain_agent_response": DomainAgentResponse(domain=Domain.CHAT_AGENT, error=str(error))}
+        return {
+            "domain_agent_response": DomainAgentResponse(
+                domain=Domain.CHAT_AGENT,
+                error=str(error),
+            )
+        }

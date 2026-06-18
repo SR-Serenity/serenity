@@ -12,5 +12,6 @@ class AgentContext:
     conversation_id: str | None = None
     task_id: str | None = None
     active_task: dict | None = None
-    # mutable slot: wiki tools write pending edits here; the node reads it back after ainvoke
+    # mutable slots: tools write proposals/edits here; the node reads them back after ainvoke
     pending_edit: dict | None = None
+    pending_proposal: dict | None = None
