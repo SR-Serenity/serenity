@@ -455,6 +455,7 @@ model ChatMessage {
   replyToId      String?
   content        String
   isCopilot      Boolean  @default(false)
+  proposedActions Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   editedAt       DateTime?

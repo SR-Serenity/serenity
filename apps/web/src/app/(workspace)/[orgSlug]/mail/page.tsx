@@ -33,6 +33,7 @@ import type { MailAccount, MailAttachment, MailThread, MailThreadDetail } from '
 import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useCopilotContextStore } from '@/stores/copilot-context-store'
 
 type MailLabel = 'inbox' | 'starred' | 'sent' | 'archive' | 'trash'
 type ComposeMode = 'compose' | 'reply' | 'replyAll' | 'forward'
@@ -121,6 +122,24 @@ export default function EmailPage() {
   const [composeBody, setComposeBody] = useState('')
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
+  const pendingMailDraft = useCopilotContextStore(s => s.pendingMailDraft)
+  const setPendingMailDraft = useCopilotContextStore(s => s.setPendingMailDraft)
+  const [draftFlash, setDraftFlash] = useState(false)
+
+  useEffect(() => {
+    if (!pendingMailDraft) return
+    const { to, subject, body } = pendingMailDraft
+    setComposeMode('compose')
+    setComposeTo(to)
+    setComposeSubject(subject)
+    setComposeBody(body)
+    setPendingMailDraft(null)
+    setDraftFlash(false)
+    requestAnimationFrame(() => setDraftFlash(true))
+    const timer = setTimeout(() => setDraftFlash(false), 700)
+    return () => clearTimeout(timer)
+  }, [pendingMailDraft])
 
   const selectedAccount = useMemo(
     () => accounts.find(account => account.id === selectedAccountId) ?? accounts[0] ?? null,
@@ -729,7 +748,7 @@ export default function EmailPage() {
             value={composeBody}
             onChange={event => setComposeBody(event.target.value)}
             placeholder="Write your message"
-            className="h-56 w-full resize-none px-4 py-3 text-sm leading-6 outline-none"
+            className={cn('h-56 w-full resize-none px-4 py-3 text-sm leading-6 outline-none', draftFlash && 'animate-draft-flash')}
           />
           <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
             <button type="button" onClick={() => setComposeMode(null)} className="text-sm text-slate-500 hover:text-slate-900">Discard</button>

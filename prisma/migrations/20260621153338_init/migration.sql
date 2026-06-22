@@ -293,6 +293,7 @@ CREATE TABLE "ChatMessage" (
     "replyToId" TEXT,
     "content" TEXT NOT NULL,
     "isCopilot" BOOLEAN NOT NULL DEFAULT false,
+    "proposedActions" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "editedAt" TIMESTAMP(3),
@@ -1005,3 +1006,13 @@ ALTER TABLE "DocumentChunk" ADD CONSTRAINT "DocumentChunk_docFileId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "AutomationRule" ADD CONSTRAINT "AutomationRule_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- automation_executions is managed by the AI service directly (not a Prisma model)
+CREATE TABLE IF NOT EXISTS automation_executions (
+    id          TEXT PRIMARY KEY,
+    org_id      TEXT NOT NULL,
+    instruction TEXT NOT NULL,
+    context     JSONB NOT NULL DEFAULT '{}',
+    content     TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -43,19 +43,17 @@ taking the currently open workspace item into account.
 
 # Available intents
 - WIKI_AGENT     : Read, search, summarize, or edit wiki / knowledge-base pages.
-- CHAT_AGENT     : Read, search, or recap chat conversations and messages.
+- CHAT_AGENT     : Read, search, recap, draft, or compose chat messages and replies. \
+  Use for anything involving the chat — reading existing messages OR writing new ones.
 - CALENDAR_AGENT : Query, update, or delete existing calendar events and tasks.
 - CONTACTS_AGENT : Find people, team members, or contacts in the workspace directory.
 - MAIL_AGENT     : Read, search, or send emails.
 - SCHEDULE_AGENT : Create new calendar items — tasks, events, meetings, room bookings.
-- CHAT_ASSIST    : Writing help, translation, grammar — only when all content \
-  is already in the message and no workspace data lookup is needed.
 - GREETING       : Greetings, small talk, chitchat.
 
 # Routing rules
 - Pick ALL intents that apply; one message can need multiple agents.
 - Detect intent from meaning, not keywords; works in any language.
-- Use CHAT_ASSIST only when no workspace data lookup is needed.
 - Set `needs_memory` true for personalised requests such as \
   "my usual", recommendations, or follow-ups on stated preferences.
 
@@ -66,8 +64,8 @@ Use this as a strong signal when the user's intent is ambiguous or when \
 they use pronouns like "this", "it", "here":
 - Wiki page open   → if the message could be about reading, editing, or \
   asking a question about that page, include WIKI_AGENT.
-- Conversation open → if the message could be about summarising, recapping, \
-  or searching that conversation, include CHAT_AGENT.
+- Conversation open → whether the user wants to DRAFT/WRITE/COMPOSE a reply \
+  or SEARCH/RECAP/SUMMARISE messages, use CHAT_AGENT — it handles both.
 - Task/event open  → if the message could be about viewing, updating, or \
   acting on that item, include CALENDAR_AGENT.
 
@@ -116,7 +114,6 @@ _NAME_TO_DOMAIN: dict[str, Domain | None] = {
     "CONTACTS_AGENT": Domain.CONTACTS_AGENT,
     "MAIL_AGENT": Domain.MAIL_AGENT,
     "SCHEDULE_AGENT": Domain.SCHEDULE_AGENT,
-    "CHAT_ASSIST": Domain.CHAT_ASSIST,
     "GREETING": None,
 }
 

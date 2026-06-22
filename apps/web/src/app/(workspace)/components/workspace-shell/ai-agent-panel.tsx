@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { aiApi, calendarApi, tasksApi, wikiApi } from '@serenity/api'
+import { aiApi } from '@serenity/api'
 import type { AiProposedAction, AiSessionMessage } from '@serenity/api'
 import {
   Bot,
@@ -16,8 +16,8 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useAiAgentStore } from '@/stores/ai-agent-store'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { useAiContext } from '@/hooks/use-ai-context'
-import { useCopilotContextStore } from '@/stores/copilot-context-store'
-import { browserTimezone, unixToIso } from '@/lib/time'
+import { useExecuteAiAction } from '@/hooks/use-execute-ai-action'
+import { browserTimezone } from '@/lib/time'
 import { ChatComposer } from './chat-composer'
 import { ChatMessageList } from './chat-message-list'
 import { ChatSessionList, type ChatSession } from './chat-session-list'
@@ -47,6 +47,7 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
   const user = useAuthStore(s => s.user)
   const currentOrg = useAuthStore(s => s.currentOrg)
   const { contextLabel, requestContext } = useAiContext()
+  const executeAction = useExecuteAiAction()
 
   const {
     sessions,
@@ -221,75 +222,6 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  async function executeAction(action: AiProposedAction): Promise<void> {
-    if (!token || !currentOrg) throw new Error('Not authenticated')
-    const p = action.payload as Record<string, unknown>
-    if (action.type === 'UPDATE_CALENDAR_ITEM') {
-      const itemId = String(p.itemId ?? '')
-      if (!itemId) throw new Error('No calendar item ID')
-      await calendarApi.updateItem(token, itemId, {
-        type: (p.itemType as 'EVENT' | 'MEETING' | 'TASK' | undefined) ?? undefined,
-        visibility: (p.visibility as 'COMPANY' | 'PERSONAL' | undefined) ?? undefined,
-        title: p.title as string | undefined,
-        descriptionMarkdown: (p.descriptionMarkdown as string | undefined)
-          ?? (p.description as string | undefined),
-        location: p.location as string | undefined,
-        startAt: unixToIso(p.startAt as number | null | undefined),
-        endAt: unixToIso(p.endAt as number | null | undefined),
-        dueDate: p.dueDate as string | undefined,
-        attendeeIds: (p.attendeeIds as string[] | undefined) ?? undefined,
-        roomId: p.roomId as string | undefined,
-        wikiPageId: p.wikiPageId as string | undefined,
-        allDay: p.allDay as boolean | undefined,
-        taskStatus: p.taskStatus as 'TODO' | 'DONE' | undefined,
-      })
-    } else if (action.type === 'CREATE_MEETING' || action.type === 'BOOK_ROOM') {
-      await calendarApi.createItem(token, {
-        type: 'MEETING',
-        visibility: (p.visibility as 'COMPANY' | 'PERSONAL') ?? 'COMPANY',
-        title: String(p.title ?? 'New meeting'),
-        startAt: unixToIso(p.startAt as number | null | undefined),
-        endAt: unixToIso(p.endAt as number | null | undefined),
-        location: p.location as string | undefined,
-        attendeeIds: (p.attendeeIds as string[]) ?? [],
-        roomId: p.roomId as string | undefined,
-      })
-    } else if (action.type === 'CREATE_TASK') {
-      await tasksApi.createTask(token, {
-        title: String(p.title ?? 'New task'),
-        description: (p.description as string | undefined) ?? null,
-        assigneeId: (p.assigneeId as string | undefined) ?? null,
-        dueDate: (p.dueDate as string | undefined) ?? null,
-        sourceType: 'AI',
-        createdByAi: true,
-        aiReason:
-          (p.reason as string | undefined) ?? (p.aiReason as string | undefined) ?? null,
-      })
-    } else if (action.type === 'CREATE_WIKI_PAGE') {
-      await wikiApi.createPage(token, {
-        title: String(p.title ?? 'New page'),
-        visibility: 'WORKSPACE',
-        contentMarkdown: p.contentMarkdown as string | undefined,
-      })
-    } else if (action.type === 'EDIT_WIKI_PAGE') {
-      const pageId = String(p.pageId ?? '')
-      if (!pageId) throw new Error('No page ID')
-      // If the target page is currently open in the editor, apply the change live with preview
-      const insertAction = useCopilotContextStore.getState().insertAction
-      if (
-        insertAction?.type === 'wiki' &&
-        insertAction.pageId === pageId &&
-        p.contentMarkdown
-      ) {
-        await insertAction.execute(p.contentMarkdown as string)
-      } else {
-        await wikiApi.updatePage(token, pageId, {
-          title: p.title as string | undefined,
-          contentMarkdown: p.contentMarkdown as string | undefined,
-        })
-      }
-    }
-  }
 
   async function sendPrompt(value: string) {
     const content = value.trim()

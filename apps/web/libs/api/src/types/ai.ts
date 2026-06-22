@@ -41,6 +41,8 @@ export type AiProposedActionType =
   | 'UPDATE_CALENDAR_ITEM'
   | 'CREATE_WIKI_PAGE'
   | 'EDIT_WIKI_PAGE'
+  | 'DRAFT_EMAIL'
+  | 'DRAFT_CHAT_MESSAGE'
 
 export type AiProposedAction = {
   type: AiProposedActionType

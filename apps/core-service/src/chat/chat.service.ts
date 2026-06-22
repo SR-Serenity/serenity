@@ -441,11 +441,14 @@ export class ChatService {
       if (!res.ok) {
         return;
       }
-      const data = (await res.json()) as { answer?: string };
+      const data = (await res.json()) as { answer?: string; proposedActions?: unknown[] };
       const replyContent = (data.answer ?? '').trim();
       if (!replyContent) {
         return;
       }
+      const proposedActions = Array.isArray(data.proposedActions) && data.proposedActions.length > 0
+        ? data.proposedActions
+        : undefined;
 
       const botUser = await this.prisma.workspaceMember.findFirst({
         where: { orgId: auth.orgId, role: 'OWNER' },
@@ -454,7 +457,13 @@ export class ChatService {
       const botAuthorId = botUser?.userId ?? auth.userId;
 
       const botMessage = await this.prisma.chatMessage.create({
-        data: { conversationId, authorId: botAuthorId, content: replyContent, isCopilot: true },
+        data: {
+          conversationId,
+          authorId: botAuthorId,
+          content: replyContent,
+          isCopilot: true,
+          proposedActions,
+        },
         include: messageInclude,
       });
 

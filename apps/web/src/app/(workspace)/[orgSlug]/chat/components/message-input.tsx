@@ -79,16 +79,20 @@ export function MessageInput(props: MessageInputProps) {
 
   const pendingChatInsert = useCopilotContextStore(s => s.pendingChatInsert)
   const setPendingChatInsert = useCopilotContextStore(s => s.setPendingChatInsert)
+  const [draftFlash, setDraftFlash] = useState(false)
 
-  // Consume pending insert from copilot sidebar
   useEffect(() => {
     if (!pendingChatInsert) return
     setContent(pendingChatInsert)
     setPendingChatInsert(null)
-    setTimeout(() => {
+    setDraftFlash(false)
+    requestAnimationFrame(() => {
+      setDraftFlash(true)
       resizeTextarea()
       textareaRef.current?.focus()
-    }, 0)
+    })
+    const timer = setTimeout(() => setDraftFlash(false), 700)
+    return () => clearTimeout(timer)
   }, [pendingChatInsert])
 
   const copilotMentioned = /@copilot\b/i.test(content)
@@ -375,9 +379,11 @@ export function MessageInput(props: MessageInputProps) {
         <div
           className={cn(
             'rounded-xl border bg-white shadow-sm transition-colors',
-            copilotMentioned
-              ? 'border-gray-400 ring-2 ring-gray-100'
-              : 'border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
+            draftFlash
+              ? 'animate-draft-flash border-brand'
+              : copilotMentioned
+                ? 'border-gray-400 ring-2 ring-gray-100'
+                : 'border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
           )}
         >
           <div className="relative px-3 py-2.5">

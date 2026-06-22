@@ -867,3 +867,13 @@ body {
   transition: var(--transition-bounce);
 }
 
+
+
+@keyframes draft-flash {
+  0%   { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent); background-color: color-mix(in srgb, var(--brand) 4%, transparent); }
+  100% { box-shadow: 0 0 0 0px transparent; background-color: transparent; }
+}
+
+.animate-draft-flash {
+  animation: draft-flash 0.7s ease-out forwards;
+}
