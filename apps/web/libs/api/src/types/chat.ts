@@ -54,6 +54,7 @@ export type ChatMessage = {
   replyToId?: string | null
   content: string
   isCopilot?: boolean
+  proposedActions?: import('./ai').AiProposedAction[] | null
   createdAt: string
   updatedAt: string
   editedAt?: string | null
