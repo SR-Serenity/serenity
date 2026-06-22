@@ -2,7 +2,6 @@ import json
 
 from langchain_openai import ChatOpenAI
 
-from src.ai.v1.contexts.schemas.enums import Domain
 from src.ai.v1.contexts.schemas.state import PipelineState
 from src.core.config import openai_api_key_secret, settings
 
@@ -64,10 +63,11 @@ def synthesizer_node(state: PipelineState) -> dict:
     # Proposals from any agent (schedule, wiki edit, etc.)
     proposed_actions = [a for r in responses for a in r.proposed_actions]
 
-    # Chat assist runs without workspace data — pass its text straight through.
-    chat_assist = next((r for r in responses if r.domain == Domain.CHAT_ASSIST and r.text), None)
-    if chat_assist and not proposed_actions:
-        return {"answer": chat_assist.text}
+    # When an agent produced a draft (has proposed_actions), pass its text straight
+    # through — no synthesis needed. proposed_actions are already in state from action_planner.
+    draft_response = next((r for r in responses if r.proposed_actions and r.text), None)
+    if draft_response:
+        return {"answer": draft_response.text}
 
     # No agents produced data (greeting / unknown intent).
     data_responses = [r for r in responses if r.text or r.error]

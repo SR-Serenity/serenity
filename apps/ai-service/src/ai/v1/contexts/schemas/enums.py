@@ -8,4 +8,3 @@ class Domain(str, Enum):
     CONTACTS_AGENT = "contacts_agent"
     MAIL_AGENT = "mail_agent"
     SCHEDULE_AGENT = "schedule_agent"
-    CHAT_ASSIST = "chat_assist"

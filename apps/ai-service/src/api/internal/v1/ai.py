@@ -113,7 +113,7 @@ async def chat_assist(payload: ChatAssistRequest, request: Request) -> ChatAssis
         f"Conversation context:\n{context or '(none)'}\n\n"
         f"User request:\n{payload.prompt}"
     )
-    return ChatAssistResponse(suggested_content=chat_assist_agent.run(prompt))
+    return ChatAssistResponse(suggested_content=chat_assist_agent.run(prompt).text)
 
 
 @router.post("/tasks/extract", response_model=TaskExtractResponse)

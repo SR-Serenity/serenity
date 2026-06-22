@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen, Calendar, CalendarCheck, CalendarPlus, Check, CheckCircle2, Clock,
-  FileEdit, FileText, Loader2, MapPin, Plus, Users, X,
+  FileEdit, FileText, Loader2, Mail, MapPin, MessageSquare, Plus, Users, X,
 } from 'lucide-react'
 import { officeApi, orgApi } from '@serenity/api'
 import type { AiProposedAction, AiProposedActionType, Member, OfficeRoom } from '@serenity/api'
@@ -18,6 +18,8 @@ const ACTION_LABELS: Record<AiProposedActionType, string> = {
   UPDATE_CALENDAR_ITEM: 'Update Event',
   CREATE_WIKI_PAGE: 'Create Wiki Page',
   EDIT_WIKI_PAGE: 'Edit Wiki Page',
+  DRAFT_EMAIL: 'Draft Email',
+  DRAFT_CHAT_MESSAGE: 'Draft Message',
 }
 
 const ACTION_ICONS: Record<AiProposedActionType, React.ElementType> = {
@@ -28,6 +30,8 @@ const ACTION_ICONS: Record<AiProposedActionType, React.ElementType> = {
   UPDATE_CALENDAR_ITEM: CalendarCheck,
   CREATE_WIKI_PAGE: FileText,
   EDIT_WIKI_PAGE: FileEdit,
+  DRAFT_EMAIL: Mail,
+  DRAFT_CHAT_MESSAGE: MessageSquare,
 }
 
 /** Normalise a raw action payload so date/time fields are stored as Unix ms. */
@@ -38,6 +42,17 @@ function normalisePayload(raw: Record<string, unknown>): Record<string, unknown>
     startAt: toUnix(raw.startAt as string | number | null | undefined, tz) ?? undefined,
     endAt: toUnix(raw.endAt as string | number | null | undefined, tz) ?? undefined,
   }
+}
+
+function toDateInputValue(
+  value: string | number | null | undefined,
+  tz: string,
+): string {
+  if (value == null || value === '') return ''
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+
+  const unix = toUnix(value, tz)
+  return unix == null ? '' : unixToLocalDate(unix, tz)
 }
 
 function MemberPicker({
@@ -405,14 +420,15 @@ function EventForm({
 function TaskForm({
   payload,
   members,
+  tz,
   onChange,
 }: {
   payload: Record<string, unknown>
   members: Member[]
+  tz: string
   onChange: (p: Record<string, unknown>) => void
 }) {
-  const dueUnix = payload.dueDate as number | string | null | undefined
-  const dueDate = typeof dueUnix === 'string' ? dueUnix : unixToLocalDate(dueUnix as number | null)
+  const dueDate = toDateInputValue(payload.dueDate as string | number | null | undefined, tz)
   const assigneeId = (payload.assigneeId as string | undefined) ?? ''
 
   return (
@@ -449,7 +465,10 @@ function TaskForm({
           type="date"
           className={inputCls()}
           value={dueDate}
-          onChange={e => onChange({ ...payload, dueDate: e.target.value || null })}
+          onChange={e => onChange({
+            ...payload,
+            dueDate: e.target.value ? new Date(e.target.value).toISOString() : null,
+          })}
         />
       </div>
 
@@ -492,6 +511,65 @@ function WikiForm({
         className={inputCls()}
         value={String(payload.title ?? '')}
         onChange={e => onChange({ ...payload, title: e.target.value })}
+      />
+    </div>
+  )
+}
+
+function DraftEmailForm({
+  payload,
+  onChange,
+}: {
+  payload: Record<string, unknown>
+  onChange: (p: Record<string, unknown>) => void
+}) {
+  return (
+    <div className="mt-2 space-y-2 rounded-lg bg-slate-50 px-2.5 py-2.5">
+      <div>
+        <label className={labelCls()}>To</label>
+        <input
+          className={inputCls()}
+          value={String(payload.to ?? '')}
+          onChange={e => onChange({ ...payload, to: e.target.value })}
+          placeholder="recipient@example.com"
+        />
+      </div>
+      <div>
+        <label className={labelCls()}>Subject</label>
+        <input
+          className={inputCls()}
+          value={String(payload.subject ?? '')}
+          onChange={e => onChange({ ...payload, subject: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className={labelCls()}>Body</label>
+        <textarea
+          rows={5}
+          className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-gray-400"
+          value={String(payload.body ?? '')}
+          onChange={e => onChange({ ...payload, body: e.target.value })}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DraftChatForm({
+  payload,
+  onChange,
+}: {
+  payload: Record<string, unknown>
+  onChange: (p: Record<string, unknown>) => void
+}) {
+  return (
+    <div className="mt-2 rounded-lg bg-slate-50 px-2.5 py-2.5">
+      <label className={labelCls()}>Message</label>
+      <textarea
+        rows={4}
+        className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-gray-400"
+        value={String(payload.content ?? '')}
+        onChange={e => onChange({ ...payload, content: e.target.value })}
       />
     </div>
   )
@@ -616,10 +694,14 @@ export function ProposedActionCard({
   }
 
   if (cardState === 'done') {
+    const doneLabel =
+      action.type === 'DRAFT_EMAIL' || action.type === 'DRAFT_CHAT_MESSAGE'
+        ? `${ACTION_LABELS[action.type]} — sent to composer`
+        : `${ACTION_LABELS[action.type]} — created`
     return (
       <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
         <Check className="size-4 shrink-0" />
-        <span className="font-medium">{ACTION_LABELS[action.type]} — created</span>
+        <span className="font-medium">{doneLabel}</span>
       </div>
     )
   }
@@ -651,10 +733,16 @@ export function ProposedActionCard({
         <EventForm payload={payload} members={members} tz={tz} onChange={setPayload} />
       )}
       {action.type === 'CREATE_TASK' && (
-        <TaskForm payload={payload} members={members} onChange={setPayload} />
+        <TaskForm payload={payload} members={members} tz={tz} onChange={setPayload} />
       )}
       {(action.type === 'CREATE_WIKI_PAGE' || action.type === 'EDIT_WIKI_PAGE') && (
         <WikiForm payload={payload} onChange={setPayload} />
+      )}
+      {action.type === 'DRAFT_EMAIL' && (
+        <DraftEmailForm payload={payload} onChange={setPayload} />
+      )}
+      {action.type === 'DRAFT_CHAT_MESSAGE' && (
+        <DraftChatForm payload={payload} onChange={setPayload} />
       )}
 
       <div className="mt-2.5 flex items-center gap-2">
@@ -669,7 +757,7 @@ export function ProposedActionCard({
           ) : (
             <Check className="size-3.5" />
           )}
-          Confirm
+          {action.type === 'DRAFT_EMAIL' || action.type === 'DRAFT_CHAT_MESSAGE' ? 'Use Draft' : 'Confirm'}
         </button>
         <button
           type="button"

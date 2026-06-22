@@ -23,6 +23,8 @@ import type { ChatAttachment, ChatMessage, ChatReaction } from '@serenity/api'
 import { Button } from '@/app/shared/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DiceBearAvatar } from '@/components/dicebear-avatar'
+import { ProposedActionCard } from '@/app/(workspace)/components/workspace-shell/proposed-action-card'
+import { useExecuteAiAction } from '@/hooks/use-execute-ai-action'
 
 type MessageItemProps = {
   message: ChatMessage
@@ -204,6 +206,7 @@ export function MessageItem({
   const [draft, setDraft] = useState(message.content)
   const [isSaving, setIsSaving] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const executeAiAction = useExecuteAiAction()
 
   const isOwnMessage = message.authorId === currentUserId
   const isUnsent = Boolean(message.unsentAt)
@@ -286,6 +289,18 @@ export function MessageItem({
               </div>
             )}
             <ChatMarkdown content={message.content} muted />
+            {message.proposedActions && message.proposedActions.length > 0 && (
+              <div className="mt-2 w-72 space-y-2">
+                {message.proposedActions.map((action, i) => (
+                  <ProposedActionCard
+                    key={i}
+                    action={action}
+                    onConfirm={executeAiAction}
+                    onReject={() => {}}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
