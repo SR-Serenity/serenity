@@ -18,8 +18,8 @@ INTENT_REGISTRY: dict[Domain, IntentConfig] = {
     ),
     Domain.CHAT_AGENT: IntentConfig(
         domain=Domain.CHAT_AGENT,
-        description="Search, recap, or understand chat conversations and messages.",
-        examples=["What did we discuss in #general?", "What did Alice say about the deadline?", "Recap this conversation"],
+        description="Search, recap, understand, draft, or compose chat messages and replies.",
+        examples=["What did we discuss in #general?", "What did Alice say about the deadline?", "Recap this conversation", "Draft a reply to Emily", "Write a message to the team"],
     ),
     Domain.CALENDAR_AGENT: IntentConfig(
         domain=Domain.CALENDAR_AGENT,
@@ -41,11 +41,7 @@ INTENT_REGISTRY: dict[Domain, IntentConfig] = {
         description="Create new calendar items — tasks, events, meetings, or room bookings.",
         examples=["Create a task for Linh due Friday", "Schedule a meeting with a room for 8 people"],
     ),
-    Domain.CHAT_ASSIST: IntentConfig(
-        domain=Domain.CHAT_ASSIST,
-        description="Writing help, translation, grammar — no workspace data needed.",
-        examples=["Translate this to Vietnamese", "Help me write a professional reply", "Fix the grammar"],
-    ),
+
 }
 
 

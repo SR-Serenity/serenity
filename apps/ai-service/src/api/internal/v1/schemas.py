@@ -51,6 +51,8 @@ ProposedActionType = Literal[
     "UPDATE_CALENDAR_ITEM",
     "CREATE_WIKI_PAGE",
     "EDIT_WIKI_PAGE",
+    "DRAFT_CHAT_MESSAGE",
+    "DRAFT_EMAIL",
 ]
 
 
@@ -192,7 +194,7 @@ class WikiSearchResponse(CamelModel):
 
 # ── Task Extraction ───────────────────────────────────────────────────────────
 
-class ConversationMessage(CamelModel):
+class TaskConversationMessage(CamelModel):
     role: str
     content: str
 
@@ -200,7 +202,7 @@ class ConversationMessage(CamelModel):
 class TaskExtractRequest(CamelModel):
     """Request for the /ai/tasks/extract endpoint."""
     auth_context: AuthContext
-    conversation_context: list[ConversationMessage]
+    conversation_context: list[TaskConversationMessage]
     source_title: str | None = None
 
 
