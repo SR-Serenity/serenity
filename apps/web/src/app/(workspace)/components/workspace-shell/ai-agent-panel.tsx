@@ -136,7 +136,11 @@ export function AiChatPanel({ compact = false }: { compact?: boolean }) {
         setMessages(lastActiveId ? supersedePending(loaded, lastActiveId) : loaded)
         setShowSuggestions(false)
       })
-      .catch(() => { /* best-effort */ })
+      .catch(() => {
+        // Session no longer exists — clear stale ID and show fresh chat
+        resetConversation()
+        setShowSuggestions(true)
+      })
       .finally(() => setLoadingSession(false))
   }, [token, activeSessionId, messages.length])
 

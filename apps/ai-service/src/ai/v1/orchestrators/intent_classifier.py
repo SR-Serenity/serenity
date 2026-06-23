@@ -64,8 +64,10 @@ Use this as a strong signal when the user's intent is ambiguous or when \
 they use pronouns like "this", "it", "here":
 - Wiki page open   → if the message could be about reading, editing, or \
   asking a question about that page, include WIKI_AGENT.
-- Conversation open → whether the user wants to DRAFT/WRITE/COMPOSE a reply \
-  or SEARCH/RECAP/SUMMARISE messages, use CHAT_AGENT — it handles both.
+- Conversation open → if the user wants to DRAFT/WRITE/COMPOSE a reply or \
+  SEARCH/RECAP/SUMMARISE messages, use CHAT_AGENT. \
+  Do NOT include CHAT_AGENT if the user is asking to CREATE a task, event, \
+  or meeting — that is SCHEDULE_AGENT only, even if a conversation is open.
 - Task/event open  → if the message could be about viewing, updating, or \
   acting on that item, include CALENDAR_AGENT.
 
@@ -180,8 +182,6 @@ def classify_intent(state: PipelineState) -> IntentClassification:
 def _domain_from_context(context: dict) -> Domain | None:
     if context.get("wikiPageId"):
         return Domain.WIKI_AGENT
-    if context.get("conversationId"):
-        return Domain.CHAT_AGENT
     if context.get("taskId"):
         return Domain.CALENDAR_AGENT
     return None
