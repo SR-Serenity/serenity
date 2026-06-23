@@ -2,6 +2,11 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain_openai import ChatOpenAI
 
+from src.ai.v1.agents.chat_agent.tools import (
+    get_conversation_messages_tool,
+    list_conversations_tool,
+    search_messages_tool,
+)
 from src.ai.v1.agents.schedule_agent.prompts import build_system_prompt
 from src.ai.v1.agents.schedule_agent.tools import (
     list_calendar_items_tool,
@@ -32,6 +37,9 @@ _agent = create_agent(
         propose_room_booking_tool,
         propose_calendar_update_tool,
         list_calendar_items_tool,
+        list_conversations_tool,
+        get_conversation_messages_tool,
+        search_messages_tool,
     ],
     middleware=[_system_prompt],
     response_format=RawAgentData,
@@ -48,6 +56,7 @@ async def schedule_agent_node(state: PipelineState, **_) -> dict:
         auth_token=state.get("auth_token") or "",
         user_context=raw.get("userContext", {}),
         time_zone=raw.get("timeZone", ""),
+        conversation_id=raw.get("conversationId"),
     )
     try:
         result = await _agent.ainvoke({"messages": list(state["messages"])}, context=ctx)
