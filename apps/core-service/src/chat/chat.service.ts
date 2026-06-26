@@ -447,7 +447,7 @@ export class ChatService {
         return;
       }
       const proposedActions = Array.isArray(data.proposedActions) && data.proposedActions.length > 0
-        ? data.proposedActions
+        ? (data.proposedActions as Prisma.InputJsonValue)
         : undefined;
 
       const botUser = await this.prisma.workspaceMember.findFirst({

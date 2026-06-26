@@ -29,6 +29,10 @@ type ChatMessageContext = {
   authorId: string;
 };
 
+type ScheduleConfig = { timeZone?: string; timezone?: string; tz?: string };
+
+const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
 export type TaskTriggerEvent = {
   taskId: string;
   orgId: string;
@@ -69,6 +73,7 @@ export class AutomationEngineService {
       orgId: rule.orgId,
       orgName: org?.name,
       triggerType: AutomationTriggerType.SCHEDULE,
+      timeZone: this.timeZoneFromConfig(rule.triggerConfig as ScheduleConfig),
     };
 
     if (rule.stepsGraph) {
@@ -261,14 +266,16 @@ export class AutomationEngineService {
 
     switch (node.nodeType as AutomationConditionType) {
       case AutomationConditionType.TIME_WINDOW: {
-        const now = new Date();
-        const hour = now.getHours();
-        const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-        const today = dayNames[now.getDay()];
-        const startHour = (config.startHour as number) ?? 0;
-        const endHour = (config.endHour as number) ?? 24;
-        const days = (config.days as string[]) ?? dayNames;
-        return hour >= startHour && hour < endHour && days.includes(today);
+        const { hour, day } = this.currentTimeParts(
+          this.timeZoneFromConfig(config as ScheduleConfig) ?? context.timeZone,
+        );
+        const startHour = this.numberFromConfig(config.startHour, 0);
+        const endHour = this.numberFromConfig(config.endHour, 24);
+        const days = (config.days as string[]) ?? DAY_NAMES;
+        const inWindow = startHour <= endHour
+          ? hour >= startHour && hour < endHour
+          : hour >= startHour || hour < endHour;
+        return inWindow && days.includes(day);
       }
 
       case AutomationConditionType.CHANNEL_IS: {
@@ -303,6 +310,37 @@ export class AutomationEngineService {
         this.logger.warn(`Unknown condition type ${node.nodeType}`);
         return false;
     }
+  }
+
+  private currentTimeParts(timeZone?: string): { hour: number; day: string } {
+    const now = new Date();
+    if (!timeZone) {
+      return { hour: now.getHours(), day: DAY_NAMES[now.getDay()] };
+    }
+
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        weekday: 'short',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(now);
+      const hour = Number(parts.find(part => part.type === 'hour')?.value ?? '0');
+      const weekday = parts.find(part => part.type === 'weekday')?.value ?? '';
+      return { hour, day: weekday.slice(0, 3).toUpperCase() };
+    } catch {
+      this.logger.warn(`Invalid automation timezone "${timeZone}"; falling back to server timezone`);
+      return { hour: now.getHours(), day: DAY_NAMES[now.getDay()] };
+    }
+  }
+
+  private numberFromConfig(value: unknown, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  private timeZoneFromConfig(config: ScheduleConfig): string | undefined {
+    return config.timeZone ?? config.timezone ?? config.tz;
   }
 
   private async executeActionNode(

@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import type { Node, Edge } from '@xyflow/react'
 import { automationApi } from '@serenity/api'
 import type { StepsGraph } from '@serenity/api'
+import { browserTimezone } from '@/lib/time'
 
 type CanvasState = {
   nodes: Node[]
@@ -28,6 +29,16 @@ const DEFAULT_STATE: CanvasState = {
   ruleName: '',
   saving: false,
   error: null,
+}
+
+function withTimeZone(nodeType: string, config: Record<string, unknown>): Record<string, unknown> {
+  if (nodeType !== 'SCHEDULE' && nodeType !== 'TIME_WINDOW') {
+    return config
+  }
+  return {
+    ...config,
+    timeZone: (config.timeZone as string | undefined) ?? browserTimezone(),
+  }
 }
 
 export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((set, get) => ({
@@ -70,14 +81,20 @@ export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((s
       return null
     }
 
-    const stepsGraph: StepsGraph = {
-      nodes: nodes.map(n => ({
+    const graphNodes: StepsGraph['nodes'] = nodes.map(n => {
+      const nodeType = (n.data as { nodeType: string }).nodeType as StepsGraph['nodes'][0]['nodeType']
+      const config = (n.data as { config: Record<string, unknown> }).config ?? {}
+      return {
         id: n.id,
         type: n.type === 'triggerNode' ? 'trigger' : n.type === 'conditionNode' ? 'condition' : 'action',
-        nodeType: (n.data as { nodeType: string }).nodeType as StepsGraph['nodes'][0]['nodeType'],
-        config: (n.data as { config: Record<string, unknown> }).config ?? {},
+        nodeType,
+        config: withTimeZone(String(nodeType), config),
         position: n.position,
-      })),
+      }
+    })
+
+    const stepsGraph: StepsGraph = {
+      nodes: graphNodes,
       edges: edges.map(e => ({
         id: e.id,
         source: e.source,
@@ -86,14 +103,14 @@ export const useAutomationCanvasStore = create<CanvasState & CanvasActions>()((s
       })),
     }
 
-    const triggerData = triggerNode.data as { nodeType: string; config: Record<string, unknown> }
+    const triggerGraphNode = graphNodes.find(n => n.id === triggerNode.id)
     const firstActionNode = nodes.find(n => n.type === 'actionNode')
     const actionData = firstActionNode?.data as { nodeType: string; config: Record<string, unknown> } | undefined
 
     const input = {
       name: ruleName.trim(),
-      triggerType: triggerData.nodeType as Parameters<typeof automationApi.createRule>[1]['triggerType'],
-      triggerConfig: triggerData.config,
+      triggerType: triggerGraphNode?.nodeType as Parameters<typeof automationApi.createRule>[1]['triggerType'],
+      triggerConfig: triggerGraphNode?.config ?? {},
       actionType: (actionData?.nodeType ?? 'AI_AGENT') as Parameters<typeof automationApi.createRule>[1]['actionType'],
       actionConfig: actionData?.config ?? {},
       stepsGraph,
