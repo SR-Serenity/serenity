@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useNodes, useReactFlow } from '@xyflow/react'
 import { X, ChevronDown, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { browserTimezone } from '@/lib/time'
 import { BLOCK_SECTIONS, findBlock, sectionForKind } from './block-registry'
 import type { BlockKind } from './block-registry'
 import type { AutomationTriggerType, AutomationActionType, AutomationConditionType } from '@serenity/api'
@@ -13,10 +14,11 @@ type Member = { id: string; displayName: string | null }
 type Dept   = { id: string; name: string }
 
 function defaultConfig(kind: BlockKind, type: string): Record<string, unknown> {
+  const timeZone = browserTimezone()
   if (kind === 'trigger' && type === 'SCHEDULE')
-    return { time: '09:00', days: ['MON', 'TUE', 'WED', 'THU', 'FRI'], cron: '0 9 * * 1,2,3,4,5' }
+    return { time: '09:00', days: ['MON', 'TUE', 'WED', 'THU', 'FRI'], cron: '0 9 * * 1,2,3,4,5', timeZone }
   if (kind === 'condition') {
-    if (type === 'TIME_WINDOW')      return { startHour: 9, endHour: 18, days: ['MON', 'TUE', 'WED', 'THU', 'FRI'] }
+    if (type === 'TIME_WINDOW')      return { startHour: 9, endHour: 18, days: ['MON', 'TUE', 'WED', 'THU', 'FRI'], timeZone }
     if (type === 'TASK_PRIORITY_IS') return { priority: 'HIGH' }
   }
   return {}
@@ -258,10 +260,11 @@ function ScheduleConfig({ config, onChange }: {
 }) {
   const time = (config.time as string) ?? '09:00'
   const days = (config.days as string[] | undefined) ?? ['MON', 'TUE', 'WED', 'THU', 'FRI']
+  const timeZone = (config.timeZone as string | undefined) ?? browserTimezone()
 
   function toggleDay(d: string) {
     const next = days.includes(d) ? days.filter(x => x !== d) : [...days, d]
-    onChange({ ...config, days: next, cron: buildScheduleCron(time, next) })
+    onChange({ ...config, days: next, cron: buildScheduleCron(time, next), timeZone })
   }
 
   return (
@@ -270,9 +273,12 @@ function ScheduleConfig({ config, onChange }: {
         <input
           type="time"
           value={time}
-          onChange={e => onChange({ ...config, time: e.target.value, cron: buildScheduleCron(e.target.value, days) })}
+          onChange={e => onChange({ ...config, time: e.target.value, cron: buildScheduleCron(e.target.value, days), timeZone })}
           className={inputCls}
         />
+      </Field>
+      <Field label="Timezone">
+        <input value={timeZone} readOnly className={cn(inputCls, 'bg-slate-50 text-slate-500')} />
       </Field>
       <Field label="Days" hint="Leave all selected to run every day.">
         <div className="flex gap-1">
@@ -357,22 +363,26 @@ function TimeWindowConfig({ config, onChange }: { config: Record<string, unknown
   const startHour = (config.startHour as number) ?? 9
   const endHour   = (config.endHour as number) ?? 18
   const days      = (config.days as string[]) ?? ['MON', 'TUE', 'WED', 'THU', 'FRI']
+  const timeZone  = (config.timeZone as string | undefined) ?? browserTimezone()
   function toggleDay(d: string) {
     const next = days.includes(d) ? days.filter(x => x !== d) : [...days, d]
-    onChange({ ...config, days: next })
+    onChange({ ...config, days: next, timeZone })
   }
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Start hour">
           <input type="number" min={0} max={23} value={startHour}
-            onChange={e => onChange({ ...config, startHour: Number(e.target.value) })} className={inputCls} />
+            onChange={e => onChange({ ...config, startHour: Number(e.target.value), timeZone })} className={inputCls} />
         </Field>
         <Field label="End hour">
           <input type="number" min={1} max={24} value={endHour}
-            onChange={e => onChange({ ...config, endHour: Number(e.target.value) })} className={inputCls} />
+            onChange={e => onChange({ ...config, endHour: Number(e.target.value), timeZone })} className={inputCls} />
         </Field>
       </div>
+      <Field label="Timezone">
+        <input value={timeZone} readOnly className={cn(inputCls, 'bg-slate-50 text-slate-500')} />
+      </Field>
       <Field label="Days of week">
         <div className="flex flex-wrap gap-1">
           {ALL_DAYS.map(day => (

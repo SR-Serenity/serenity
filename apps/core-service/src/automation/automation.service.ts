@@ -5,6 +5,8 @@ import { PrismaService } from '../database/prisma.service';
 import type { CreateAutomationRuleDto, StepsGraph, UpdateAutomationRuleDto } from './dto/automation.dto';
 import { AutomationSchedulerService } from './automation-scheduler.service';
 
+type ScheduleConfig = { cron?: string; timeZone?: string; timezone?: string; tz?: string };
+
 @Injectable()
 export class AutomationService {
   constructor(
@@ -40,9 +42,9 @@ export class AutomationService {
     });
 
     if (rule.enabled && rule.triggerType === AutomationTriggerType.SCHEDULE) {
-      const config = rule.triggerConfig as { cron?: string };
+      const config = rule.triggerConfig as ScheduleConfig;
       if (config.cron) {
-        this.scheduler.registerJob(rule.id, config.cron);
+        await this.scheduler.registerJob(rule.id, config.cron, this.timeZoneFromConfig(config));
       }
     }
 
@@ -86,12 +88,12 @@ export class AutomationService {
     const isCronRule = rule.triggerType === AutomationTriggerType.SCHEDULE;
 
     if (wasCronRule) {
-      this.scheduler.unregisterJob(ruleId);
+      await this.scheduler.unregisterJob(ruleId);
     }
     if (isCronRule && rule.enabled) {
-      const config = rule.triggerConfig as { cron?: string };
+      const config = rule.triggerConfig as ScheduleConfig;
       if (config.cron) {
-        this.scheduler.registerJob(rule.id, config.cron);
+        await this.scheduler.registerJob(rule.id, config.cron, this.timeZoneFromConfig(config));
       }
     }
 
@@ -107,11 +109,11 @@ export class AutomationService {
     });
 
     if (rule.triggerType === AutomationTriggerType.SCHEDULE) {
-      const config = rule.triggerConfig as { cron?: string };
+      const config = rule.triggerConfig as ScheduleConfig;
       if (enabled && config.cron) {
-        this.scheduler.registerJob(rule.id, config.cron);
+        await this.scheduler.registerJob(rule.id, config.cron, this.timeZoneFromConfig(config));
       } else {
-        this.scheduler.unregisterJob(rule.id);
+        await this.scheduler.unregisterJob(rule.id);
       }
     }
 
@@ -122,7 +124,7 @@ export class AutomationService {
     const rule = await this.findRule(orgId, ruleId);
 
     if (rule.triggerType === AutomationTriggerType.SCHEDULE) {
-      this.scheduler.unregisterJob(ruleId);
+      await this.scheduler.unregisterJob(ruleId);
     }
 
     await this.prisma.automationRule.delete({ where: { id: ruleId } });
@@ -152,5 +154,9 @@ export class AutomationService {
       triggerType: triggerNode.nodeType as AutomationTriggerType,
       triggerConfig: triggerNode.config,
     };
+  }
+
+  private timeZoneFromConfig(config: ScheduleConfig): string | undefined {
+    return config.timeZone ?? config.timezone ?? config.tz;
   }
 }

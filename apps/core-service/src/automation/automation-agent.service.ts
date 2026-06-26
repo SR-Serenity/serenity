@@ -31,6 +31,7 @@ export type AgentContext = {
   taskTitle?: string;
   taskStatus?: string;
   taskPriority?: string;
+  timeZone?: string;
 };
 
 type ActionConfig = {
