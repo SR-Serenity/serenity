@@ -1,19 +1,10 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { AuthUtilsService } from '../shared/auth-utils.service';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import { AuthService } from '../auth/auth.service';
-import { AuthResponseDto } from '../auth/dto/auth.dto';
-import {
-  CreateOrganizationBodyDto,
-  SwitchOrganizationBodyDto,
-  UserOrganizationsResponseDto,
+  CreateOrganizationRequestDto,
+  SwitchOrganizationRequestDto,
 } from './dto/organization.dto';
+import { OrganizationService } from './organization.service';
 
 type RequestWithAuth = {
   headers: {
@@ -21,53 +12,37 @@ type RequestWithAuth = {
   };
 };
 
-@ApiTags('organizations')
-@ApiBearerAuth()
 @Controller('auth')
 export class OrganizationController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly organizationService: OrganizationService,
+    private readonly authUtils: AuthUtilsService
+  ) {}
 
   @Get('organizations')
-  @ApiOperation({ summary: 'List user organizations' })
-  @ApiOkResponse({
-    description: 'List of organizations',
-    type: UserOrganizationsResponseDto,
-  })
   organizations(@Req() req: RequestWithAuth) {
     const authorization = req.headers.authorization as string | undefined;
-    const userId = this.authService.getUserIdFromAuthHeader(authorization);
-    return this.authService.listOrganizations(userId);
+    const userId = this.authUtils.getUserIdFromAuthHeader(authorization);
+    return this.organizationService.listOrganizations(userId);
   }
 
   @Post('organizations')
-  @ApiOperation({ summary: 'Create a new organization' })
-  @ApiBody({ type: CreateOrganizationBodyDto })
-  @ApiCreatedResponse({
-    description: 'Organization created successfully',
-    type: AuthResponseDto,
-  })
   createOrganization(
     @Req() req: RequestWithAuth,
-    @Body() body: CreateOrganizationBodyDto
+    @Body() request: CreateOrganizationRequestDto
   ) {
     const authorization = req.headers.authorization as string | undefined;
-    const userId = this.authService.getUserIdFromAuthHeader(authorization);
-    return this.authService.createOrganization(userId, body);
+    const userId = this.authUtils.getUserIdFromAuthHeader(authorization);
+    return this.organizationService.createOrganization(userId, request);
   }
 
   @Post('switch-org')
-  @ApiOperation({ summary: 'Switch to a different organization' })
-  @ApiBody({ type: SwitchOrganizationBodyDto })
-  @ApiOkResponse({
-    description: 'Organization switched successfully',
-    type: AuthResponseDto,
-  })
   switchOrganization(
     @Req() req: RequestWithAuth,
-    @Body() body: SwitchOrganizationBodyDto
+    @Body() request: SwitchOrganizationRequestDto
   ) {
     const authorization = req.headers.authorization as string | undefined;
-    const userId = this.authService.getUserIdFromAuthHeader(authorization);
-    return this.authService.switchOrganization(userId, body.orgSlug);
+    const userId = this.authUtils.getUserIdFromAuthHeader(authorization);
+    return this.organizationService.switchOrganization(userId, request);
   }
 }

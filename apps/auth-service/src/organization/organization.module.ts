@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
+import { SharedModule } from '../shared/shared.module';
 import { OrganizationController } from './organization.controller';
+import { OrganizationService } from './organization.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [SharedModule],
   controllers: [OrganizationController],
+  providers: [OrganizationService],
 })
 export class OrganizationModule {}
