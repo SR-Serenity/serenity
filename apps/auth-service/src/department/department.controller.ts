@@ -7,97 +7,61 @@ import {
   Patch,
   Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthUtilsService } from '../shared/auth-utils.service';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiCreatedResponse,
-  ApiNoContentResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import { AuthService } from '../auth/auth.service';
+  type AuthenticatedRequest,
+  JwtAuthGuard,
+} from '../shared/jwt-auth.guard';
 import {
-  CreateDepartmentBodyDto,
-  ListDepartmentsResponseDto,
-  UpdateDepartmentBodyDto,
+  CreateDepartmentRequestDto,
+  UpdateDepartmentRequestDto,
 } from './dto/department.dto';
 import { DepartmentService } from './department.service';
 
-type RequestWithAuth = {
-  headers: {
-    authorization?: string;
-  };
-};
-
-@ApiTags('departments')
-@ApiBearerAuth()
 @Controller('auth')
+@UseGuards(JwtAuthGuard)
 export class DepartmentController {
   constructor(
-    private readonly authService: AuthService,
+    private readonly authUtils: AuthUtilsService,
     private readonly departmentService: DepartmentService
   ) {}
 
   @Post('departments')
-  @ApiOperation({ summary: 'Create a new department (OWNER only)' })
-  @ApiBody({ type: CreateDepartmentBodyDto })
-  @ApiCreatedResponse({ description: 'Department created successfully' })
   createDepartment(
-    @Req() req: RequestWithAuth,
-    @Body() body: CreateDepartmentBodyDto
+    @Req() request: AuthenticatedRequest,
+    @Body() input: CreateDepartmentRequestDto
   ) {
-    const authorization = req.headers.authorization as string;
-    const userId = this.authService.getUserIdFromAuthHeader(authorization);
-    const { orgId, role } = this.authService.getOrgContextFromHeader(
-      authorization
-    );
-    this.authService.assertOwnerOnly(role, 'create department');
-    return this.departmentService.createDepartment(orgId, userId, body);
+    this.authUtils.assertOwner(request.user.role, 'create department');
+    return this.departmentService.createDepartment(request.user.org_id, input);
   }
 
   @Get('departments')
-  @ApiOperation({ summary: 'List all departments' })
-  @ApiOkResponse({
-    description: 'List of departments',
-    type: ListDepartmentsResponseDto,
-  })
-  listDepartments(@Req() req: RequestWithAuth) {
-    const authorization = req.headers.authorization as string;
-    const { orgId } = this.authService.getOrgContextFromHeader(authorization);
-    return this.departmentService.listDepartments(orgId);
+  listDepartments(@Req() request: AuthenticatedRequest) {
+    return this.departmentService.listDepartments(request.user.org_id);
   }
 
   @Patch('departments/:id')
-  @ApiOperation({ summary: 'Update a department (OWNER only)' })
-  @ApiBody({ type: UpdateDepartmentBodyDto })
-  @ApiOkResponse({ description: 'Department updated successfully' })
   updateDepartment(
-    @Req() req: RequestWithAuth,
+    @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: UpdateDepartmentBodyDto
+    @Body() input: UpdateDepartmentRequestDto
   ) {
-    const authorization = req.headers.authorization as string;
-    const { orgId, role } = this.authService.getOrgContextFromHeader(
-      authorization
+    this.authUtils.assertOwner(request.user.role, 'update department');
+    return this.departmentService.updateDepartment(
+      request.user.org_id,
+      id,
+      input
     );
-    this.authService.assertOwnerOnly(role, 'update department');
-    return this.departmentService.updateDepartment(orgId, id, body);
   }
 
   @Delete('departments/:id')
-  @ApiOperation({ summary: 'Delete a department (OWNER only)' })
-  @ApiNoContentResponse({ description: 'Department deleted successfully' })
   deleteDepartment(
-    @Req() req: RequestWithAuth,
+    @Req() request: AuthenticatedRequest,
     @Param('id') id: string
   ) {
-    const authorization = req.headers.authorization as string;
-    const { orgId, role } = this.authService.getOrgContextFromHeader(
-      authorization
-    );
-    this.authService.assertOwnerOnly(role, 'delete department');
-    return this.departmentService.deleteDepartment(orgId, id);
+    this.authUtils.assertOwner(request.user.role, 'delete department');
+    return this.departmentService.deleteDepartment(request.user.org_id, id);
   }
 }

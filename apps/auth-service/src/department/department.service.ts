@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import {
-  CreateDepartmentBodyDto,
-  UpdateDepartmentBodyDto,
+  CreateDepartmentRequestDto,
+  UpdateDepartmentRequestDto,
 } from './dto/department.dto';
 
 @Injectable()
@@ -15,11 +15,8 @@ export class DepartmentService {
 
   async createDepartment(
     orgId: string,
-    userId: string,
-    input: CreateDepartmentBodyDto
+    input: CreateDepartmentRequestDto
   ) {
-    this.assertRequired(input.name, 'Department name');
-
     const existing = await this.prisma.department.findFirst({
       where: {
         orgId,
@@ -81,10 +78,8 @@ export class DepartmentService {
   async updateDepartment(
     orgId: string,
     departmentId: string,
-    input: UpdateDepartmentBodyDto
+    input: UpdateDepartmentRequestDto
   ) {
-    this.assertRequired(input.name, 'Department name');
-
     const existing = await this.prisma.department.findFirst({
       where: {
         orgId,
@@ -112,11 +107,5 @@ export class DepartmentService {
     await this.prisma.department.delete({
       where: { id: departmentId },
     });
-  }
-
-  private assertRequired(value: string | undefined, fieldName: string) {
-    if (!value || value.trim().length === 0) {
-      throw new BadRequestException(`${fieldName} is required`);
-    }
   }
 }

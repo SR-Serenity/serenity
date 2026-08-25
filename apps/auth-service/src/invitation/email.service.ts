@@ -1,9 +1,12 @@
 /* eslint-disable max-len */
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+
+  constructor(private readonly configService: ConfigService) {}
 
   async sendInvitationEmail(
     email: string,
@@ -11,14 +14,17 @@ export class EmailService {
     orgName: string,
     inviteUrl: string
   ) {
-    if (!process.env.RESEND_API_KEY) {
-      this.logger.warn(`Email not sent (RESEND_API_KEY not set) — to: ${email}, org: ${orgName}`);
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (!apiKey) {
+      this.logger.warn(
+        `Email not sent (RESEND_API_KEY not set) — to: ${email}, org: ${orgName}`
+      );
       return;
     }
 
     const resend = await import('resend');
     const { Resend } = resend;
-    const resendClient = new Resend(process.env.RESEND_API_KEY);
+    const resendClient = new Resend(apiKey);
 
     try {
       await resendClient.emails.send({

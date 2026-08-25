@@ -1,63 +1,43 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-
-export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+import { WorkspaceRole } from '@prisma/client';
+import {
+  AccessTokenService,
+  type AccessTokenPayload,
+} from './access-token.service';
 
 @Injectable()
 export class AuthUtilsService {
-  getUserIdFromAuthHeader(authorization: string): string {
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      throw new ForbiddenException('Missing or invalid authorization header');
-    }
+  constructor(private readonly accessTokenService: AccessTokenService) {}
 
-    const token = authorization.substring(7);
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new ForbiddenException('Invalid token format');
-      }
-
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      const userId = payload.user_id || payload.sub;
-
-      if (!userId) {
-        throw new ForbiddenException('User ID not found in token');
-      }
-
-      return userId;
-    } catch (err) {
-      throw new ForbiddenException('Invalid token');
-    }
+  getUserIdFromAuthHeader(authorization?: string): string {
+    return this.payloadFrom(authorization).user_id;
   }
 
-  getOrgContextFromHeader(authorization: string): { orgId: string; role: UserRole } {
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      throw new ForbiddenException('Missing or invalid authorization header');
-    }
-
-    const token = authorization.substring(7);
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new ForbiddenException('Invalid token format');
-      }
-
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      const orgId = payload.org_id;
-      const role = payload.role;
-
-      if (!orgId || !role) {
-        throw new ForbiddenException('Organization context not found in token');
-      }
-
-      return { orgId, role };
-    } catch (err) {
-      throw new ForbiddenException('Cannot extract org context from token');
-    }
+  getOrgContextFromHeader(authorization?: string): {
+    orgId: string;
+    role: WorkspaceRole;
+  } {
+    const payload = this.payloadFrom(authorization);
+    return { orgId: payload.org_id, role: payload.role };
   }
 
-  assertOwnerOrAdmin(role: string, action: string): void {
-    if (role !== 'OWNER' && role !== 'ADMIN') {
+  assertOwnerOrAdmin(role: WorkspaceRole, action: string): void {
+    if (role !== WorkspaceRole.OWNER && role !== WorkspaceRole.ADMIN) {
       throw new ForbiddenException(`Only OWNER or ADMIN can ${action}`);
     }
+  }
+
+  assertOwner(role: WorkspaceRole, action: string): void {
+    if (role !== WorkspaceRole.OWNER) {
+      throw new ForbiddenException(`Only OWNER can ${action}`);
+    }
+  }
+
+  private payloadFrom(authorization?: string): AccessTokenPayload {
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      throw new ForbiddenException('Missing or invalid authorization header');
+    }
+
+    return this.accessTokenService.verify(authorization.substring(7));
   }
 }

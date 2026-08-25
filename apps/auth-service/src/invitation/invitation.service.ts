@@ -4,36 +4,41 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
-import { WorkspaceRole, InvitationStatus } from '@prisma/client';
+import {
+  InvitationStatus,
+  Prisma,
+  type User,
+  WorkspaceRole,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
-import { type SignOptions, sign } from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
-import { CreateInvitationBodyDto, AcceptInvitationBodyDto } from './dto/invitation.dto';
+import { RegisterWithInvitationRequestDto } from '../auth/dto/auth.dto';
+import {
+  AcceptInvitationRequestDto,
+  CreateInvitationRequestDto,
+} from './dto/invitation.dto';
 import { EmailService } from './email.service';
+import { AccessTokenService } from '../shared/access-token.service';
 
-type RegisterWithInvitationInput = {
-  email: string;
-  password: string;
-  displayName: string;
-  inviteToken: string;
-};
+type InvitationWithOrganization = Prisma.InvitationGetPayload<{
+  include: { organization: true };
+}>;
 
 @Injectable()
 export class InvitationService {
-  private readonly jwtSecret: string;
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
-  ) {
-    this.jwtSecret = process.env.JWT_SECRET || 'default-secret';
-  }
+    private readonly emailService: EmailService,
+    private readonly accessTokenService: AccessTokenService,
+    private readonly configService: ConfigService
+  ) {}
 
   async createInvitation(
     orgId: string,
     inviterId: string,
-    input: CreateInvitationBodyDto
+    input: CreateInvitationRequestDto
   ) {
     const inviter = await this.prisma.workspaceMember.findFirst({
       where: { userId: inviterId, orgId },
@@ -45,10 +50,15 @@ export class InvitationService {
     }
 
     if (input.role === WorkspaceRole.OWNER) {
-      throw new BadRequestException('Owners cannot be invited. Transfer ownership after onboarding.');
+      throw new BadRequestException(
+        'Owners cannot be invited. Transfer ownership after onboarding.'
+      );
     }
 
-    if (input.role === WorkspaceRole.ADMIN && inviter.role !== WorkspaceRole.OWNER) {
+    if (
+      input.role === WorkspaceRole.ADMIN &&
+      inviter.role !== WorkspaceRole.OWNER
+    ) {
       throw new ForbiddenException('Only owners can invite admins');
     }
 
@@ -58,7 +68,9 @@ export class InvitationService {
         select: { id: true },
       });
       if (!department) {
-        throw new BadRequestException('Department does not belong to this organization');
+        throw new BadRequestException(
+          'Department does not belong to this organization'
+        );
       }
     }
 
@@ -70,7 +82,9 @@ export class InvitationService {
     });
 
     if (existingMember) {
-      throw new BadRequestException('User is already a member of this organization');
+      throw new BadRequestException(
+        'User is already a member of this organization'
+      );
     }
 
     const existingInvite = await this.prisma.invitation.findFirst({
@@ -104,7 +118,10 @@ export class InvitationService {
       },
     });
 
-    const webUrl = process.env.WEB_URL || process.env.FRONTEND_URL || 'http://localhost:9999';
+    const webUrl =
+      this.configService.get<string>('WEB_URL') ??
+      this.configService.get<string>('FRONTEND_URL') ??
+      'http://localhost:9999';
     const inviteUrl = `${webUrl.replace(/\/$/, '')}/invite/${token}`;
     await this.emailService.sendInvitationEmail(
       invitation.email,
@@ -170,7 +187,7 @@ export class InvitationService {
     });
   }
 
-  async acceptInvitation(input: AcceptInvitationBodyDto) {
+  async acceptInvitation(input: AcceptInvitationRequestDto) {
     const invitation = await this.prisma.invitation.findFirst({
       where: {
         token: input.token,
@@ -217,7 +234,9 @@ export class InvitationService {
     });
 
     if (existingMember) {
-      throw new BadRequestException('You are already a member of this organization');
+      throw new BadRequestException(
+        'You are already a member of this organization'
+      );
     }
 
     await this.prisma.workspaceMember.create({
@@ -229,8 +248,6 @@ export class InvitationService {
       },
     });
 
-    void this.notifyMemberJoined(invitation.orgId, user.id);
-
     await this.prisma.invitation.update({
       where: { id: invitation.id },
       data: { status: InvitationStatus.ACCEPTED },
@@ -239,25 +256,23 @@ export class InvitationService {
     return this.generateAuthResponse(user, invitation);
   }
 
-  async registerWithInvitation(input: RegisterWithInvitationInput) {
+  async registerWithInvitation(input: RegisterWithInvitationRequestDto) {
     const invitation = await this.findUsableInvitation(input.inviteToken);
     const email = input.email.toLowerCase().trim();
 
     if (email !== invitation.email) {
-      throw new BadRequestException('Invitation email does not match registration email');
-    }
-    if (!input.displayName?.trim()) {
-      throw new BadRequestException('Display name is required');
-    }
-    if (!input.password || input.password.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters');
+      throw new BadRequestException(
+        'Invitation email does not match registration email'
+      );
     }
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
     if (existingUser) {
-      throw new BadRequestException('Email is already in use. Please sign in to accept this invitation.');
+      throw new BadRequestException(
+        'Email is already in use. Please sign in to accept this invitation.'
+      );
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
@@ -286,8 +301,6 @@ export class InvitationService {
 
       return createdUser;
     });
-
-    void this.notifyMemberJoined(invitation.orgId, user.id);
 
     return this.generateAuthResponse(user, invitation);
   }
@@ -319,35 +332,15 @@ export class InvitationService {
     return invitation;
   }
 
-  private async notifyMemberJoined(orgId: string, userId: string): Promise<void> {
-    const coreServiceUrl = process.env.CORE_SERVICE_URL;
-    const secret = process.env.INTERNAL_SERVICE_SECRET;
-    if (!coreServiceUrl || !secret) {
-      return;
-    }
-    try {
-      await fetch(`${coreServiceUrl}/automations/internal/member-joined`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ secret, orgId, userId }),
-      });
-    } catch {
-      // fire-and-forget, don't fail invitation flow
-    }
-  }
-
-  private async generateAuthResponse(user: any, invitation: any) {
-    const payload = {
-      sub: user.id,
-      user_id: user.id,
-      org_id: invitation.orgId,
-      role: invitation.role,
-      email: user.email,
-      displayName: user.displayName,
-    };
-
-    const expiresIn = (process.env.JWT_EXPIRES_IN ?? '1d') as SignOptions['expiresIn'];
-    const accessToken = sign(payload, this.jwtSecret, { expiresIn });
+  private generateAuthResponse(
+    user: User,
+    invitation: InvitationWithOrganization
+  ) {
+    const accessToken = this.accessTokenService.sign(
+      user,
+      invitation.orgId,
+      invitation.role
+    );
 
     return {
       accessToken,
